@@ -1,0 +1,102 @@
+import type { ne } from "./ne";
+
+// Typed against `ne` so a missing or extra key is a compile error (ADR-020).
+export const en: { readonly [K in keyof typeof ne]: string } = {
+  "app.name": "Mero Pasal",
+
+  "nav.today": "Today",
+  "nav.bills": "Bills",
+  "nav.accounts": "Accounts",
+
+  "action.sale": "Sold bill",
+  "action.sale.sub": "Sold to a customer",
+  "action.purchase": "Bought bill",
+  "action.purchase.sub": "Bought from a supplier",
+
+  "kind.sale": "Sold",
+  "kind.purchase": "Bought",
+  "filter.all": "All",
+
+  "today.billed": "Today's bills",
+  "today.noAmount": "Without amount",
+  "today.empty": "No bills today. Press a button above to save the first bill.",
+  "today.seeAll": "See all",
+
+  "photo.use": "Use photo",
+  "photo.retake": "Retake",
+  "photo.addPage": "Add page",
+
+  "party.title": "Whose bill?",
+  "party.search": "Search name (Nepali or English)",
+  "party.walkIn": "Walk-in customer",
+  "party.recent": "Recent",
+  "party.add": "Add new name",
+  "party.later": "Later",
+  "party.save": "Save name",
+  "party.similar": "A similar name already exists",
+  "party.same": "Yes, same person",
+  "party.new": "No, create new",
+  "party.notFound": "No name “{q}” yet",
+  "party.addThis": "Add “{q}” as a new name",
+  "party.notThem": "A different “{q}”? Add as new",
+  "party.isItThis": "Is it one of these?",
+  "party.confirmName": "Is the name right?",
+  "party.confirmSub": "This is what I heard. Fix it if it's wrong, then save.",
+
+  "voice.listening": "Listening… say the name",
+  "voice.heard": "Heard",
+  "voice.sayAgain": "Say again",
+  "voice.needsInternet": "Needs internet",
+
+  "amount.title": "Bill total?",
+  "amount.later": "Add amount later",
+
+  "date.today": "Today",
+  "date.yesterday": "Yesterday",
+  "date.dayBefore": "Day before",
+  "date.pick": "Pick date",
+
+  "bill.save": "Save bill",
+  "bill.saved": "Saved",
+  "bill.correct": "Correct",
+  "bill.remove": "Remove",
+  "bill.removeConfirm": "Remove this bill?",
+  "bill.removed": "Removed",
+  "bill.noAmount": "No amount",
+
+  "sync.ok": "All saved",
+  "sync.pending": "{n} waiting to upload",
+  "sync.offline": "No internet — bills are safe on this phone",
+  "sync.failed": "Couldn't upload",
+  "sync.stale": "(old)",
+
+  "pay.cash": "Cash",
+  "pay.qr": "QR",
+  "pay.udharo": "Udharo",
+  "pay.partUdharo": "Part udharo",
+  "pay.paid": "Paid",
+  "pay.due": "Due",
+  "pay.partDue": "Part due",
+  "account.balance": "Balance due",
+  "account.received": "Money received",
+  "dayClose.title": "Day close",
+
+  "auth.notInvited": "You haven't been added to this shop. Contact Binayak.",
+  "auth.signInSub": "Sign in with your Google account",
+  "auth.signOut": "Sign out",
+
+  "lang.switch": "Change language",
+  "lang.ne": "नेपाली",
+  "lang.en": "English",
+  "settings.open": "Settings",
+
+  "common.cancel": "Cancel",
+  "common.undo": "Undo",
+
+  "error.UNAUTHENTICATED": "Please sign in again.",
+  "error.FORBIDDEN": "You're not allowed to do this.",
+  "error.NOT_FOUND": "This wasn't found. It may have been removed.",
+  "error.VALIDATION": "Something doesn't look right. Check and try again.",
+  "error.CONFLICT": "This already exists.",
+  "error.unknown": "Something went wrong. Try again.",
+};
