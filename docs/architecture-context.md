@@ -273,7 +273,8 @@ export default defineSchema({
     status: v.union(v.literal("active"), v.literal("deleted")),
     deletedReason: v.optional(v.string()),
     needsAttention: v.boolean(),           // no amount OR no party (sale/purchase)
-    capturedAt: v.number(),                // server clock at create
+    capturedAt: v.number(),                // server clock at create (the record)
+    clientCapturedAt: v.optional(v.number()), // M2: phone clock when taken; ordering only, dropped if implausible
     createdBy: v.id("members"),
     updatedAt: v.number(),
   })
@@ -305,6 +306,13 @@ export default defineSchema({
   })
     .index("by_shop_month", ["shopId", "monthBs"])
     .index("by_party_month", ["partyId", "monthBs"]),
+
+  memberSync: defineTable({                   // M2: device sync health per member (members.heartbeat)
+    shopId: v.id("shops"), memberId: v.id("members"),
+    lastSeenAt: v.number(), lastSyncAt: v.optional(v.number()),
+    pending: v.number(), failed: v.number(),
+    oldestPendingAt: v.optional(v.number()), foreignPending: v.number(),
+  }).index("by_member", ["memberId"]).index("by_shop", ["shopId"]),
 
   dayCloses: defineTable({                    // v1.1
     shopId: v.id("shops"),
@@ -359,7 +367,8 @@ Importing raw `query` or `mutation` from `_generated/server` in feature modules 
 | Module | Function | Kind | Who | Purpose |
 |---|---|---|---|---|
 | `members` | `me` | query (`optionalMemberQuery`) | anyone | Returns `{member, shop}` or `null` for signed-out, not-invited or deactivated callers (drives the "Not invited" screen) |
-| | `setLocale`, `heartbeat` | mutation | member | Language preference; `lastSeenAt`/`lastSyncAt` |
+| | `setLocale` | mutation | member | Language preference |
+| | `heartbeat` | mutation | member | M2: writes the member's `memberSync` row (last seen; last full sync; pending/failed counts; items left by another account). A separate table, so heartbeats don't re-run member queries |
 | | `list`, `invite`, `setRole`, `deactivate` | q/m | admin | F-13 |
 | `parties` | `listForPicker` | query | member | All non-archived, non-merged parties, trimmed fields (for client-side search and cache) |
 | | `create` | mutation | member | Idempotent by `clientId`; computes `nameLatin`, `nameDevanagari`, `phoneticKey` |
@@ -377,6 +386,7 @@ Importing raw `query` or `mutation` from `_generated/server` in feature modules 
 | `summaries` | `forDate(dateBs)`, `forRange(from, to)` | query | member | Today strip, reports (≤ 400 rows read) |
 | | `rebuild(from, to)` | internal mutation | CLI | Repair tool: recompute derived data from transactions |
 | `audit` | `listForEntity` | query | admin | Drawer history |
+| `e2eSupport` | `billsByClientIds` | internal query | CLI (e2e) | Which phone-made bills reached the server; used by Playwright via `convex run` on dev |
 | `seed` | `bootstrap` | internal mutation | CLI | Shop, owner (locale `ne`) and admin (locale `en`) members, walk-in party; refuses if a shop exists (`CONFLICT`) |
 | `crons` | weekly | — | — | v1: nothing critical. Later: orphan-file report and backup reminder. |
 

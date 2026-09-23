@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as e2eSupport from "../e2eSupport.js";
 import type * as files from "../files.js";
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_errors from "../lib/errors.js";
@@ -26,6 +27,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  e2eSupport: typeof e2eSupport;
   files: typeof files;
   "lib/audit": typeof lib_audit;
   "lib/errors": typeof lib_errors;

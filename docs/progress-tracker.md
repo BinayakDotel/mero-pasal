@@ -35,7 +35,7 @@
 - [x] `shared/i18n`: typed `ne`/`en` dictionaries and `t()`, seeded from the ui-ux §8 copy deck.
 - [x] `packages/ui`: `theme.css` tokens, fonts (Baloo 2, Mukta), `BigButton`, `Chip`, `Sheet`, `NumPad`, `AmountText`, `BsDateText`, `LedgerStrip`, `Stamp`.
 - [x] PWA: manifest (name "मेरो पसल", placeholder icons until OD-4, standalone, portrait), Serwist (`@serwist/turbopack`) service worker with app-shell precache and `/~offline` fallback.
-- [~] Deploy pipeline: `apps/web/vercel.json` ready (architecture §11). **Binayak:** create the Vercel project (root `apps/web`), Convex prod deployment + deploy keys, Clerk production instance.
+- [~] Deploy pipeline: **M1 test deploy live on Vercel** (`*.vercel.app`, root `apps/web`, corepack for pnpm 12, Convex dev + Clerk dev, no `CONVEX_DEPLOY_KEY`). Production (Convex prod, Clerk production instance, domain) is before M5.
 - [ ] Redmi smoke test: install from Chrome, sign in, reopen from the icon, confirm no login prompt.
 
 ### M1 — Capture core (≈ 1 week) · F-02, F-03, F-04, F-05, F-10

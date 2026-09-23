@@ -47,6 +47,7 @@ export default defineSchema({
     role,
     locale,
     active: v.boolean(),
+    // Superseded by `memberSync` (M2): writing here re-ran every live member query. Unused.
     lastSeenAt: v.optional(v.number()),
     lastSyncAt: v.optional(v.number()),
   })
@@ -101,7 +102,8 @@ export default defineSchema({
     status: v.union(v.literal("active"), v.literal("deleted")),
     deletedReason: v.optional(v.string()),
     needsAttention: v.boolean(), // no amount OR no party (sale/purchase)
-    capturedAt: v.number(), // server clock at create
+    capturedAt: v.number(), // server clock at create (the record)
+    clientCapturedAt: v.optional(v.number()), // M2: phone clock when taken; ordering only
     createdBy: v.id("members"),
     updatedAt: v.number(),
   })
@@ -137,6 +139,21 @@ export default defineSchema({
   })
     .index("by_shop_month", ["shopId", "monthBs"])
     .index("by_party_month", ["partyId", "monthBs"]),
+
+  // M2 / F-11, F-13: each member's device sync health, reported by members.heartbeat. Its own table
+  // so heartbeats don't re-run every query that reads the member row.
+  memberSync: defineTable({
+    shopId: v.id("shops"),
+    memberId: v.id("members"),
+    lastSeenAt: v.number(),
+    lastSyncAt: v.optional(v.number()), // last time the outbox fully drained
+    pending: v.number(),
+    failed: v.number(),
+    oldestPendingAt: v.optional(v.number()),
+    foreignPending: v.number(), // items left on this device by another account
+  })
+    .index("by_member", ["memberId"])
+    .index("by_shop", ["shopId"]),
 
   // v1.1
   dayCloses: defineTable({
