@@ -11,7 +11,7 @@
 | **Current focus** | M0 exit: Vercel project + Convex prod deployment + Clerk production instance (Binayak), then the Redmi smoke test. Then M1 capture core |
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
-| **Risks** | NFR-03: an empty Today already ships 256 KB gzipped JS (budget 250): React/Next ≈ 140 KB, Clerk + Convex ≈ 65 KB. Decide in M1: lazy-load Clerk UI, trim, or revise the budget. |
+| **Risks** | NFR-03: Today ships 262 KB gzipped JS (budget 250); React/Next ≈ 140 KB, Clerk + Convex ≈ 65 KB are the bulk. Judged on the Redmi instead: Today interactive < 2 s warm (ADR-031); time it in the phone test. |
 | **Last updated** | 2083-06-07 BS (2026-09-23) |
 
 **Capacity assumption:** ~4–5 h a day (~25–30 h a week). The estimates below are rough; re-plan after M1 with real velocity.
@@ -42,17 +42,22 @@
 
 **Exit:** a named bill with amount is captured online in ≤ 15 s on the Redmi.
 
-- [ ] Image worker: orientation, resize to ≤1600 px, JPEG ~0.72, 320 px thumbnail, EXIF strip; tests with sample photos.
-- [ ] Capture state machine (`photo → preview → party → amount → saving → saved`), add page (≤ 5), retake, leave-without-saving guard.
-- [ ] `shared/names`: `transliterate`, `phoneticKey`, `matchParties` + a fixture set of 50 Nepali names.
-- [ ] `parties.listForPicker`, `parties.create` (idempotent), `parties.similar`.
-- [ ] Name picker UI: walk-in row, recent, search, new-name sheet, duplicate prompt, "Later".
-- [ ] Amount pad with lakh display, ≥ 5 lakh confirm, "Add amount later".
-- [ ] Date chip and sheet: today, yesterday, day before, BS picker (≤ 90 days back).
-- [ ] `shared/ledger.contribution()` + `convex/lib/ledger.apply()` + `dailySummaries` and `partyMonthly` upserts.
-- [ ] `transactions.createFromClient` (idempotent) + ledger **invariant test**.
-- [ ] Today: header, two big buttons, ledger strip, recent 5; the stamp moment.
-- [ ] Language switch persisted to `members.locale`.
+**Status:** code complete; waiting on the local click-through, the test deploy, the voice spike and the Redmi stopwatch.
+**Known M1 gaps, closed in M2:**
+- The stamp shows after the server confirms, not after the phone stores the bill (NFR-02).
+- Offline Save shows a message and keeps the bill on screen.
+
+- [x] Photo pipeline (browser APIs, no library, no worker; ADR-010 amended): orientation, ≤1600 px, JPEG 0.72/0.6, 320 px thumbnail, EXIF/GPS stripped; Playwright fixtures (sideways+GPS, 50 MP, HEIF).
+- [x] Capture state machine (`preview → party → amount → saving → saved`), add page (≤ 5), retake, leave-without-saving sheet + Android back guard.
+- [x] `shared/names`: `transliterate`, `phoneticKey`, `searchParties`/`findSimilar` + 57-name fixture.
+- [x] `parties.listForPicker`, `parties.create` (idempotent), `parties.similar`.
+- [x] Name picker UI: walk-in row, recent with last bill, search, not-found card, new-name sheet, duplicate prompt, "Later".
+- [x] Amount pad with lakh display, ≥ 5 lakh confirm, "Add amount later".
+- [x] Date chip and sheet: today, yesterday, day before, BS month grid (≤ 90 days back, no future).
+- [x] `shared/ledger.contribution()` + `convex/lib/ledger.apply()` + `dailySummaries` and `partyMonthly` upserts (second-pass reviewed).
+- [x] `transactions.createFromClient` (idempotent) + ledger **invariant test**.
+- [x] Today: header, two big buttons, ledger strip, recent 5; the stamp moment. Save goes online through `enqueue()` (M2 makes it offline-first).
+- [x] Language switch persisted to `members.locale`.
 - [~] **Voice spike (1 h):** Buwa says 20 real customer names into a bare test page (Web Speech API, `ne-NP`) on the Redmi. Record the hit rate and decide OD-5 (F-24 in v1.0 or v1.1).
   - Dry run 2083-06-07 (Binayak, laptop Chrome, quiet room): 14/18 transcripts usable (78%), 2.3–3.7 s each. Through `searchParties` the right account came first in every name tried, including run-together (रामप्रसाद) and misheard (घातीय → गायत्री) names. Brave can't use Web Speech (error `network`), so use Chrome. Several attempts were relations or nicknames (भाइको छोरो, घरपेटी बा, school, काले), a proposal to make tags searchable was **declined**: distinguishing words go in the name instead ("Ram gharbeti", ADR-029). Real spike: Buwa on the Redmi after the test deploy; score "right person first", not exact text.
 

@@ -31,7 +31,7 @@ Pinned exactly in each `package.json` during M0 (2026-09-23). Update this table 
 | Auth | Clerk (`@clerk/nextjs`) | 7.9.4 | `ConvexProviderWithClerk` from `convex/react-clerk` |
 | PWA / service worker | Serwist (`@serwist/turbopack`, `serwist`) | 9.5.12 | Turbopack integration (ADR-028); `esbuild` 0.28.2 bundles the worker |
 | Offline storage | Dexie (IndexedDB) | 4.4 (M2) | Outbox and caches; install in M2 |
-| Image compression | browser-image-compression | 2.0 (M1) | Runs in a web worker; install in M1 |
+| Image compression | Browser APIs only (`createImageBitmap`, `OffscreenCanvas`) | — | No library (ADR-010, amended M1): reads the JPEG header, decodes already reduced |
 | BS calendar | nepali-date-converter | 3.4.0 | **Supports BS 2000–2090 only.** Only its month table is used, through `@mero-pasal/shared/dates` (§7.2) |
 | Lint and format | Biome | 2.5.14 | One tool for the whole repo |
 | Tests | Vitest, convex-test, Playwright | 5.0.1, 0.0.59, 1.63.0 | `@edge-runtime/vm` 5.0.0 for convex-test |
@@ -554,7 +554,14 @@ stateDiagram-v2
 ## 9. Photos and files
 
 - **Capture:** `<input type="file" accept="image/*" capture="environment">`. This opens the native camera, which Buwa already knows and which gives full sensor quality (ADR-009).
-- **Processing (web worker):** fix EXIF orientation, resize to ≤1600 px on the long edge, JPEG quality ~0.72, target ≤ 300 KB, plus a 320 px thumbnail (~25 KB). Re-encoding removes EXIF, including GPS.
+- **Processing (`features/capture/image`)** starts as soon as a photo is taken, from the page:
+  - The JPEG header gives the size and EXIF orientation.
+  - `createImageBitmap` decodes the photo already reduced to ≤ 1600 px on the long edge and turned upright, so a 50 MP photo never fills memory.
+  - It's encoded as JPEG at ~0.72 (0.6 if still over ~450 KB), and a 320 px thumbnail is made from the reduced image.
+  - Re-encoding removes all EXIF, including GPS; the original file is never uploaded.
+  - Photos the phone can't decode (e.g. HEIF) show "फेरि खिच्नुहोस्".
+  - Decoding and encoding are asynchronous browser work, so no Web Worker is used (Turbopack copies worker files as raw assets).
+  - Covered by a Playwright test on fixture photos: a sideways photo with GPS, and a 50 MP photo.
 - **Storage:** Convex file storage, two files per page. Lists only ever load thumbnails. The detail view loads the full image.
 - **Expected volume:** ~55 bills a day × ~1.2 pages × ~300 KB ≈ 20 MB a day, which is about 0.6 GB a month or 7 GB a year.
 - **URL security:** `ctx.storage.getUrl()` URLs are unguessable, but anyone holding one can fetch it. This is accepted for v1 (family shop, members only see URLs). If that changes, serve images through an authenticated Convex HTTP action.

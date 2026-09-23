@@ -30,7 +30,9 @@ export type CaptureState =
   | { step: "idle" }
   | (Draft & { step: "preview"; viewing: number })
   | (Draft & { step: "party"; party?: PartyChoice })
-  | (Draft & { step: "amount"; party: PartyChoice });
+  | (Draft & { step: "amount"; party: PartyChoice })
+  | (Draft & { step: "saving"; party: PartyChoice })
+  | (Draft & { step: "saved"; party: PartyChoice });
 
 export type CaptureEvent =
   | { type: "start"; kind: BillKind; clientId: string; page: Page; now: number }
@@ -43,6 +45,9 @@ export type CaptureEvent =
   | { type: "amountBackspace" }
   | { type: "amountClear" }
   | { type: "setDate"; dateBs: string | null }
+  | { type: "saveStart" }
+  | { type: "saveFailed" }
+  | { type: "saved" }
   | { type: "back" }
   | { type: "reset" };
 
@@ -112,12 +117,20 @@ export function captureReducer(state: CaptureState, event: CaptureEvent): Captur
       return state.step === "amount" ? { ...state, digits: "" } : state;
     case "setDate":
       return state.step === "amount" ? { ...state, dateBs: event.dateBs } : state;
+    case "saveStart":
+      return state.step === "amount" ? { ...state, step: "saving" } : state;
+    case "saveFailed":
+      // Nothing is lost: back to the amount step with everything still filled in.
+      return state.step === "saving" ? { ...state, step: "amount" } : state;
+    case "saved":
+      return state.step === "saving" ? { ...state, step: "saved" } : state;
     case "back":
       if (state.step === "amount") return { ...state, step: "party" };
       if (state.step === "party") {
         const { party, ...draft } = state;
         return { ...draft, step: "preview", viewing: draft.pages.length - 1 };
       }
-      return state; // leaving from preview is the page's decision (leave-without-saving sheet)
+      // Leaving from preview is the page's decision (leave sheet); saving/saved can't go back.
+      return state;
   }
 }

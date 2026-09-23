@@ -20,6 +20,8 @@ export const ne = {
 
   "today.billed": "आजका बिल",
   "today.noAmount": "रकम नहालेका",
+  "today.billCount": "{n} बिल",
+  "today.recent": "हालै राखेका",
   "today.empty": "आज कुनै बिल छैन। माथिको बटन थिचेर पहिलो बिल राख्नुहोस्।",
   "today.seeAll": "सबै हेर्नुहोस्",
 
@@ -28,6 +30,7 @@ export const ne = {
   "capture.photoAlt": "बिलको फोटो, पाना {n}",
   "capture.hint": "बिल पूरै देखिने गरी खिच्नुहोस्",
   "capture.maxPages": "बढीमा {n} पाना", // i18n-review
+  "capture.unreadable": "यो फोटो खोल्न सकिएन। फेरि खिच्नुहोस्।", // i18n-review
   "capture.leave": "बिल नराखी फर्कने?",
   "capture.leaveSub": "खिचेको फोटो हट्छ।", // i18n-review
   "capture.leaveYes": "हो, फर्कने", // i18n-review
@@ -70,7 +73,12 @@ export const ne = {
   "amount.later": "रकम पछि हाल्छु",
 
   "amount.delete": "मेटाउनुहोस्", // i18n-review
-  "amount.saveSoon": "बिल राख्ने काम अर्को अपडेटमा आउँछ।", // i18n-review
+  "amount.confirmLarge": "{amount} — ठीक हो?",
+  "amount.confirmYes": "हो, ठीक छ", // i18n-review
+  "amount.confirmNo": "सच्याउँछु", // i18n-review
+  "capture.saving": "राख्दै…", // i18n-review
+  "capture.saveOffline": "इन्टरनेट छैन। बिल यहीँ छ — इन्टरनेट आएपछि फेरि राख्नुहोस्।", // i18n-review
+  "capture.saveFailed": "बिल राख्न सकिएन। फेरि प्रयास गर्नुहोस्।", // i18n-review
   "date.label": "मिति",
   "date.prevMonth": "अघिल्लो महिना",
   "date.nextMonth": "अर्को महिना",

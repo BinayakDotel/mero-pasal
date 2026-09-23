@@ -257,6 +257,7 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `capture.photoAlt` | बिलको फोटो, पाना {n} | Bill photo, page {n} |
 | `capture.hint` | बिल पूरै देखिने गरी खिच्नुहोस् | Fit the whole bill in the frame |
 | `capture.maxPages` | बढीमा {n} पाना | Up to {n} pages |
+| `capture.unreadable` | यो फोटो खोल्न सकिएन। फेरि खिच्नुहोस्। | This photo couldn't be opened. Please take it again. |
 | `capture.leave` | बिल नराखी फर्कने? | Leave without saving? |
 | `capture.leaveSub` | खिचेको फोटो हट्छ। | The photo you took will be discarded. |
 | `capture.leaveYes` | हो, फर्कने | Yes, leave |
@@ -296,7 +297,12 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `amount.title` | जम्मा कति? | Bill total? |
 | `amount.later` | रकम पछि हाल्छु | Add amount later |
 | `amount.delete` | मेटाउनुहोस् | Delete |
-| `amount.saveSoon` | बिल राख्ने काम अर्को अपडेटमा आउँछ। | Saving arrives in the next update. |
+| `amount.confirmLarge` | {amount} — ठीक हो? | {amount} — is this right? |
+| `amount.confirmYes` | हो, ठीक छ | Yes, it's right |
+| `amount.confirmNo` | सच्याउँछु | Let me fix it |
+| `capture.saving` | राख्दै… | Saving… |
+| `capture.saveOffline` | इन्टरनेट छैन। बिल यहीँ छ — इन्टरनेट आएपछि फेरि राख्नुहोस्। | No internet. The bill is still here — save again when you're back online. |
+| `capture.saveFailed` | बिल राख्न सकिएन। फेरि प्रयास गर्नुहोस्। | Couldn't save the bill. Please try again. |
 | `date.label` | मिति | Date |
 | `date.prevMonth` | अघिल्लो महिना | Previous month |
 | `date.nextMonth` | अर्को महिना | Next month |
@@ -325,6 +331,8 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `kind.sale` | बेचेको | Sold |
 | `kind.purchase` | किनेको | Bought |
 | `filter.all` | सबै | All |
+| `today.billCount` | {n} बिल | {n} bill(s) |
+| `today.recent` | हालै राखेका | Recently saved |
 | `today.empty` | आज कुनै बिल छैन। माथिको बटन थिचेर पहिलो बिल राख्नुहोस्। | No bills today. Press a button above to save the first bill. |
 | `today.seeAll` | सबै हेर्नुहोस् | See all |
 | `sync.stale` | (पुरानो) | (old) |

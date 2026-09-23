@@ -104,6 +104,32 @@ describe("capture state machine (F-03)", () => {
     }
   });
 
+  it("F-03: amount → saving → saved; a failed save returns to the amount with nothing lost", () => {
+    const amount = run(
+      started,
+      { type: "usePhotos" },
+      { type: "pickParty", party: { type: "later" } },
+      { type: "amountKey", key: "5" },
+    );
+    const saving = captureReducer(amount, { type: "saveStart" });
+    expect(saving).toMatchObject({ step: "saving", digits: "5", clientId: "c1" });
+    expect(captureReducer(saving, { type: "back" })).toBe(saving); // no leaving mid-save
+    expect(captureReducer(saving, { type: "saveFailed" })).toMatchObject({
+      step: "amount",
+      digits: "5",
+    });
+    const saved = captureReducer(saving, { type: "saved" });
+    expect(saved).toMatchObject({ step: "saved", clientId: "c1" });
+    expect(captureReducer(saved, { type: "back" })).toBe(saved);
+    for (const event of [
+      { type: "saveStart" },
+      { type: "saveFailed" },
+      { type: "saved" },
+    ] as const) {
+      expect(captureReducer(started, event)).toBe(started);
+    }
+  });
+
   it("reset discards the draft", () => {
     expect(captureReducer(started, { type: "reset" })).toEqual({ step: "idle" });
   });
