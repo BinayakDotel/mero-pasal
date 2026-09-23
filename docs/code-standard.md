@@ -79,7 +79,7 @@ export const update = memberMutation({
 - **Buwa's screens are client components.** Put `"use client"` at the top of route files in the `(app)` group. Server components are used only for static layouts and metadata.
 - **Feature folders** (`src/features/<feature>/`) own their components, hooks, state and tests. Promote something to `packages/ui` only when a second feature needs it *and* it contains no domain logic.
 - **Data access** goes through hooks in the feature: `useTodaySummary()`, `usePartiesForPicker()`. Components don't call `useQuery(api...)` directly. Offline-capable reads use `useCachedQuery`.
-- **Writes from Buwa's app go through the outbox** (`features/sync/outbox.ts` → `enqueue()`), never straight to `useMutation`, so offline behaviour is uniform. Admin console writes may call mutations directly.
+- **Writes from Buwa's app go through the outbox** (`features/sync/outbox.ts` → `enqueue()`), never straight to `useMutation`, so offline behaviour is uniform. Admin console writes may call mutations directly. Exception: `members.setLocale` (a preference, not shop data) is called directly.
 - **The capture flow is a state machine** (a reducer with explicit states `photo → preview → party → amount → saving → saved`). Don't spread boolean flags across components.
 - **Components** stay under ~200 lines, have props typed inline, and hold no business logic: call shared domain functions instead.
 - **Styling:**

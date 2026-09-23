@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { optionalMemberQuery } from "./lib/functions";
+import { memberMutation, optionalMemberQuery } from "./lib/functions";
 import { locale, role } from "./schema";
 
 /**
@@ -41,5 +41,18 @@ export const me = optionalMemberQuery({
           ? { _id: shop._id, name: shop.name }
           : { _id: shop._id, name: shop.name, nameNe: shop.nameNe },
     };
+  },
+});
+
+/**
+ * F-10: remember the member's language. A preference, not a bill, so the web app calls this
+ * directly rather than through the outbox (documented exception, code-standard §5).
+ */
+export const setLocale = memberMutation({
+  args: { locale },
+  returns: v.null(),
+  handler: async (ctx, { locale: next }) => {
+    await ctx.db.patch(ctx.member._id, { locale: next });
+    return null;
   },
 });
