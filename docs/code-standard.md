@@ -115,9 +115,25 @@ export const update = memberMutation({
 - `pnpm lint` and `pnpm typecheck` must pass before commit (Husky or lefthook pre-commit).
 - Imports are ordered by Biome's organise-imports. There are no relative imports across packages.
 
-## 9. Git and commits
+## 9. Git, Graphite and commits
 
-- Trunk-based: short branches such as `feat/F-03-amount-pad`, `fix/F-09-duplicate-upload`, `docs/arch-outbox`.
+- **Remote:** `github.com/BinayakDotel/mero-pasal` (private). Trunk is `main`; nothing is committed to `main` directly after the M0 baseline.
+- **Graphite (`gt`) stacks the work** (ADR-027). One logical change is one branch is one PR. A change that depends on an unmerged one stacks on top of it.
+- Branch names: `feat/F-03-amount-pad`, `fix/F-09-duplicate-upload`, `docs/arch-outbox`, `chore/M0-tooling`.
+- Everyday commands:
+
+  | Do | Command |
+  |---|---|
+  | New branch + commit from staged changes, stacked on the current branch | `gt create feat/F-xx-name -m "feat(scope): F-xx …"` |
+  | Amend the current branch after review feedback (restacks children) | `gt modify` (or `gt modify -c -m "…"` for an extra commit) |
+  | Open or update PRs for the whole stack | `gt submit --stack` |
+  | Pull `main`, drop merged branches, restack | `gt sync` |
+  | See the stack | `gt log short` |
+  | Move between branches | `gt up` / `gt down` / `gt checkout` |
+
+- Keep PRs small enough to review in one sitting. Schema, auth, ledger and sync changes each get their own PR so they can be reviewed on their own.
+- PR descriptions list the spec IDs, what to test (on the phone for UI), and any doc or ADR touched.
+- **No AI co-author trailers.** Commit messages never include `Co-Authored-By: Claude …` (or any other AI tool). Binayak is the author of record.
 - Conventional commits with the spec ID:
   - `feat(capture): F-03 add amount pad with lakh formatting`
   - `fix(sync): F-09 skip re-upload when storageId recorded`
