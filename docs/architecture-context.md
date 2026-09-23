@@ -243,6 +243,8 @@ export default defineSchema({
     archived: v.boolean(),
     mergedIntoId: v.optional(v.id("parties")),
     lastUsedAt: v.number(),
+    lastBillDateBs: v.optional(v.string()), // F-04 "हिजो · रु 2,340"; kept by ledger.apply
+    lastBillPaisa: v.optional(v.number()),  // absent when that bill has no amount
     billCount: v.number(),                 // denormalised all-time
     salePaisa: v.number(),
     purchasePaisa: v.number(),
