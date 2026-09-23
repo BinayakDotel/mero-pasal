@@ -70,6 +70,9 @@ export const en: { readonly [K in keyof typeof ne]: string } = {
   "sync.failed": "Couldn't upload",
   "sync.stale": "(old)",
 
+  "offline.title": "No internet",
+  "offline.body": "Open the app again when the internet is back.",
+
   "pay.cash": "Cash",
   "pay.qr": "QR",
   "pay.udharo": "Udharo",

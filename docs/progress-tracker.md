@@ -11,6 +11,7 @@
 | **Current focus** | M0: `packages/ui` tokens and primitives, then `apps/web` (sign-in, Not invited, empty Today), PWA shell |
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
+| **Risks** | NFR-03: an empty Today already ships 256 KB gzipped JS (budget 250): React/Next ≈ 140 KB, Clerk + Convex ≈ 65 KB. Decide in M1: lazy-load Clerk UI, trim, or revise the budget. |
 | **Last updated** | 2083-06-07 BS (2026-09-23) |
 
 **Capacity assumption:** ~4–5 h a day (~25–30 h a week). The estimates below are rough; re-plan after M1 with real velocity.
@@ -32,7 +33,7 @@
 - [x] `shared/dates` with tests: NPT today, BS↔AD, formatBs ne/en, monthOf, fiscalYearOf, and the range alarm test.
 - [x] `shared/i18n`: typed `ne`/`en` dictionaries and `t()`, seeded from the ui-ux §8 copy deck.
 - [ ] `packages/ui`: `theme.css` tokens, fonts (Baloo 2, Mukta), `BigButton`, `Chip`, `Sheet`, `NumPad`, `AmountText`, `BsDateText`, `LedgerStrip`, `Stamp`.
-- [ ] PWA: manifest (name "मेरो पसल", icons, standalone, portrait), Serwist service worker with app-shell precache.
+- [x] PWA: manifest (name "मेरो पसल", placeholder icons until OD-4, standalone, portrait), Serwist (`@serwist/turbopack`) service worker with app-shell precache and `/~offline` fallback.
 - [ ] Deploy pipeline: Vercel project (root `apps/web`) and Convex prod. **Binayak runs the prod steps.**
 - [ ] Redmi smoke test: install from Chrome, sign in, reopen from the icon, confirm no login prompt.
 

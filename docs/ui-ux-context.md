@@ -303,6 +303,8 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `today.empty` | आज कुनै बिल छैन। माथिको बटन थिचेर पहिलो बिल राख्नुहोस्। | No bills today. Press a button above to save the first bill. |
 | `today.seeAll` | सबै हेर्नुहोस् | See all |
 | `sync.stale` | (पुरानो) | (old) |
+| `offline.title` | इन्टरनेट छैन | No internet |
+| `offline.body` | इन्टरनेट आएपछि एप फेरि खोल्नुहोस्। | Open the app again when the internet is back. |
 | `auth.notInvited` | तपाईंलाई यो पसलमा थपिएको छैन। बिनायकलाई सम्पर्क गर्नुहोस्। | You haven't been added to this shop. Contact Binayak. |
 | `auth.signInSub` | Google खाताबाट भित्र पस्नुहोस् | Sign in with your Google account |
 | `auth.signOut` | बाहिर निस्कनुहोस् | Sign out |

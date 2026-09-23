@@ -1,3 +1,4 @@
+import { withSerwist } from "@serwist/turbopack";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -5,4 +6,5 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@mero-pasal/shared", "@mero-pasal/ui", "@mero-pasal/backend"],
 };
 
-export default nextConfig;
+// ADR-004 / architecture §2: Serwist's Turbopack integration builds the service worker.
+export default withSerwist(nextConfig);
