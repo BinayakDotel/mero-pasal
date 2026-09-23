@@ -569,7 +569,9 @@ stateDiagram-v2
 
 **Vercel:**
 - Root directory: `apps/web`.
-- `apps/web/vercel.json` sets the build command: `convex deploy` from `packages/backend`, with `--cmd` building the web app and `--cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL` (ported from the template, adapted to pnpm).
+- `apps/web/vercel.json` runs `scripts/vercel-build.sh`:
+  - **With `CONVEX_DEPLOY_KEY`:** `convex deploy` from `packages/backend`, with `--cmd` building the web app and `--cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL` (ported from the template, adapted to pnpm).
+  - **Without it (M1 test deploys):** a plain `next build` against `NEXT_PUBLIC_CONVEX_URL` (Convex dev). Nothing is deployed to Convex from Vercel.
 - `CONVEX_DEPLOY_KEY` decides where that deploy goes. Set a **production** deploy key for Vercel's Production environment only. Set a **preview** deploy key (or none) for Preview, so preview builds never deploy to the production Convex backend.
 - The Clerk production instance (custom domain, own Google OAuth credentials) gets its own Convex integration and its `CLERK_JWT_ISSUER_DOMAIN` on the prod Convex deployment.
 
