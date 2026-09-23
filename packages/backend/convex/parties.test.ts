@@ -138,6 +138,27 @@ describe("parties.listForPicker (F-04)", () => {
     expect(shopId).toBeDefined();
   });
 
+  it("F-04: includes the last bill line when the account has one (ADR-030)", async () => {
+    const t = convexTest(schema, modules);
+    const { asOwner } = await seedShop(t);
+    const withAmount = await asOwner.mutation(api.parties.create, newParty("a", "Hari"));
+    const noAmount = await asOwner.mutation(api.parties.create, newParty("b", "Sita"));
+    await t.run(async (ctx) => {
+      await ctx.db.patch(withAmount, { lastBillDateBs: "2083-06-06", lastBillPaisa: 234_000 });
+      await ctx.db.patch(noAmount, { lastBillDateBs: "2083-06-07" });
+    });
+    const byName = new Map(
+      (await asOwner.query(api.parties.listForPicker, {})).map((p) => [p.displayName, p]),
+    );
+    expect(byName.get("Hari")).toMatchObject({
+      lastBillDateBs: "2083-06-06",
+      lastBillPaisa: 234_000,
+    });
+    expect(byName.get("Sita")).toMatchObject({ lastBillDateBs: "2083-06-07" });
+    expect(byName.get("Sita")).not.toHaveProperty("lastBillPaisa");
+    expect(byName.get("नगद ग्राहक")).not.toHaveProperty("lastBillDateBs"); // no bills yet
+  });
+
   it("NFR-06: strangers get FORBIDDEN", async () => {
     const t = convexTest(schema, modules);
     await seedShop(t);

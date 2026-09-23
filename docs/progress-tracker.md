@@ -54,7 +54,7 @@
 - [ ] Today: header, two big buttons, ledger strip, recent 5; the stamp moment.
 - [ ] Language switch persisted to `members.locale`.
 - [~] **Voice spike (1 h):** Buwa says 20 real customer names into a bare test page (Web Speech API, `ne-NP`) on the Redmi. Record the hit rate and decide OD-5 (F-24 in v1.0 or v1.1).
-  - Dry run 2083-06-07 (Binayak, laptop Chrome, quiet room): 14/18 transcripts usable (78%), 2.3–3.7 s each. Through `searchParties` the right account came first in every name tried, including run-together (रामप्रसाद) and misheard (घातीय → गायत्री) names. Brave can't use Web Speech (error `network`), so use Chrome. Several attempts were relations or nicknames (भाइको छोरो, घरपेटी बा, school, काले), so **proposal: make tags searchable** (F-04 change, awaiting Binayak). Real spike: Buwa on the Redmi after the test deploy; score "right person first", not exact text.
+  - Dry run 2083-06-07 (Binayak, laptop Chrome, quiet room): 14/18 transcripts usable (78%), 2.3–3.7 s each. Through `searchParties` the right account came first in every name tried, including run-together (रामप्रसाद) and misheard (घातीय → गायत्री) names. Brave can't use Web Speech (error `network`), so use Chrome. Several attempts were relations or nicknames (भाइको छोरो, घरपेटी बा, school, काले), a proposal to make tags searchable was **declined**: distinguishing words go in the name instead ("Ram gharbeti", ADR-029). Real spike: Buwa on the Redmi after the test deploy; score "right person first", not exact text.
 
 ### M2 — Offline and sync (≈ 1 week) · F-09
 

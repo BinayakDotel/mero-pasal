@@ -21,6 +21,8 @@ const pickerParty = v.object({
   phoneticKey: v.string(),
   isWalkIn: v.boolean(),
   lastUsedAt: v.number(),
+  lastBillDateBs: v.optional(v.string()),
+  lastBillPaisa: v.optional(v.number()),
 });
 
 /** F-04: every usable account for the picker, most recently used first (trimmed fields). */
@@ -44,6 +46,8 @@ export const listForPicker = memberQuery({
         phoneticKey: p.phoneticKey,
         isWalkIn: p.isWalkIn,
         lastUsedAt: p.lastUsedAt,
+        ...(p.lastBillDateBs === undefined ? {} : { lastBillDateBs: p.lastBillDateBs }),
+        ...(p.lastBillPaisa === undefined ? {} : { lastBillPaisa: p.lastBillPaisa }),
       }));
   },
 });

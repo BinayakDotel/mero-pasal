@@ -149,6 +149,16 @@
 - **Consequences:** The service worker lives at `src/app/sw.ts`. `/~offline` and `/serwist/*` are public in `proxy.ts` so the worker can precache them. The worker is disabled in `next dev`.
 - **Alternative considered:** `@serwist/next` with `next build --webpack`: slower builds and a second bundler to maintain.
 
+### ADR-029 · Tags are not searchable; distinguishing words go in the name
+- **Decision:** Search (`searchParties`) matches names only. To tell people apart, Buwa saves the distinguishing word as part of the name ("Ram gharbeti", "Ram school"). The optional tag stays as a note shown after the name.
+- **Why:** Binayak's call (2026-09-23), after the voice dry run showed people are known by relation or nickname. Every word of a name is already searchable in both scripts, so this needs no extra matching rules and adds no noise from common tag words.
+- **Consequences:** The new-name sheet's hint should suggest this pattern (M1 PR 9). Revisit if Buwa keeps typing tags he then can't find.
+
+### ADR-030 · The last bill is stored on the account
+- **Decision:** Add optional `parties.lastBillDateBs` / `lastBillPaisa`, maintained by `ledger.apply`, instead of reading each account's latest bill inside `listForPicker`.
+- **Why:** The picker line "हिजो · रु 2,340" (F-04) needs it for every visible name. Every save already patches the party row, so storing it costs nothing extra. It also keeps `listForPicker` a single index read and gives M2's offline cache the same data.
+- **Consequences:** Backward-compatible (optional fields, no backfill: no bills existed). When the latest bill is removed or moved to an earlier date, `ledger.apply` recomputes the fields with a bounded read; the ledger invariant test covers it.
+
 ---
 
 ## Open decisions

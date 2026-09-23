@@ -69,6 +69,10 @@ export default defineSchema({
     archived: v.boolean(),
     mergedIntoId: v.optional(v.id("parties")),
     lastUsedAt: v.number(),
+    // F-04 picker line "हिजो · रु 2,340": the latest active bill (by date). Kept by ledger.apply;
+    // undefined until the account has a bill. The amount is absent when that bill has none.
+    lastBillDateBs: v.optional(v.string()),
+    lastBillPaisa: v.optional(v.number()),
     billCount: v.number(), // denormalised all-time
     salePaisa: v.number(),
     purchasePaisa: v.number(),
