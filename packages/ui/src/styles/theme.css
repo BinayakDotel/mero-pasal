@@ -1,0 +1,116 @@
+/*
+ * Mero Pasal design tokens (ui-ux-context §3). Import once from the app's globals.css after
+ * `@import "tailwindcss"`. Components use these through Tailwind utilities (`bg-sale`,
+ * `text-ink-soft`); raw hex values appear only here.
+ *
+ * The paper-and-ledger look is a product decision (ADR-022): paper grain, ruled lines, the red
+ * bahi margin, the double rule under totals and the rubber stamp. Don't "modernise" it away.
+ */
+
+@theme {
+  --color-paper: #f2f4f1;
+  --color-card: #ffffff;
+  --color-ink: #1b2433;
+  --color-ink-soft: #566074;
+  --color-rule: #c7d3e3;
+
+  --color-sale: #1e7a4c;
+  --color-sale-dk: #145a37;
+  --color-sale-tint: #e3f1e9;
+  --color-buy: #2c3d9a;
+  --color-buy-dk: #1f2c75;
+  --color-buy-tint: #e4e8f7;
+  --color-udharo: #d98e0b;
+  --color-udharo-tint: #fbefd6;
+  --color-udharo-ink: #6b4500; /* text on udharo-tint, ≥ 4.5:1 */
+  --color-bahi: #9e2a2b;
+  --color-ok: #1e7a4c;
+
+  /* next/font sets --font-mukta and --font-baloo on <html>; the names are fallbacks. */
+  --font-body: var(--font-mukta), "Mukta", "Noto Sans Devanagari", system-ui, sans-serif;
+  --font-display:
+    var(--font-baloo), "Baloo 2", var(--font-mukta), "Noto Sans Devanagari", system-ui, sans-serif;
+
+  --radius-bigbtn: 20px;
+  --radius-sheet: 24px;
+  --radius-btn: 16px;
+
+  --shadow-sheet: 0 -8px 30px -12px rgb(27 36 51 / 0.35);
+}
+
+:root {
+  /* ≤ 9% alpha noise: reads as paper, keeps WCAG AA contrast (ui-ux §3.5). */
+  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .32  0 0 0 0 .30  0 0 0 0 .26  0 0 0 .09 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--color-paper) var(--grain);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: 18px; /* NFR-05: body text ≥ 18 px */
+    line-height: 1.35;
+  }
+  button {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+}
+
+/* Paper background with grain, for full-screen surfaces. */
+@utility paper {
+  background: var(--color-paper) var(--grain);
+}
+
+/* Ruled ledger page: a rule every 48px row and the red bahi margin line (ui-ux §3.4). */
+@utility ledger {
+  position: relative;
+  background-color: var(--color-card);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 47px,
+    var(--color-rule) 47px 48px
+  );
+  border-top: 2px solid var(--color-ink);
+  padding-left: 30px;
+  &::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    left: 18px;
+    width: 2px;
+    background: var(--color-bahi);
+    opacity: 0.55;
+  }
+}
+
+/* The accountant's total line under the amount being entered (ui-ux §3.5). */
+@utility double-rule {
+  border-bottom: 5px double var(--color-ink);
+}
+
+/* The one non-essential animation in the app: the rubber stamp settling at −8° (ui-ux §3.4). */
+@keyframes stamp-land {
+  from {
+    opacity: 0;
+    transform: rotate(-8deg) scale(1.4);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-8deg) scale(1);
+  }
+}
+
+@utility stamp {
+  transform: rotate(-8deg);
+  animation: stamp-land 350ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}

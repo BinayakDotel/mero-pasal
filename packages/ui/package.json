@@ -1,0 +1,25 @@
+{
+  "name": "@mero-pasal/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./styles/theme.css": "./src/styles/theme.css",
+    "./components/*": "./src/components/*.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mero-pasal/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "19.3.0"
+  },
+  "devDependencies": {
+    "@mero-pasal/config": "workspace:*",
+    "@types/react": "19.3.0",
+    "react": "19.3.0",
+    "typescript": "6.0.3"
+  }
+}
