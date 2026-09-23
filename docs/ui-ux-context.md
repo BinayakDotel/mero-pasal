@@ -67,7 +67,7 @@ Dark mode: not in v1. The shop is bright and paper-like surfaces photograph and 
 Fallback stack: `"Noto Sans Devanagari", system-ui, sans-serif`. Load through `next/font/google` with the `devanagari` and `latin` subsets.
 
 Digits:
-- Amounts use **Latin digits** with lakh grouping: `रु 1,23,456`.
+- Amounts use **Latin digits** with lakh grouping: `रु 1,23,456` in Nepali, `Rs 1,23,456` in English.
 - Dates in Nepali mode use Devanagari digits: `७ असोज`.
 - Use `font-variant-numeric: tabular-nums` in columns.
 

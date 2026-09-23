@@ -130,6 +130,10 @@
 - **Note:** TS 6 defaults `types` to `[]`, so each tsconfig lists the ambient types it needs (e.g. `node`).
 - **Revisit when:** Next.js and Convex document TS 7 support; upgrade outside feature work.
 
+### ADR-026 · Money display: `रु` in Nepali, `Rs` in English
+- **Decision:** `formatNpr` prints `रु 1,23,456` (ne) and `Rs 1,23,456` (en), Latin digits and lakh grouping in both. Paisa appear only when non-zero; negatives put the minus first (`-रु 1,200`).
+- **Why:** Matches the mockup; Binayak confirmed during M0 (F-10 previously said `रु` for both).
+
 ---
 
 ## Open decisions

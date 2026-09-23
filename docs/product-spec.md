@@ -184,7 +184,7 @@
 ### F-10 Language, numbers and dates **[v1.0]**
 
 - **Nepali is the default UI language**, with a one-tap switch between नेपाली and English. The choice is saved per member.
-- Amounts use Latin digits (Buwa uses a calculator), a "रु" prefix and lakh grouping: `रु 1,23,456`.
+- Amounts use Latin digits (Buwa uses a calculator) and lakh grouping, with a "रु" prefix in Nepali and "Rs" in English: `रु 1,23,456` / `Rs 1,23,456`. Paisa are shown only when non-zero (`रु 2,340.50`); negatives read `-रु 1,200` (ADR-026).
 - Dates are shown in BS. In Nepali mode: "७ असोज २०८३" (Devanagari digits in dates only). In English: "7 Asoj 2083".
 - No string is hard-coded; every UI string lives in the `ne` and `en` dictionaries.
 

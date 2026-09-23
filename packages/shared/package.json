@@ -1,0 +1,20 @@
+{
+  "name": "@mero-pasal/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./domain": "./src/domain/domain.ts",
+    "./money": "./src/money/money.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@mero-pasal/config": "workspace:*",
+    "@vitest/coverage-v8": "5.0.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.1"
+  }
+}
