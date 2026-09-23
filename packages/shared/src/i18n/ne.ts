@@ -23,6 +23,15 @@ export const ne = {
   "today.empty": "आज कुनै बिल छैन। माथिको बटन थिचेर पहिलो बिल राख्नुहोस्।",
   "today.seeAll": "सबै हेर्नुहोस्",
 
+  "common.back": "पछाडि",
+  "capture.page": "पाना {n}",
+  "capture.photoAlt": "बिलको फोटो, पाना {n}",
+  "capture.hint": "बिल पूरै देखिने गरी खिच्नुहोस्",
+  "capture.maxPages": "बढीमा {n} पाना", // i18n-review
+  "capture.leave": "बिल नराखी फर्कने?",
+  "capture.leaveSub": "खिचेको फोटो हट्छ।", // i18n-review
+  "capture.leaveYes": "हो, फर्कने", // i18n-review
+  "capture.leaveNo": "होइन, बस्ने", // i18n-review
   "photo.use": "ठीक छ",
   "photo.retake": "फेरि खिच्नुहोस्",
   "photo.addPage": "अर्को पाना",
@@ -41,6 +50,14 @@ export const ne = {
   "party.addThis": "“{q}” नाम थप्नुहोस्",
   "party.notThem": "“{q}” अर्कै मान्छे हो? नयाँ थप्नुहोस्",
   "party.isItThis": "यीमध्ये कोही हो?",
+  "party.results": "खोजेका",
+  "party.walkInSub": "नाम नचाहिने बिक्री",
+  "party.newTitle": "नयाँ नाम",
+  "party.fieldName": "नाम",
+  "party.nameHint": "एउटै नाम धेरै भए नाममै एउटा शब्द थप्नुहोस्, जस्तै “राम स्कूल”", // i18n-review
+  "party.fieldPhone": "फोन (नभए खाली)",
+  "party.fieldTag": "चिनाउने शब्द (नभए खाली)",
+  "party.fieldTagHint": "जस्तै: चोक, ड्राइभर, पसल छेउ",
   "party.confirmName": "नाम ठीक छ?",
   "party.confirmSub": "सुनेको नाम हो। मिलेन भने सच्याएर राख्नुहोस्।",
 
@@ -52,6 +69,14 @@ export const ne = {
   "amount.title": "जम्मा कति?",
   "amount.later": "रकम पछि हाल्छु",
 
+  "amount.delete": "मेटाउनुहोस्", // i18n-review
+  "amount.saveSoon": "बिल राख्ने काम अर्को अपडेटमा आउँछ।", // i18n-review
+  "date.label": "मिति",
+  "date.prevMonth": "अघिल्लो महिना",
+  "date.nextMonth": "अर्को महिना",
+  "party.noName": "नाम छैन",
+  "photo.enlarge": "फोटो ठूलो गर्नुहोस्", // i18n-review
+  "common.close": "बन्द गर्नुहोस्",
   "date.today": "आज",
   "date.yesterday": "हिजो",
   "date.dayBefore": "अस्ति",
