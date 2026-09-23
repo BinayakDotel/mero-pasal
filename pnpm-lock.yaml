@@ -183,10 +183,10 @@ importers:
         version: link:../shared
       convex:
         specifier: 1.46.0
-        version: 1.46.0
+        version: 1.46.0(react@19.3.0)
       convex-helpers:
         specifier: 0.1.124
-        version: 0.1.124(convex@1.46.0)(typescript@6.0.3)
+        version: 0.1.124(convex@1.46.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
     devDependencies:
       '@edge-runtime/vm':
         specifier: 5.0.0
@@ -199,7 +199,7 @@ importers:
         version: 5.0.1(vitest@5.0.1)
       convex-test:
         specifier: 0.0.59
-        version: 0.0.59(convex@1.46.0)
+        version: 0.0.59(convex@1.46.0(react@19.3.0))
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -230,6 +230,25 @@ importers:
       vitest:
         specifier: 5.0.1
         version: 5.0.1(@edge-runtime/vm@5.0.0)(@types/node@24.13.6)(@vitest/coverage-v8@5.0.1)(vite@8.3.0(@types/node@24.13.6))
+
+  packages/ui:
+    dependencies:
+      '@mero-pasal/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@mero-pasal/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/react':
+        specifier: 19.3.0
+        version: 19.3.0
+      react:
+        specifier: 19.3.0
+        version: 19.3.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
 
 packages:
 
@@ -629,6 +648,9 @@ packages:
   '@types/node@24.13.6':
     resolution: {integrity: sha512-SGrw/h3KPFshy3OE6ZL53LMBG5vGQQ8/gIpiqz/kRZhPJ7HgwCEs8LBuNtWLa8dvGZVpSF7+Bf+c11HUrCb/yg==}
 
+  '@types/react@19.3.0':
+    resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
+
   '@vitest/coverage-v8@5.0.1':
     resolution: {integrity: sha512-FRC8ACiudC3dI6MTplzRSYWHDRnIv2IPfbzs4FdoJNsMal/35sWV8hwIfV8ZcqzSPy+uXHeMVONt9CEqtOU17w==}
     peerDependencies:
@@ -716,6 +738,9 @@ packages:
         optional: true
       react:
         optional: true
+
+  csstype@3.2.3:
+    resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
@@ -861,6 +886,10 @@ packages:
     resolution: {integrity: sha512-WRFq3Wn3WId7LLROfMLdH7xaFr2jR62wU8nLO6rQUOLOxNZUviyJQs1M0iIhLexSFy+L+w0ch66wtoO2jRjG0A==}
     engines: {node: '>=14'}
     hasBin: true
+
+  react@19.3.0:
+    resolution: {integrity: sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog==}
+    engines: {node: '>=0.10.0'}
 
   rolldown@1.2.9:
     resolution: {integrity: sha512-hx/Pv0N1haXRb11qkfnK5MXB/iqr7i0yjWQqmO9uHqZpBgQSqzc8UsSnEpalsh+j1I8qQ2CkXAkJC8Br3dKSlg==}
@@ -1234,6 +1263,10 @@ snapshots:
     dependencies:
       undici-types: 7.18.2
 
+  '@types/react@19.3.0':
+    dependencies:
+      csstype: 3.2.3
+
   '@vitest/coverage-v8@5.0.1(vitest@5.0.1)':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
@@ -1273,24 +1306,29 @@ snapshots:
 
   chai@6.2.2: {}
 
-  convex-helpers@0.1.124(convex@1.46.0)(typescript@6.0.3):
+  convex-helpers@0.1.124(convex@1.46.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3):
     dependencies:
-      convex: 1.46.0
+      convex: 1.46.0(react@19.3.0)
     optionalDependencies:
+      react: 19.3.0
       typescript: 6.0.3
 
-  convex-test@0.0.59(convex@1.46.0):
+  convex-test@0.0.59(convex@1.46.0(react@19.3.0)):
     dependencies:
-      convex: 1.46.0
+      convex: 1.46.0(react@19.3.0)
 
-  convex@1.46.0:
+  convex@1.46.0(react@19.3.0):
     dependencies:
       esbuild: 0.27.0
       prettier: 3.9.8
       ws: 8.21.0
+    optionalDependencies:
+      react: 19.3.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
+
+  csstype@3.2.3: {}
 
   detect-libc@2.1.2: {}
 
@@ -1416,6 +1454,8 @@ snapshots:
       source-map-js: 1.2.1
 
   prettier@3.9.8: {}
+
+  react@19.3.0: {}
 
   rolldown@1.2.9:
     dependencies:
