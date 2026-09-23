@@ -1,0 +1,139 @@
+import { deriveNames, findSimilar } from "@mero-pasal/shared/names";
+import { v } from "convex/values";
+import { writeAudit } from "./lib/audit";
+import { appError } from "./lib/errors";
+import { memberMutation, memberQuery } from "./lib/functions";
+import { partyKind } from "./schema";
+
+// F-04 name picker backend. Search itself runs on the phone over `listForPicker` (ADR-012);
+// the server derives the Latin form and phonetic key so every device agrees.
+
+const MAX_PARTIES = 2000; // ADR-012: revisit above ~5,000
+const MAX_CLIENT_ID = 64;
+const MAX_NAME = 80;
+
+const pickerParty = v.object({
+  _id: v.id("parties"),
+  clientId: v.string(),
+  kind: partyKind,
+  displayName: v.string(),
+  tag: v.optional(v.string()),
+  phoneticKey: v.string(),
+  isWalkIn: v.boolean(),
+  lastUsedAt: v.number(),
+});
+
+/** F-04: every usable account for the picker, most recently used first (trimmed fields). */
+export const listForPicker = memberQuery({
+  args: {},
+  returns: v.array(pickerParty),
+  handler: async (ctx) => {
+    const rows = await ctx.db
+      .query("parties")
+      .withIndex("by_shop_lastUsed", (q) => q.eq("shopId", ctx.shopId))
+      .order("desc")
+      .take(MAX_PARTIES);
+    return rows
+      .filter((p) => !p.archived && p.mergedIntoId === undefined)
+      .map((p) => ({
+        _id: p._id,
+        clientId: p.clientId,
+        kind: p.kind,
+        displayName: p.displayName,
+        ...(p.tag === undefined ? {} : { tag: p.tag }),
+        phoneticKey: p.phoneticKey,
+        isWalkIn: p.isWalkIn,
+        lastUsedAt: p.lastUsedAt,
+      }));
+  },
+});
+
+function cleanOptional(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+/**
+ * F-04 quick create. Idempotent by `clientId` (architecture §5.3 invariant 2): a retry from the
+ * phone returns the account it already made. The kind comes from the bill type.
+ */
+export const create = memberMutation({
+  args: {
+    clientId: v.string(),
+    name: v.string(),
+    kind: v.union(v.literal("customer"), v.literal("supplier")),
+    phone: v.optional(v.string()),
+    tag: v.optional(v.string()),
+  },
+  returns: v.id("parties"),
+  handler: async (ctx, { clientId, name, kind, phone, tag }) => {
+    if (clientId === "" || clientId.length > MAX_CLIENT_ID) {
+      throw appError("VALIDATION", "clientId must be 1–64 characters");
+    }
+    const existing = await ctx.db
+      .query("parties")
+      .withIndex("by_shop_clientId", (q) => q.eq("shopId", ctx.shopId).eq("clientId", clientId))
+      .unique();
+    if (existing) return existing._id;
+
+    const names = deriveNames(name);
+    if (names.displayName === "" || names.phoneticKey === "") {
+      throw appError("VALIDATION", "A name with at least one letter is required");
+    }
+    if (names.displayName.length > MAX_NAME) throw appError("VALIDATION", "Name is too long");
+
+    const now = Date.now();
+    const cleanPhone = cleanOptional(phone);
+    const cleanTag = cleanOptional(tag);
+    const id = await ctx.db.insert("parties", {
+      shopId: ctx.shopId,
+      clientId,
+      kind,
+      displayName: names.displayName,
+      nameLatin: names.nameLatin,
+      ...(names.nameDevanagari === undefined ? {} : { nameDevanagari: names.nameDevanagari }),
+      phoneticKey: names.phoneticKey,
+      ...(cleanPhone === undefined ? {} : { phone: cleanPhone }),
+      ...(cleanTag === undefined ? {} : { tag: cleanTag }),
+      isWalkIn: false,
+      archived: false,
+      lastUsedAt: now,
+      billCount: 0,
+      salePaisa: 0,
+      purchasePaisa: 0,
+      balancePaisa: 0,
+      createdBy: ctx.member._id,
+      createdAt: now,
+    });
+    await writeAudit(ctx, {
+      shopId: ctx.shopId,
+      actorId: ctx.member._id,
+      action: "party.create",
+      entity: "party",
+      entityId: id,
+      summary: `${names.displayName} (${kind})`,
+    });
+    return id;
+  },
+});
+
+/** F-04 "उही हो?": the online double-check for names close to a new one (up to 3). */
+export const similar = memberQuery({
+  args: { name: v.string() },
+  returns: v.array(
+    v.object({ _id: v.id("parties"), displayName: v.string(), tag: v.optional(v.string()) }),
+  ),
+  handler: async (ctx, { name }) => {
+    const rows = await ctx.db
+      .query("parties")
+      .withIndex("by_shop_lastUsed", (q) => q.eq("shopId", ctx.shopId))
+      .order("desc")
+      .take(MAX_PARTIES);
+    const usable = rows.filter((p) => !p.archived && p.mergedIntoId === undefined && !p.isWalkIn);
+    return findSimilar(name, usable).map((p) => ({
+      _id: p._id,
+      displayName: p.displayName,
+      ...(p.tag === undefined ? {} : { tag: p.tag }),
+    }));
+  },
+});
