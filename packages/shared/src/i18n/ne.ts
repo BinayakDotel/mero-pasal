@@ -71,6 +71,9 @@ export const ne = {
   "sync.failed": "पठाउन सकिएन",
   "sync.stale": "(पुरानो)",
 
+  "offline.title": "इन्टरनेट छैन",
+  "offline.body": "इन्टरनेट आएपछि एप फेरि खोल्नुहोस्।", // i18n-review
+
   // v1.1 (F-20 … F-23); kept here so the copy deck lives in one place.
   "pay.cash": "नगद",
   "pay.qr": "QR",

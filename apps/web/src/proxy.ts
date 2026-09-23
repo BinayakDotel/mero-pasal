@@ -1,8 +1,9 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // Next 16 name for middleware (architecture §10). This only gates routes; authorization is
-// enforced in Convex (ADR-003). Everything except sign-in and static files needs a session.
-const isPublicRoute = createRouteMatcher(["/sign-in(.*)"]);
+// enforced in Convex (ADR-003). Everything needs a session except sign-in, the offline page and
+// the service worker (the SW precaches /~offline while installing, without cookies).
+const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/~offline", "/serwist/(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
   if (isPublicRoute(request)) return;

@@ -1,4 +1,5 @@
 import { ClerkProvider } from "@clerk/nextjs";
+import { SerwistProvider } from "@serwist/turbopack/react";
 import type { Metadata, Viewport } from "next";
 import { Baloo_2, Mukta } from "next/font/google";
 import type { ReactNode } from "react";
@@ -36,9 +37,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ne" className={`${mukta.variable} ${baloo.variable}`}>
       <body className="min-h-dvh">
-        <ClerkProvider signInUrl="/sign-in">
-          <ConvexClientProvider>{children}</ConvexClientProvider>
-        </ClerkProvider>
+        {/* Off in dev so stale caches never hide code changes. */}
+        <SerwistProvider swUrl="/serwist/sw.js" disable={process.env.NODE_ENV === "development"}>
+          <ClerkProvider signInUrl="/sign-in">
+            <ConvexClientProvider>{children}</ConvexClientProvider>
+          </ClerkProvider>
+        </SerwistProvider>
       </body>
     </html>
   );

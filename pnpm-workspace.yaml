@@ -5,6 +5,7 @@ packages:
 # From the Convex monorepo template: packages whose install scripts may run.
 allowBuilds:
   "@clerk/shared": true
+  '@swc/core': set this to true or false
   browser-tabs-lock: true
   bufferutil: true
   core-js: true
