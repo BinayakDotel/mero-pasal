@@ -1,0 +1,25 @@
+{
+  "name": "@mero-pasal/backend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "convex dev",
+    "setup": "convex dev --until-success",
+    "typecheck": "tsc --noEmit -p convex",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mero-pasal/shared": "workspace:*",
+    "convex": "1.46.0",
+    "convex-helpers": "0.1.124"
+  },
+  "devDependencies": {
+    "@edge-runtime/vm": "5.0.0",
+    "@types/node": "24.13.6",
+    "@vitest/coverage-v8": "5.0.1",
+    "convex-test": "0.0.59",
+    "typescript": "6.0.3",
+    "vitest": "5.0.1"
+  }
+}

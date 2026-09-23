@@ -34,11 +34,15 @@
           "level": "error",
           "options": {
             "paths": {
-              "nepali-date-converter": "Use @mero-pasal/shared/dates (code-standard §4)."
+              "nepali-date-converter": "Use @mero-pasal/shared/dates (code-standard §4).",
+              "convex/server": {
+                "importNames": ["queryGeneric", "mutationGeneric", "actionGeneric"],
+                "message": "Use the auth wrappers in convex/lib/functions.ts (AGENTS.md rule 4)."
+              }
             },
             "patterns": [
               {
-                "group": ["**/_generated/server"],
+                "group": ["**/_generated/server", "**/_generated/server.js"],
                 "importNamePattern": "(query|mutation|action)",
                 "message": "Use the auth wrappers in convex/lib/functions.ts (AGENTS.md rule 4)."
               }
@@ -66,7 +70,11 @@
               "level": "error",
               "options": {
                 "paths": {
-                  "nepali-date-converter": "Use @mero-pasal/shared/dates (code-standard §4)."
+                  "nepali-date-converter": "Use @mero-pasal/shared/dates (code-standard §4).",
+                  "convex/server": {
+                    "importNames": ["queryGeneric", "mutationGeneric", "actionGeneric"],
+                    "message": "Use the auth wrappers in convex/lib/functions.ts (AGENTS.md rule 4)."
+                  }
                 }
               }
             }
