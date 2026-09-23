@@ -296,8 +296,30 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `account.balance` (v1.1) | बाँकी | Balance due |
 | `account.received` (v1.1) | पैसा आयो | Money received |
 | `dayClose.title` (v1.1) | दिनको हिसाब | Day close |
+| `app.name` | मेरो पसल | Mero Pasal |
+| `kind.sale` | बेचेको | Sold |
+| `kind.purchase` | किनेको | Bought |
+| `filter.all` | सबै | All |
+| `today.empty` | आज कुनै बिल छैन। माथिको बटन थिचेर पहिलो बिल राख्नुहोस्। | No bills today. Press a button above to save the first bill. |
+| `today.seeAll` | सबै हेर्नुहोस् | See all |
+| `sync.stale` | (पुरानो) | (old) |
+| `auth.notInvited` | तपाईंलाई यो पसलमा थपिएको छैन। बिनायकलाई सम्पर्क गर्नुहोस्। | You haven't been added to this shop. Contact Binayak. |
+| `auth.signInSub` | Google खाताबाट भित्र पस्नुहोस् | Sign in with your Google account |
+| `auth.signOut` | बाहिर निस्कनुहोस् | Sign out |
+| `lang.switch` | भाषा बदल्नुहोस् | Change language |
+| `lang.ne` | नेपाली | नेपाली |
+| `lang.en` | English | English |
+| `settings.open` | सेटिङ | Settings |
+| `error.UNAUTHENTICATED` | फेरि साइन इन गर्नुहोस्। | Please sign in again. |
+| `error.FORBIDDEN` | तपाईंलाई यो काम गर्ने अनुमति छैन। | You're not allowed to do this. |
+| `error.NOT_FOUND` | यो भेटिएन। हटाइएको हुन सक्छ। | This wasn't found. It may have been removed. |
+| `error.VALIDATION` | केही मिलेन। जाँचेर फेरि प्रयास गर्नुहोस्। | Something doesn't look right. Check and try again. |
+| `error.CONFLICT` | यो पहिले नै छ। | This already exists. |
+| `error.unknown` | केही गडबड भयो। फेरि प्रयास गर्नुहोस्। | Something went wrong. Try again. |
 
 Tone: plain, polite imperative (-नुहोस्), and short. Messages don't apologise and are never vague.
+
+This table and `packages/shared/src/i18n/{ne,en}.ts` are kept identical by a unit test: change both together. Month and weekday names live in `@mero-pasal/shared/dates`.
 
 ## 9. Accessibility and quality floor
 
