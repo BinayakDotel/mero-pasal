@@ -1,0 +1,260 @@
+import type { MeroPasalDb, OutboxRow } from "./db";
+import { type OutboxDeps, processItem } from "./outbox";
+
+// F-09 sync engine (architecture §8.2–8.3). Sends the phone's outbox to the server, oldest first
+// (names before the bills that use them), exactly once per item (server de-duplicates by
+// clientId; upload progress is persisted after every upload).
+
+/** Backoff after failures: 5 s, 30 s, 2 min, 10 min, then every 30 min. */
+export const BACKOFF_MS = [5_000, 30_000, 120_000, 600_000, 1_800_000] as const;
+export const MAX_FAILURES = 5;
+const CONFLICT_RETRY_MS = 30_000;
+/** Session expired or not allowed: wait for Clerk to refresh the token, then try again. */
+const AUTH_RETRY_MS = 60_000;
+export const DONE_BLOB_TTL_MS = 7 * 86_400_000;
+export const DONE_ROW_TTL_MS = 30 * 86_400_000;
+
+export type ErrorClass = "network" | "auth" | "conflict" | "other";
+
+/** Map a failure to what the engine should do (§8.3). */
+export function classify(error: unknown): ErrorClass {
+  if (error instanceof TypeError) return "network"; // fetch() dropped (upload)
+  const code = (error as { data?: { code?: string } } | null)?.data?.code;
+  if (code === "UNAUTHENTICATED" || code === "FORBIDDEN") return "auth";
+  if (code === "CONFLICT") return "conflict";
+  return "other";
+}
+
+export function backoff(streak: number): number {
+  return BACKOFF_MS[Math.min(Math.max(streak, 1), BACKOFF_MS.length) - 1] as number;
+}
+
+export type EngineEnv = {
+  db: MeroPasalDb;
+  deps: OutboxDeps;
+  now: () => number;
+  /** Is the Convex connection up? (Convex mutations wait rather than fail while offline.) */
+  isConnected: () => boolean;
+  /** The signed-in member on this device, or null (auth not ready / signed out). */
+  identity: () => { memberId: string; clerkId: string } | null;
+  /** Cross-tab exclusivity: runs `fn` only if no other tab is syncing. */
+  withLock: (fn: () => Promise<void>) => Promise<void>;
+  /** After each pass: the outbox health for members.heartbeat and the pill. */
+  onPass?: (report: PassReport) => void;
+};
+
+export type PassReport = {
+  drained: boolean;
+  pending: number;
+  failed: number;
+  oldestPendingAt?: number;
+  foreignPending: number;
+  pausedUntil: number;
+  pauseReason: "none" | "network" | "auth";
+};
+
+export class SyncEngine {
+  private running: Promise<void> | null = null;
+  private rerun = false;
+  private pausedUntil = 0;
+  private pauseReason: PassReport["pauseReason"] = "none";
+  private networkStreak = 0;
+  /** clientIds confirmed by the server this session (instant, before the Dexie write lands). */
+  readonly confirmed = new Set<string>();
+
+  constructor(private readonly env: EngineEnv) {}
+
+  /** Ask for a pass (enqueue, app open, back online, visible, timer). Never overlaps. */
+  kick(): Promise<void> {
+    if (this.running) {
+      this.rerun = true;
+      return this.running;
+    }
+    this.running = (async () => {
+      try {
+        do {
+          this.rerun = false;
+          await this.env.withLock(() => this.pass());
+        } while (this.rerun);
+      } finally {
+        this.running = null;
+      }
+    })();
+    return this.running;
+  }
+
+  /** "Try now" (F-09 sheet): clear the pause and give failed items a fresh start. */
+  async retryNow(): Promise<void> {
+    this.pausedUntil = 0;
+    this.pauseReason = "none";
+    this.networkStreak = 0;
+    const { db } = this.env;
+    await db.outbox
+      .where("status")
+      .anyOf("failed", "pending")
+      .modify((row) => {
+        row.status = "pending";
+        row.nextAttemptAt = 0;
+        row.failures = 0;
+        delete row.lastError;
+      });
+    await this.kick();
+  }
+
+  private async pass(): Promise<void> {
+    const { db, now } = this.env;
+    // Holding the lock: rows left "uploading" by a killed tab are safe to resume.
+    await db.outbox.where("status").equals("uploading").modify({ status: "pending" });
+
+    while (this.canSend()) {
+      const identity = this.env.identity();
+      if (!identity) break;
+      const row = await this.nextRow(identity.clerkId, now());
+      if (!row) break;
+      await this.send(row);
+    }
+    await this.purge(now());
+    this.env.onPass?.(await this.report());
+  }
+
+  private canSend(): boolean {
+    const { now, isConnected } = this.env;
+    if (now() < this.pausedUntil) return false;
+    if (!isConnected()) {
+      this.pauseReason = "network";
+      return false;
+    }
+    return true;
+  }
+
+  private async nextRow(clerkId: string, now: number): Promise<OutboxRow | undefined> {
+    return this.env.db.outbox
+      .orderBy("seq")
+      .filter((r) => r.status === "pending" && r.ownerClerkId === clerkId && r.nextAttemptAt <= now)
+      .first();
+  }
+
+  private async send(row: OutboxRow): Promise<void> {
+    const { db, deps, now } = this.env;
+    const seq = row.seq as number;
+    await db.outbox.update(seq, { status: "uploading", attempts: row.attempts + 1 });
+    try {
+      const one = () => db.outbox.where("seq").equals(seq);
+      await processItem(row, deps, async (progress) => {
+        if (progress.type !== "tx.create") return;
+        await one().modify((stored) => {
+          if (stored.type === "tx.create") stored.pages = progress.pages;
+        });
+      });
+      this.confirmed.add(row.clientId);
+      await one().modify((stored) => {
+        stored.status = "done";
+        stored.doneAt = now();
+        delete stored.lastError;
+      });
+      this.networkStreak = 0;
+      this.pauseReason = "none";
+    } catch (error) {
+      await this.fail(row, error);
+    }
+  }
+
+  private async fail(row: OutboxRow, error: unknown): Promise<void> {
+    const { db, now } = this.env;
+    const seq = row.seq as number;
+    const message = error instanceof Error ? error.message : String(error);
+    switch (classify(error)) {
+      case "network":
+        this.networkStreak += 1;
+        this.pausedUntil = now() + backoff(this.networkStreak);
+        this.pauseReason = "network";
+        await db.outbox.update(seq, { status: "pending", lastError: message });
+        return;
+      case "auth":
+        this.pauseReason = "auth";
+        this.pausedUntil = now() + AUTH_RETRY_MS;
+        await db.outbox.update(seq, { status: "pending", lastError: message });
+        return;
+      case "conflict": {
+        // A bill whose new name hasn't reached the server: wait for the name, don't count it.
+        const partyClientId =
+          row.type === "tx.create" && row.payload.partyRef && "clientId" in row.payload.partyRef
+            ? row.payload.partyRef.clientId
+            : undefined;
+        const party = partyClientId
+          ? await db.outbox.where("clientId").equals(partyClientId).first()
+          : undefined;
+        if (party && party.status !== "done" && party.status !== "failed") {
+          await db.outbox.update(seq, {
+            status: "pending",
+            nextAttemptAt: now() + CONFLICT_RETRY_MS,
+            lastError: message,
+          });
+          return;
+        }
+        if (party?.status === "failed") {
+          await db.outbox.update(seq, {
+            status: "failed",
+            lastError: `BLOCKED: name ${partyClientId} failed`,
+          });
+          return;
+        }
+        break; // a real conflict: count it like any other rejection
+      }
+      case "other":
+        break;
+    }
+    const failures = row.failures + 1;
+    await db.outbox.update(
+      seq,
+      failures >= MAX_FAILURES
+        ? { status: "failed", failures, lastError: message }
+        : {
+            status: "pending",
+            failures,
+            nextAttemptAt: now() + backoff(failures),
+            lastError: message,
+          },
+    );
+  }
+
+  /** §8.1: drop photos of sent items after 7 days, the rows after 30. Never touches unsent items. */
+  private async purge(now: number): Promise<void> {
+    const { db } = this.env;
+    await db.outbox
+      .where("status")
+      .equals("done")
+      .filter((r) => (r.doneAt ?? now) < now - DONE_ROW_TTL_MS)
+      .delete();
+    await db.outbox
+      .where("status")
+      .equals("done")
+      .filter(
+        (r) =>
+          r.type === "tx.create" &&
+          (r.doneAt ?? now) < now - DONE_BLOB_TTL_MS &&
+          r.pages.some((p) => p.full.size > 0),
+      )
+      .modify((r) => {
+        if (r.type !== "tx.create") return;
+        r.pages = r.pages.map((p) => ({ ...p, full: new Blob([]), thumb: new Blob([]) }));
+      });
+  }
+
+  async report(): Promise<PassReport> {
+    const { db, identity } = this.env;
+    const me = identity()?.clerkId;
+    const open = await db.outbox.where("status").anyOf("pending", "uploading", "failed").toArray();
+    const mine = open.filter((r) => r.ownerClerkId === me);
+    const pending = mine.filter((r) => r.status !== "failed");
+    return {
+      drained: pending.length === 0,
+      pending: pending.length,
+      failed: mine.length - pending.length,
+      ...(pending.length ? { oldestPendingAt: Math.min(...pending.map((r) => r.createdAt)) } : {}),
+      foreignPending: open.length - mine.length,
+      pausedUntil: this.pausedUntil,
+      pauseReason: this.pauseReason,
+    };
+  }
+}

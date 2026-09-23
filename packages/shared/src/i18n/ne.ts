@@ -77,7 +77,7 @@ export const ne = {
   "amount.confirmYes": "हो, ठीक छ", // i18n-review
   "amount.confirmNo": "सच्याउँछु", // i18n-review
   "capture.saving": "राख्दै…", // i18n-review
-  "capture.saveOffline": "इन्टरनेट छैन। बिल यहीँ छ — इन्टरनेट आएपछि फेरि राख्नुहोस्।", // i18n-review
+  "capture.storageFull": "फोनमा ठाउँ भएन। केही फोटो वा एप मेटाएर फेरि राख्नुहोस्।", // i18n-review
   "capture.saveFailed": "बिल राख्न सकिएन। फेरि प्रयास गर्नुहोस्।", // i18n-review
   "date.label": "मिति",
   "date.prevMonth": "अघिल्लो महिना",

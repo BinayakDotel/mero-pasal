@@ -122,8 +122,8 @@ export function AmountStep({ onBack }: { onBack: () => void }) {
             className="rounded-xl bg-udharo-tint px-3 py-2 text-center font-semibold text-udharo-ink"
           >
             {t(
-              problem === "offline"
-                ? "capture.saveOffline"
+              problem === "full"
+                ? "capture.storageFull"
                 : problem === "unreadable"
                   ? "capture.unreadable"
                   : "capture.saveFailed",

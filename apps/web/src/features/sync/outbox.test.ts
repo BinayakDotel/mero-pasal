@@ -1,12 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  enqueue,
-  OfflineError,
-  type OutboxDeps,
-  type OutboxItem,
-  orderForSending,
-  processItem,
-} from "./outbox";
+import { type OutboxDeps, type OutboxItem, orderForSending, processItem } from "./outbox";
 
 const page = () => ({
   full: new Blob(["f"]),
@@ -53,28 +46,6 @@ function fakeDeps(overrides: Partial<OutboxDeps> = {}) {
 }
 
 describe("outbox (architecture §8, F-03)", () => {
-  it("§8.2: sends the new name before the bill, then uploads, then the bill", async () => {
-    const { deps, calls } = fakeDeps();
-    await enqueue([bill(), party()], deps, () => true);
-    expect(calls).toEqual(["party:p1", "upload:url1", "upload:url2", "tx:t1"]);
-    expect(deps.createTx).toHaveBeenCalledWith(
-      expect.objectContaining({
-        clientId: "t1",
-        partyRef: { clientId: "p1" },
-        amountPaisa: 234_000,
-        photos: [
-          {
-            storageId: "storage-url1",
-            thumbId: "storage-url2",
-            width: 1200,
-            height: 1600,
-            bytes: 1,
-          },
-        ],
-      }),
-    );
-  });
-
   it("§8.2: a retry never re-uploads a page that already went up", async () => {
     let fail = true;
     const { deps } = fakeDeps({
@@ -89,6 +60,19 @@ describe("outbox (architecture §8, F-03)", () => {
     await processItem(item, deps);
     expect(deps.upload).toHaveBeenCalledTimes(4); // nothing uploaded again
     expect(item.attempts).toBe(2);
+  });
+
+  it("reports progress after each upload (M2 persists it)", async () => {
+    const { deps } = fakeDeps();
+    const seen: (string | undefined)[][] = [];
+    const item = bill([page()]);
+    await processItem(item, deps, async (it) => {
+      if (it.type === "tx.create") seen.push(it.pages.flatMap((p) => [p.storageId, p.thumbId]));
+    });
+    expect(seen).toEqual([
+      ["storage-url1", undefined],
+      ["storage-url1", "storage-url2"],
+    ]);
   });
 
   it("resumes an interrupted upload at the page that failed", async () => {
@@ -108,41 +92,6 @@ describe("outbox (architecture §8, F-03)", () => {
     ]);
     await processItem(item, deps);
     expect(deps.upload).toHaveBeenCalledTimes(5); // 3 before (one failed) + the 2 remaining
-  });
-
-  it("M1: offline → OfflineError before sending anything", async () => {
-    const { deps } = fakeDeps();
-    await expect(enqueue([party(), bill()], deps, () => false)).rejects.toBeInstanceOf(
-      OfflineError,
-    );
-    expect(deps.createParty).not.toHaveBeenCalled();
-  });
-
-  it("a dropped connection mid-way becomes OfflineError; the retry skips what already went through", async () => {
-    let online = true;
-    const { deps } = fakeDeps({
-      generateUploadUrl: vi.fn(async () => {
-        online = false;
-        throw new TypeError("Failed to fetch");
-      }),
-    });
-    const done = new Set<string>();
-    const items = [party(), bill()];
-    await expect(enqueue(items, deps, () => online, done)).rejects.toBeInstanceOf(OfflineError);
-    expect([...done]).toEqual(["p1"]);
-
-    online = true;
-    deps.generateUploadUrl = vi.fn(async () => "url");
-    await enqueue(items, deps, () => online, done);
-    expect(deps.createParty).toHaveBeenCalledTimes(1); // not re-sent
-    expect(deps.createTx).toHaveBeenCalledTimes(1);
-  });
-
-  it("server errors are passed through unchanged (not mistaken for offline)", async () => {
-    const { deps } = fakeDeps({
-      createParty: vi.fn(async () => Promise.reject(new Error("VALIDATION"))),
-    });
-    await expect(enqueue([party()], deps, () => true)).rejects.toThrow("VALIDATION");
   });
 
   it("orders parties before bills without reordering within a type", () => {

@@ -486,16 +486,18 @@ The operations map to it like this:
 
 ## 8. Offline and sync
 
-### 8.1 On-device storage (Dexie database `mero-pasal`)
+### 8.1 On-device storage (Dexie database `mero-pasal`, `features/sync/db.ts`)
+
+Opened with `chromeTransactionDurability: "strict"` so a saved bill survives a reboot (NFR-02).
 
 | Table | Holds | Purge |
 |---|---|---|
-| `outbox` | Pending actions: `party.create`, `tx.create`, `tx.update`, `tx.remove`, with photo blobs (full + thumb) | Blobs 7 days after server confirmation; rows after 30 days |
-| `drafts` | The in-progress capture (restores after tab kill) | On save or discard |
-| `parties` | Mirror of `parties.listForPicker` + local pending parties | Replaced on each sync |
-| `recentTx` | Last ~200 transactions for offline Today and lists | Rolling |
+| `outbox` | Items to send (`party.create`, `tx.create`), with photo blobs (full + thumb). Each row also records status (`pending` / `uploading` / `failed` / `done`), non-network `failures`, `nextAttemptAt`, `lastError`, the owner (member + Clerk id), and upload progress (`storageId`s) | Blobs 7 days after `done`; rows after 30 days (the Today merge needs them); unsent items never |
+| `drafts` / `draftPages` | The unfinished bill: small fields in one row; one row per page (the raw photo until processed, then full + thumb) | On save (same transaction as the enqueue) or discard |
+| `cache` | Last results of queries (`useCachedQuery`), keyed per query + args, with `savedAt` | Replaced on each live result |
+| `meta` | The last signed-in member (for the offline shell) | Cleared on sign-out or when `members.me` says not invited |
 
-On first launch call `navigator.storage.persist()`. An installed PWA usually gets it granted.
+**Save = `enqueueDurable`:** one transaction writes the new name before its bill and deletes the draft. The stamp shows once it commits. Photos are processed before the transaction opens, and a full phone raises `StorageFullError` (no stamp). On first launch the app calls `navigator.storage.persist()`.
 
 ### 8.2 Capture and sync sequence
 
@@ -536,19 +538,31 @@ sequenceDiagram
     CX-->>UI: reactive queries push new totals
 ```
 
-### 8.3 Outbox item lifecycle
+### 8.3 Outbox item lifecycle (sync engine, `features/sync/sync-engine.ts`)
 
 ```mermaid
 stateDiagram-v2
-    [*] --> pending: saved on device
-    pending --> uploading: sync engine picks item
-    uploading --> pending: network error (backoff 5s, 30s, 2m, 10m…)
+    [*] --> pending: saved on the phone (enqueueDurable)
+    pending --> uploading: engine picks the oldest eligible item
     uploading --> done: server confirmed (or clientId already existed)
-    uploading --> failed: 5 non-network errors
-    failed --> pending: "Try now" or admin fix
-    done --> purged: blobs after 7 days
+    uploading --> pending: network / auth / waiting for its name (not counted)
+    uploading --> pending: rejected, failures < 5 (backoff)
+    uploading --> failed: rejected 5 times, or its new name failed (BLOCKED)
+    failed --> pending: "Try now"
+    done --> purged: blobs after 7 days, row after 30
     purged --> [*]
 ```
+
+- **One sender per phone:** `navigator.locks` (`mp-sync`, if available). Holding the lock, the engine resets rows left `uploading` by a killed tab.
+- **One loop at a time**, with a rerun flag. Triggers: save, app open, `online`, visible again, Convex reconnect, and every 60 s.
+- **Progress is persisted after every upload**, so a restart never re-uploads a page. The server de-duplicates by `clientId`.
+- **Error classes:**
+  - **network:** upload `TypeError`, or the Convex WebSocket is down (checked via `connectionState()`, not `navigator.onLine`). The engine pauses and backs off 5 s → 30 s → 2 m → 10 m → 30 m. Not counted.
+  - **auth:** `UNAUTHENTICATED`/`FORBIDDEN`. Paused 60 s. Not counted.
+  - **`CONFLICT`** while the bill's name item is still pending: retried in 30 s, not counted. If that name item failed, the bill is marked `failed` as BLOCKED.
+  - **anything else:** counted; 5 → `failed`, kept and reported. It never blocks the rest of the queue.
+- **Owner guard:** only the signed-in member's items are sent. Other accounts' items are counted as `foreignPending` in `memberSync`.
+- **Reporting:** after each pass the engine reports its state, which feeds the sync pill and a throttled `members.heartbeat`.
 
 ### 8.4 Offline limits (the honest version)
 

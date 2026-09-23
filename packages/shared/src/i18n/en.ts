@@ -76,8 +76,7 @@ export const en: { readonly [K in keyof typeof ne]: string } = {
   "amount.confirmYes": "Yes, it's right",
   "amount.confirmNo": "Let me fix it",
   "capture.saving": "Saving…",
-  "capture.saveOffline":
-    "No internet. The bill is still here — save again when you're back online.",
+  "capture.storageFull": "The phone is out of space. Delete some photos or apps, then save again.",
   "capture.saveFailed": "Couldn't save the bill. Please try again.",
   "date.label": "Date",
   "date.prevMonth": "Previous month",

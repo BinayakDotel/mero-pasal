@@ -301,7 +301,7 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `amount.confirmYes` | हो, ठीक छ | Yes, it's right |
 | `amount.confirmNo` | सच्याउँछु | Let me fix it |
 | `capture.saving` | राख्दै… | Saving… |
-| `capture.saveOffline` | इन्टरनेट छैन। बिल यहीँ छ — इन्टरनेट आएपछि फेरि राख्नुहोस्। | No internet. The bill is still here — save again when you're back online. |
+| `capture.storageFull` | फोनमा ठाउँ भएन। केही फोटो वा एप मेटाएर फेरि राख्नुहोस्। | The phone is out of space. Delete some photos or apps, then save again. |
 | `capture.saveFailed` | बिल राख्न सकिएन। फेरि प्रयास गर्नुहोस्। | Couldn't save the bill. Please try again. |
 | `date.label` | मिति | Date |
 | `date.prevMonth` | अघिल्लो महिना | Previous month |
