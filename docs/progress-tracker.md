@@ -7,8 +7,8 @@
 
 | | |
 |---|---|
-| **Phase** | Planning complete → **M0 Foundations** next |
-| **Current focus** | M0: scaffold the monorepo from the Convex Turborepo template, auth, schema v1, shared dates and money |
+| **Phase** | **M0 Foundations** in progress (steps 1–5 of 9 done) |
+| **Current focus** | M0: `packages/ui` tokens and primitives, then `apps/web` (sign-in, Not invited, empty Today), PWA shell |
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
 | **Last updated** | 2083-06-07 BS (2026-09-23) |
@@ -23,14 +23,14 @@
 
 **Exit:** Buwa's phone shows an installed, signed-in, empty Today screen.
 
-- [ ] Scaffold from `get-convex/turbo-expo-nextjs-clerk-convex-monorepo`. Remove Expo, rename packages to `@mero-pasal/*`, add `packages/shared`, `packages/ui` and `packages/config`.
-- [ ] Root tooling: pnpm workspace, turbo tasks (`dev`, `build`, `lint`, `typecheck`, `test`, `e2e`), Biome, tsconfig bases. Pin TS version (architecture §2).
-- [ ] Clerk dev instance: Google only, allowlist, Convex integration. Add `convex/auth.config.ts`, `ConvexProviderWithClerk`, and `src/proxy.ts`.
-- [ ] `convex/schema.ts` v1 (architecture §5.2); `lib/functions.ts` wrappers; `lib/errors.ts`; `seed:bootstrap`.
-- [ ] `members.me` + "Not invited" screen.
-- [ ] `shared/money` with tests (paisa, lakh formatting).
-- [ ] `shared/dates` with tests: NPT today, BS↔AD, formatBs ne/en, monthOf, fiscalYearOf, and the range alarm test.
-- [ ] `shared/i18n`: typed `ne`/`en` dictionaries and `t()`, seeded from the ui-ux §8 copy deck.
+- [~] Monorepo built by hand with the template's wiring ported (ADR-001 amended): `config`, `shared`, `backend` done; `ui` and `apps/web` next.
+- [x] Root tooling: pnpm workspace, turbo tasks (`dev`, `build`, `lint`, `typecheck`, `test`, `e2e`), Biome, tsconfig bases. Pin TS version (architecture §2).
+- [~] Clerk dev instance (`direct-drum-2930`): Google only, Convex integration, `CLERK_JWT_ISSUER_DOMAIN` set on Convex dev `fine-marlin-976`; `convex/auth.config.ts` done. Allowlist (plan-dependent), `ConvexProviderWithClerk` and `src/proxy.ts` pending (step 7).
+- [x] `convex/schema.ts` v1 (architecture §5.2, + `members.email`); `lib/functions.ts` wrappers; `lib/errors.ts`; `seed:bootstrap`. Second-pass auth review done; findings fixed.
+- [~] `members.me` done; "Not invited" screen in step 7.
+- [x] `shared/money` with tests (paisa, lakh formatting; रु / Rs, ADR-026).
+- [x] `shared/dates` with tests: NPT today, BS↔AD, formatBs ne/en, monthOf, fiscalYearOf, and the range alarm test.
+- [x] `shared/i18n`: typed `ne`/`en` dictionaries and `t()`, seeded from the ui-ux §8 copy deck.
 - [ ] `packages/ui`: `theme.css` tokens, fonts (Baloo 2, Mukta), `BigButton`, `Chip`, `Sheet`, `NumPad`, `AmountText`, `BsDateText`, `LedgerStrip`, `Stamp`.
 - [ ] PWA: manifest (name "मेरो पसल", icons, standalone, portrait), Serwist service worker with app-shell precache.
 - [ ] Deploy pipeline: Vercel project (root `apps/web`) and Convex prod. **Binayak runs the prod steps.**
@@ -139,3 +139,4 @@
 |---|---|---|---|---|
 | 2083-06-07 | Claude (planning) | all | Initial documentation set, mockups, architecture | Start M0 |
 | 2083-06-07 | Claude (planning) | F-04, F-24 | Voice now finds *or creates* names (confirm sheet); typed search gets an "Add “X”" card; paper look made explicit (ADR-022/023); mockup updated | Run voice spike in M1 |
+| 2083-06-07 | Claude (M0) | F-01, F-02, F-03, F-05, F-10, F-13 | Root tooling; shared money, domain, dates (UTC-only arithmetic, 33,238-day oracle test), i18n (copy-deck sync test); Convex schema, auth wrappers, `members.me`, seed; Graphite + private GitHub repo (ADR-024…027) | Review month names and `i18n-review` strings; step 6 `packages/ui` |

@@ -39,7 +39,7 @@ Domain words: code says `party`, `transaction`, `sale`, `purchase`; the UI says 
 
 ## 3. Convex backend
 
-1. **Build every public function from the wrappers** in `convex/lib/functions.ts` (`memberQuery`, `memberMutation`, `ownerMutation`, `adminQuery`, `adminMutation`). Importing `query`/`mutation` from `_generated/server` in feature modules is lint-blocked.
+1. **Build every public function from the wrappers** in `convex/lib/functions.ts` (`memberQuery`, `memberMutation`, `ownerMutation`, `adminQuery`, `adminMutation`, and `optionalMemberQuery` for `members.me` only). Importing `query`/`mutation`/`action` from `_generated/server`, or `queryGeneric`/`mutationGeneric`/`actionGeneric` from `convex/server`, in feature modules is lint-blocked. Biome can't see through a namespace import (`import * as server from "./_generated/server"`), so those are banned by review.
 2. **Validate every argument** with `v.*`. Add `returns` validators on public functions.
 3. **Never accept `shopId` as an argument.** Use `ctx.shopId` from the wrapper.
 4. **Indexes, not filters.** Use `.withIndex(...)` for any table that grows. `.filter()` is allowed only on already-bounded results. Every list is paginated (`paginationOptsValidator`) or `.take(n)` with an explicit bound.

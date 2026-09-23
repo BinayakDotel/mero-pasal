@@ -1,0 +1,25 @@
+{
+  /* Ported from the Convex monorepo template (ADR-001). Settings below the marked line are
+   * required by Convex; the rest follow code-standard §1. */
+  "compilerOptions": {
+    "allowJs": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    /* TS 6 loads no ambient types by default (ADR-025): process.env in auth.config.ts. */
+    "types": ["node"],
+
+    /* Required by Convex */
+    "target": "ESNext",
+    "lib": ["ES2021", "dom"],
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["./**/*"],
+  "exclude": ["./_generated"]
+}

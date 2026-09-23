@@ -216,6 +216,7 @@ export default defineSchema({
   members: defineTable({
     shopId: v.id("shops"),
     clerkUserId: v.string(),               // identity.subject
+    email: v.optional(v.string()),         // F-13: lets an invite be claimed on first sign-in (M4)
     displayName: v.string(),
     role,
     locale: v.union(v.literal("ne"), v.literal("en")),
@@ -224,7 +225,8 @@ export default defineSchema({
     lastSyncAt: v.optional(v.number()),
   })
     .index("by_clerkUserId", ["clerkUserId"])
-    .index("by_shop", ["shopId"]),
+    .index("by_shop", ["shopId"])
+    .index("by_email", ["email"]),
 
   parties: defineTable({
     shopId: v.id("shops"),
@@ -343,6 +345,7 @@ All public functions are built with wrappers in `convex/lib/functions.ts` (using
 
 | Wrapper | Allows | Injects |
 |---|---|---|
+| `optionalMemberQuery` | Anyone (signed in or not) | `ctx.member` (active member or `null`); for `members.me` only |
 | `memberQuery` / `memberMutation` | Any active member | `ctx.member`, `ctx.shopId` |
 | `ownerMutation` | `owner` or `admin` | same |
 | `adminQuery` / `adminMutation` | `admin` only | same |
@@ -352,7 +355,7 @@ Importing raw `query` or `mutation` from `_generated/server` in feature modules 
 
 | Module | Function | Kind | Who | Purpose |
 |---|---|---|---|---|
-| `members` | `me` | query | any signed-in | Returns `{member, shop}` or `null` (drives the "Not invited" screen) |
+| `members` | `me` | query (`optionalMemberQuery`) | anyone | Returns `{member, shop}` or `null` for signed-out, not-invited or deactivated callers (drives the "Not invited" screen) |
 | | `setLocale`, `heartbeat` | mutation | member | Language preference; `lastSeenAt`/`lastSyncAt` |
 | | `list`, `invite`, `setRole`, `deactivate` | q/m | admin | F-13 |
 | `parties` | `listForPicker` | query | member | All non-archived, non-merged parties, trimmed fields (for client-side search and cache) |
@@ -370,7 +373,7 @@ Importing raw `query` or `mutation` from `_generated/server` in feature modules 
 | `summaries` | `forDate(dateBs)`, `forRange(from, to)` | query | member | Today strip, reports (≤ 400 rows read) |
 | | `rebuild(from, to)` | internal mutation | CLI | Repair tool: recompute derived data from transactions |
 | `audit` | `listForEntity` | query | admin | Drawer history |
-| `seed` | `bootstrap` | internal mutation | CLI | Shop, members, walk-in party |
+| `seed` | `bootstrap` | internal mutation | CLI | Shop, owner (locale `ne`) and admin (locale `en`) members, walk-in party; refuses if a shop exists (`CONFLICT`) |
 | `crons` | weekly | — | — | v1: nothing critical. Later: orphan-file report and backup reminder. |
 
 **Error contract:** throw `ConvexError({ code, message? })` with `code` one of `UNAUTHENTICATED | FORBIDDEN | NOT_FOUND | VALIDATION | CONFLICT`. The UI maps each code to an i18n message.
@@ -582,8 +585,11 @@ pnpm e2e          # playwright, mobile viewport
 **First-time data setup** (run by a human, never by an AI agent in prod):
 
 ```bash
-pnpm --filter @mero-pasal/backend exec convex run seed:bootstrap \
-  '{"shopName":"<shop>","ownerClerkId":"<buwa>","adminClerkId":"<binayak>"}'
+pnpm --filter @mero-pasal/backend exec convex run seed:bootstrap '{
+  "shopName": "<shop>", "shopNameNe": "<पसल>",
+  "owner": { "clerkUserId": "<buwa user_…>", "displayName": "Buwa", "email": "<buwa@gmail.com>" },
+  "admin": { "clerkUserId": "<binayak user_…>", "displayName": "Binayak", "email": "<binayak@…>" }
+}'
 ```
 
 ## 12. Web app structure (`apps/web`)
