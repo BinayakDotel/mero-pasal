@@ -1,12 +1,11 @@
 "use client";
 
-import type { api } from "@mero-pasal/backend/convex/_generated/api";
 import { toDevanagariDigits } from "@mero-pasal/shared/dates";
 import { AmountText } from "@mero-pasal/ui/components/amount-text";
-import type { FunctionReturnType } from "convex/server";
+import { useEffect, useState } from "react";
+import { Icon } from "@/components/icons";
 import { useLocale } from "@/features/session/locale";
-
-export type RecentBill = FunctionReturnType<typeof api.transactions.listRecentForDate>[number];
+import type { RecentItem } from "./merge-today";
 
 const nptTime = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Kathmandu",
@@ -14,12 +13,26 @@ const nptTime = new Intl.DateTimeFormat("en-GB", {
   minute: "2-digit",
 });
 
+function useThumbUrl(thumb: RecentItem["thumb"]): string | null {
+  const [url, setUrl] = useState<string | null>(thumb && "url" in thumb ? thumb.url : null);
+  useEffect(() => {
+    if (!thumb) return setUrl(null);
+    if ("url" in thumb) return setUrl(thumb.url);
+    const objectUrl = URL.createObjectURL(thumb.blob);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [thumb]);
+  return url;
+}
+
 /**
- * F-02 / ui-ux §5.5 bill row: type edge (colour), thumbnail, name with capture time, amount or
- * the "रकम छैन" tag. Rows open the bill in M3, so for now they're not buttons.
+ * F-02 / ui-ux §5.5 bill row: type edge, thumbnail, name with capture time, amount or the
+ * "रकम छैन" tag, and a clock while the bill is still waiting on the phone (F-09). Rows open the
+ * bill in M3, so for now they're not buttons.
  */
-export function BillRow({ bill, highlight }: { bill: RecentBill; highlight: boolean }) {
+export function BillRow({ bill, highlight }: { bill: RecentItem; highlight: boolean }) {
   const { locale, t } = useLocale();
+  const thumbUrl = useThumbUrl(bill.thumb);
   const name = bill.isWalkIn ? t("party.walkIn") : (bill.partyName ?? t("party.noName"));
   const time = nptTime.format(bill.capturedAt);
   return (
@@ -30,10 +43,10 @@ export function BillRow({ bill, highlight }: { bill: RecentBill; highlight: bool
         className={`self-stretch rounded-r ${bill.kind === "sale" ? "bg-sale" : "bg-buy"}`}
         aria-hidden="true"
       />
-      {bill.thumbUrl ? (
-        // biome-ignore lint/performance/noImgElement: Convex storage URL; list shows thumbnails only (F-06)
+      {thumbUrl ? (
+        // biome-ignore lint/performance/noImgElement: Convex storage URL or local blob; thumbnails only (F-06)
         <img
-          src={bill.thumbUrl}
+          src={thumbUrl}
           alt=""
           width={50}
           height={56}
@@ -45,7 +58,13 @@ export function BillRow({ bill, highlight }: { bill: RecentBill; highlight: bool
       )}
       <span className="min-w-0">
         <span className="block truncate text-[19px] leading-tight font-semibold">{name}</span>
-        <span className="block text-[15px] text-ink-soft">
+        <span className="flex items-center gap-1.5 text-[15px] text-ink-soft">
+          {bill.pending ? (
+            <span className="inline-flex items-center" title={t("sync.statusPending")}>
+              <Icon name="clock" className="size-4" />
+              <span className="sr-only">{t("sync.statusPending")}</span>
+            </span>
+          ) : null}
           {t(bill.kind === "sale" ? "kind.sale" : "kind.purchase")} ·{" "}
           {locale === "ne" ? toDevanagariDigits(time) : time}
         </span>

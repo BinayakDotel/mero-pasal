@@ -147,6 +147,10 @@ The camera and full-size photo views are the only dark surfaces, because photos 
 4. **Recent bills today:** up to 5 rows, then "सबै हेर्नुहोस्" (see all).
 5. v1.1: a "दिनको हिसाब" button under the strip; an "उधारो दिएको" line in the strip.
 
+**Unfinished bill card (F-03, M2)** sits under the sync pill when a draft exists: its thumbnail, **अधुरो बिल छ**, and **जारी राख्नुहोस्** / **हटाउनुहोस्**. Removing asks first, because it deletes the photos.
+
+**Offline (M2):** bills still on the phone appear in the strip and in the recent list with a clock. Headings show **(पुरानो)** while the numbers are the last saved copy.
+
 Empty state: "आज कुनै बिल छैन। माथिको बटन थिचेर पहिलो बिल राख्नुहोस्।" (No bills today. Press a button above to save the first bill.)
 
 ### 5.2 Capture: photo and preview (F-03)
@@ -262,6 +266,12 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `capture.leaveSub` | खिचेको फोटो हट्छ। | The photo you took will be discarded. |
 | `capture.leaveYes` | हो, फर्कने | Yes, leave |
 | `capture.leaveNo` | होइन, बस्ने | No, stay |
+| `draft.title` | अधुरो बिल छ | Unfinished bill |
+| `draft.sub` | जारी राख्ने कि हटाउने? | Continue it or remove it? |
+| `draft.continue` | जारी राख्नुहोस् | Continue |
+| `draft.discard` | हटाउनुहोस् | Remove |
+| `draft.discardConfirm` | यो अधुरो बिल हटाउने? यसको फोटो पनि हट्छ। | Remove this unfinished bill? Its photos go too. |
+| `draft.keep` | होइन, राख्ने | No, keep it |
 | `photo.use` | ठीक छ | Use photo |
 | `photo.retake` | फेरि खिच्नुहोस् | Retake |
 | `photo.addPage` | अर्को पाना | Add page |
@@ -335,6 +345,14 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `today.recent` | हालै राखेका | Recently saved |
 | `today.empty` | आज कुनै बिल छैन। माथिको बटन थिचेर पहिलो बिल राख्नुहोस्। | No bills today. Press a button above to save the first bill. |
 | `today.seeAll` | सबै हेर्नुहोस् | See all |
+| `sync.statusPending` | पठाउन बाँकी | Waiting to upload |
+| `sync.sheetTitle` | पठाउन बाँकी बिलहरू | Waiting to upload |
+| `sync.tryNow` | अहिले पठाउनुहोस् | Try now |
+| `sync.allSent` | सबै बिल पठाइसकियो। | Everything has been sent. |
+| `sync.offlineHint` | इन्टरनेट आएपछि आफैँ पठाइन्छ। बिलहरू फोनमा सुरक्षित छन्। | They'll send by themselves when the internet is back. The bills are safe on this phone. |
+| `sync.newName` | नयाँ नाम: {name} | New name: {name} |
+| `sync.blocked` | यसको नाम पठाउन सकिएन | Its name couldn't be sent |
+| `sync.storageLow` | फोनमा ठाउँ कम छ। पुराना फोटो वा एप मेटाउनुहोस्। | Phone storage is low. Delete old photos or apps. |
 | `sync.stale` | (पुरानो) | (old) |
 | `offline.title` | इन्टरनेट छैन | No internet |
 | `offline.body` | इन्टरनेट आएपछि एप फेरि खोल्नुहोस्। | Open the app again when the internet is back. |

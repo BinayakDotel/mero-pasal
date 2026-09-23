@@ -12,7 +12,9 @@ import { useCapture } from "@/features/capture/capture-provider";
 import { useCamera } from "@/features/capture/use-camera";
 import { useLocale } from "@/features/session/locale";
 import { useMember } from "@/features/session/member-gate";
+import { SyncPill } from "@/features/sync/sync-pill";
 import { BillRow } from "./bill-row";
+import { DraftCard } from "./draft-card";
 import { useTodayBills } from "./use-today-bills";
 import { useTodayBs } from "./use-today-bs";
 
@@ -27,7 +29,8 @@ export function TodayScreen() {
   const shopName = locale === "ne" ? (shop.nameNe ?? shop.name) : shop.name;
   const router = useRouter();
   const { start, lastSaved } = useCapture();
-  const { totals, recent } = useTodayBills(today);
+  const { totals, recent, live } = useTodayBills(today);
+  const stale = live ? "" : ` ${t("sync.stale")}`; // ui-ux §7: saved copy while offline
   // F-02: the bill just saved glows briefly, then settles.
   const [glow, setGlow] = useState<string | null>(lastSaved);
   useEffect(() => {
@@ -36,8 +39,8 @@ export function TodayScreen() {
     return () => clearTimeout(timer);
   }, [lastSaved]);
   const kind = useRef<BillKind>("sale");
-  const camera = useCamera((file) => {
-    start(kind.current, file);
+  const camera = useCamera(async (file) => {
+    await start(kind.current, file);
     router.push("/capture");
   });
   const capture = (billKind: BillKind) => {
@@ -64,14 +67,7 @@ export function TodayScreen() {
         </button>
       </header>
 
-      {/* F-09: always in words. Nothing can be pending until capture exists (M1/M2). */}
-      <p
-        role="status"
-        className="mx-4 mt-1.5 inline-flex min-h-10 items-center gap-2 rounded-full bg-sale-tint px-3.5 text-[15px] font-semibold text-sale"
-      >
-        <Icon name="check" className="size-[18px]" />
-        {t("sync.ok")}
-      </p>
+      <SyncPill />
 
       <div className="grid gap-3 px-4 pt-3.5 pb-1">
         <BigButton
@@ -90,10 +86,12 @@ export function TodayScreen() {
         />
       </div>
 
+      <DraftCard />
+
       {totals ? (
         <div className="mx-4 mt-3.5">
           <LedgerStrip
-            heading={t("today.billed")}
+            heading={`${t("today.billed")}${stale}`}
             rows={[
               {
                 label: t("kind.sale"),
@@ -132,10 +130,13 @@ export function TodayScreen() {
         <p className="px-5 py-7 text-center text-ink-soft">{t("today.empty")}</p>
       ) : (
         <section className="mt-4.5">
-          <h2 className="mx-4 mb-1 text-base font-bold text-ink-soft">{t("today.recent")}</h2>
+          <h2 className="mx-4 mb-1 text-base font-bold text-ink-soft">
+            {t("today.recent")}
+            {stale}
+          </h2>
           <ul>
             {recent.map((bill) => (
-              <BillRow key={bill._id} bill={bill} highlight={bill.clientId === glow} />
+              <BillRow key={bill.key} bill={bill} highlight={bill.clientId === glow} />
             ))}
           </ul>
         </section>

@@ -8,7 +8,7 @@
 | | |
 |---|---|
 | **Phase** | **M0 Foundations**: code merged (PRs #1–#8) and running locally against Convex dev; production deploy and Redmi test remain |
-| **Current focus** | M0 exit: Vercel project + Convex prod deployment + Clerk production instance (Binayak), then the Redmi smoke test. Then M1 capture core |
+| **Current focus** | M2 offline and sync: offline shell (PR 8) and the offline e2e test (PR 9) remain; M1 phone tests (voice, stopwatch) pending with Binayak |
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
 | **Risks** | NFR-03: Today ships 262 KB gzipped JS (budget 250); React/Next ≈ 140 KB, Clerk + Convex ≈ 65 KB are the bulk. Judged on the Redmi instead: Today interactive < 2 s warm (ADR-031); time it in the phone test. |
@@ -65,13 +65,13 @@
 
 **Exit:** the F-09 acceptance tests pass on the Redmi and in Playwright.
 
-- [ ] Dexie DB: `outbox`, `drafts`, `parties`, `recentTx`; `navigator.storage.persist()`.
-- [ ] Sync engine: FIFO; parties before the bills that reference them; per-page upload with recorded storageIds; backoff; triggers (enqueue, open, online, visibility, 60 s).
-- [ ] `useCachedQuery`; Today and the picker working from cache while offline.
-- [ ] Draft restore after tab kill.
-- [ ] Sync pill (ok / pending / offline / failed) + details sheet with "Try now".
+- [x] Dexie DB `mero-pasal` (strict durability): `outbox`, `drafts`, `draftPages`, `cache`, `meta`; `navigator.storage.persist()`. Save = one transaction, then the stamp (NFR-02).
+- [x] Sync engine: FIFO, names before bills, upload progress persisted, error classes + backoff, Web Locks, owner guard, purge, Try now (18 tests, 6 deliberate bugs caught).
+- [x] `useCachedQuery`; Today (pending bills counted once, clock mark, "(पुरानो)") and the picker (incl. names added offline) work from cache.
+- [x] Draft restore after tab kill: Today card **अधुरो बिल छ** → continue / remove (Binayak's choice: ask, not auto-resume).
+- [x] Sync pill (ok / pending / offline / failed) + details sheet with "Try now" and a low-storage warning.
 - [ ] Offline shell not gated on Clerk (architecture §8.4).
-- [ ] `members.heartbeat` → `lastSeenAt` / `lastSyncAt`.
+- [x] `members.heartbeat` → `memberSync` (own table; last seen, last full sync, pending/failed/other-account counts).
 - [ ] Playwright: offline capture ×5 → reconnect → exactly 5 on the server.
 - [ ] Manual: airplane mode + app kill + cold start on the Redmi.
 

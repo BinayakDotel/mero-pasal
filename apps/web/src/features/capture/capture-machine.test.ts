@@ -130,6 +130,13 @@ describe("capture state machine (F-03)", () => {
     }
   });
 
+  it("F-03: restore continues a saved draft, but never over a bill in progress", () => {
+    const draft = run(started, { type: "usePhotos" });
+    if (draft.step !== "party") throw new Error("expected party");
+    expect(captureReducer(initialCapture, { type: "restore", state: draft })).toBe(draft);
+    expect(captureReducer(started, { type: "restore", state: draft })).toBe(started);
+  });
+
   it("reset discards the draft", () => {
     expect(captureReducer(started, { type: "reset" })).toEqual({ step: "idle" });
   });

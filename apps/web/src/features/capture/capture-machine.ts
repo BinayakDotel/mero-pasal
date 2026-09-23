@@ -12,6 +12,8 @@ export type Page = { id: string; file: Blob; url: string };
 export type PartyChoice =
   | { type: "existing"; id: string; displayName: string; isWalkIn: boolean }
   | { type: "new"; clientId: string; displayName: string; phone?: string; tag?: string }
+  /** A name added earlier on this phone that hasn't reached the server yet (F-04 offline). */
+  | { type: "local"; clientId: string; displayName: string }
   | { type: "later" };
 
 type Draft = {
@@ -48,6 +50,8 @@ export type CaptureEvent =
   | { type: "saveStart" }
   | { type: "saveFailed" }
   | { type: "saved" }
+  /** F-03 draft restore: continue an unfinished bill from the phone's storage. */
+  | { type: "restore"; state: Exclude<CaptureState, { step: "idle" | "saving" | "saved" }> }
   | { type: "back" }
   | { type: "reset" };
 
@@ -82,6 +86,8 @@ export function captureReducer(state: CaptureState, event: CaptureEvent): Captur
       };
     case "reset":
       return initialCapture;
+    case "restore":
+      return state.step === "idle" ? event.state : state;
   }
 
   if (state.step === "idle") return state; // nothing to act on

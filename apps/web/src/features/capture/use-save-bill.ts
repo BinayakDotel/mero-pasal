@@ -66,7 +66,9 @@ export function useSaveBill() {
           payload: {
             kind: state.kind,
             ...(party.type === "existing" ? { partyRef: { id: party.id } } : {}),
-            ...(party.type === "new" ? { partyRef: { clientId: party.clientId } } : {}),
+            ...(party.type === "new" || party.type === "local"
+              ? { partyRef: { clientId: party.clientId } }
+              : {}),
             dateBs: state.dateBs ?? todayBs(now),
             ...(amountPaisa === undefined ? {} : { amountPaisa }),
             clientCapturedAt: state.startedAt,

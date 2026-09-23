@@ -1,16 +1,20 @@
 "use client";
 
-import { SignOutButton } from "@clerk/nextjs";
+import { SignOutButton, useAuth } from "@clerk/nextjs";
 import { api } from "@mero-pasal/backend/convex/_generated/api";
 import { t } from "@mero-pasal/shared/i18n";
 import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
-import { createContext, type ReactNode, useCallback, useContext, useEffect } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
+import { getDb } from "@/features/sync/db";
+import { decideGate } from "./gate-decision";
 import { LocaleProvider } from "./locale";
 import { type MeState, useMe } from "./use-me";
 
 type Me = Extract<MeState, { status: "member" }>["me"];
+type Snapshot = { me: Me; clerkUserId: string };
 const MeContext = createContext<Me | null>(null);
+const SNAPSHOT_KEY = "member";
 
 /** The signed-in member and shop; only usable inside <MemberGate>. */
 export function useMember(): Me {
@@ -20,33 +24,88 @@ export function useMember(): Me {
 }
 
 /**
- * Wraps Buwa's screens: skeleton while loading, "Not invited" for non-members (F-01), and a
- * plain sign-in-again message if Convex rejects the Clerk session (ui-ux §7).
- * M2 note: capture must not be gated on Clerk once the offline shell lands (architecture §8.4).
+ * Wraps Buwa's screens (F-01, architecture §8.4). Shows the member the server confirms; offline,
+ * when the Clerk token can't refresh (or Clerk can't even load), keeps working as the member last
+ * confirmed on this phone, unless Clerk says signed out or a different account is signed in.
+ * Nothing reaches the server until it accepts the session again (the sync engine pauses).
  */
 export function MemberGate({ children }: { children: ReactNode }) {
   const state = useMe();
+  const { isLoaded, isSignedIn, userId } = useAuth();
   const router = useRouter();
+  const [snapshot, setSnapshot] = useState<Snapshot | null | undefined>(undefined);
   const setLocale = useMutation(api.members.setLocale);
   const persistLocale = useCallback(
     (locale: "ne" | "en") => void setLocale({ locale }).catch(() => undefined), // best effort
     [setLocale],
   );
 
+  // Read the last confirmed member once.
   useEffect(() => {
-    if (state.status === "notInvited") router.replace("/not-invited");
-  }, [state.status, router]);
+    void getDb()
+      .meta.get(SNAPSHOT_KEY)
+      .then((row) => setSnapshot((row?.value as Snapshot | undefined) ?? null))
+      .catch(() => setSnapshot(null));
+  }, []);
 
-  if (state.status === "member") {
+  // Keep it up to date while the server confirms the member. Depend on the member data itself
+  // (stable until it really changes), not the wrapper object useMe() rebuilds every render.
+  const liveMe = state.status === "member" ? state.me : null;
+  useEffect(() => {
+    if (!liveMe || !userId) return;
+    const next: Snapshot = { me: liveMe, clerkUserId: userId };
+    setSnapshot((current) =>
+      current?.me === liveMe && current.clerkUserId === userId ? current : next,
+    );
+    void getDb()
+      .meta.put({ key: SNAPSHOT_KEY, value: next })
+      .catch(() => undefined);
+  }, [liveMe, userId]);
+
+  const decision = decideGate({
+    server:
+      state.status === "member"
+        ? "member"
+        : state.status === "notInvited"
+          ? "notInvited"
+          : state.status === "signedOut"
+            ? "unauthenticated"
+            : "loading",
+    clerkLoaded: isLoaded,
+    clerkSignedIn: isSignedIn,
+    clerkUserId: userId,
+    snapshotClerkUserId: snapshot?.clerkUserId ?? null,
+  });
+
+  // A real sign-out or removal forgets the member on this phone (the outbox is kept, F-09).
+  useEffect(() => {
+    if (decision === "notInvited" || (isLoaded && isSignedIn === false)) {
+      setSnapshot(null);
+      void getDb()
+        .meta.delete(SNAPSHOT_KEY)
+        .catch(() => undefined);
+    }
+    if (decision === "notInvited") router.replace("/not-invited");
+    // The shells are public (ADR-032): a visitor who isn't signed in goes to sign-in.
+    if (isLoaded && isSignedIn === false) router.replace("/sign-in");
+  }, [decision, isLoaded, isSignedIn, router]);
+
+  const me =
+    decision === "live" && state.status === "member"
+      ? state.me
+      : decision === "snapshot"
+        ? snapshot?.me
+        : null;
+  if (me) {
     return (
-      <MeContext.Provider value={state.me}>
-        <LocaleProvider initial={state.me.member.locale} onChange={persistLocale}>
+      <MeContext.Provider value={me}>
+        <LocaleProvider initial={me.member.locale} onChange={persistLocale}>
           {children}
         </LocaleProvider>
       </MeContext.Provider>
     );
   }
-  if (state.status === "signedOut") {
+  if (decision === "signedOut") {
     return (
       <main className="grid min-h-dvh place-content-center gap-4 p-6 text-center">
         <p className="text-lg">{t("ne", "error.UNAUTHENTICATED")}</p>

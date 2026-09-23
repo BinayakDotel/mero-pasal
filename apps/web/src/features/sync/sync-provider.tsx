@@ -66,7 +66,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       db: getDb(),
       deps,
       now: () => Date.now(),
-      isConnected: () => convex.connectionState().isWebSocketConnected,
+      isConnected: () => navigator.onLine && convex.connectionState().isWebSocketConnected,
       identity: () => ownerRef.current,
       withLock: async (fn) => {
         if (!navigator.locks) return fn();

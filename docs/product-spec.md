@@ -79,7 +79,7 @@
 - Amount is entered in whole rupees in v1 and stored as integer paisa.
 - If the amount is ≥ NPR 5,00,000, ask once: "रु X — ठीक हो? / Is this right?"
 - Back leaves the current step. Leaving the flow after taking a photo asks "बिल नराखी फर्कने? / Leave without saving?"
-- If the phone kills the tab mid-flow, the draft (photo, type, party) is restored the next time the app opens.
+- If the phone kills the tab mid-flow, the draft (photos, type, name, amount, date) is kept on the phone. The next time the app opens, Today shows **अधुरो बिल छ** with **जारी राख्नुहोस्** (continue) and **हटाउनुहोस्** (remove, after a confirm). It isn't resumed automatically (Binayak, M2). Starting a new bill replaces an unfinished one.
 
 **Acceptance**
 - A trained user completes a named-customer bill with amount in ≤ 15 s (median of 10 attempts during the trial).
