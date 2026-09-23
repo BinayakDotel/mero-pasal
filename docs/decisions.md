@@ -143,6 +143,12 @@
 - **Why:** Binayak wants every change reviewable in small pieces. The plan's gated steps (money, dates, schema, auth) map naturally to one PR each, and stacking lets work continue while earlier PRs wait for review.
 - **Consequences:** `gt sync` after merges; PRs, not local commits, are the unit of review.
 
+### ADR-028 · Serwist's Turbopack integration for the service worker
+- **Decision:** Use `@serwist/turbopack` + `serwist` 9.5.12 (with `esbuild` to bundle the worker) instead of the webpack-based `@serwist/next` named in the original stack table.
+- **Why:** Next 16 builds with Turbopack by default. The Turbopack integration serves the worker from a route handler (`/serwist/sw.js`) with `Service-Worker-Allowed: /`, so it controls the whole app without switching the build back to webpack.
+- **Consequences:** The service worker lives at `src/app/sw.ts`. `/~offline` and `/serwist/*` are public in `proxy.ts` so the worker can precache them. The worker is disabled in `next dev`.
+- **Alternative considered:** `@serwist/next` with `next build --webpack`: slower builds and a second bundler to maintain.
+
 ---
 
 ## Open decisions
