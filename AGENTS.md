@@ -31,14 +31,19 @@ docs/                    specs, architecture, rules, tracker, mockups
 ```
 
 ## Commands
+Use `just` (run `just` alone for the full list; recipes are in `/justfile`):
 ```bash
-pnpm install
-pnpm dev          # convex dev + next dev (turbo)
-pnpm lint         # biome check
-pnpm typecheck
-pnpm test         # vitest: shared + backend (convex-test)
-pnpm e2e          # playwright, mobile viewport
+just setup        # pnpm install + Playwright browser
+just env-check    # are the local env files filled in? (never prints values)
+just dev          # web + Convex dev watcher in this terminal (Ctrl+C stops)
+just run / stop   # same, in the background; `just status`, `just logs`, `just restart`
+just check        # lint + typecheck + unit tests (what every PR needs)
+just e2e          # Playwright, mobile viewport
+just convex-push  # push backend to the Convex *dev* deployment once
+just data members # read a dev table
+just sync         # gt sync after merges
 ```
+The pnpm scripts underneath still work (`pnpm dev`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm e2e`). There are no production recipes on purpose (rule 9).
 
 ## Read before you touch…
 | If your task involves | Read |
