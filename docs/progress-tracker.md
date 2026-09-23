@@ -8,7 +8,7 @@
 | | |
 |---|---|
 | **Phase** | **M0 Foundations**: code merged (PRs #1–#8) and running locally against Convex dev; production deploy and Redmi test remain |
-| **Current focus** | M2 offline and sync: offline shell (PR 8) and the offline e2e test (PR 9) remain; M1 phone tests (voice, stopwatch) pending with Binayak |
+| **Current focus** | M2 offline and sync: the offline e2e test (PR 9, needs the Clerk dev test user) and the Redmi airplane-mode test remain; M1 phone tests (voice, stopwatch) pending with Binayak |
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
 | **Risks** | NFR-03: Today ships 262 KB gzipped JS (budget 250); React/Next ≈ 140 KB, Clerk + Convex ≈ 65 KB are the bulk. Judged on the Redmi instead: Today interactive < 2 s warm (ADR-031); time it in the phone test. |
@@ -70,7 +70,7 @@
 - [x] `useCachedQuery`; Today (pending bills counted once, clock mark, "(पुरानो)") and the picker (incl. names added offline) work from cache.
 - [x] Draft restore after tab kill: Today card **अधुरो बिल छ** → continue / remove (Binayak's choice: ask, not auto-resume).
 - [x] Sync pill (ok / pending / offline / failed) + details sheet with "Try now" and a low-storage warning.
-- [ ] Offline shell not gated on Clerk (architecture §8.4).
+- [x] Offline shell not gated on Clerk (architecture §8.4): public shells + member snapshot (ADR-032); `/` and `/capture` precached per build; updates wait for idle; Clerk network-only; no reload on reconnect.
 - [x] `members.heartbeat` → `memberSync` (own table; last seen, last full sync, pending/failed/other-account counts).
 - [ ] Playwright: offline capture ×5 → reconnect → exactly 5 on the server.
 - [ ] Manual: airplane mode + app kill + cold start on the Redmi.

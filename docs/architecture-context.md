@@ -568,9 +568,13 @@ stateDiagram-v2
 
 - **Warm offline** (app already open when the connection drops): everything in F-09 works.
 - **Cold start offline** (app opened for the first time after losing connection):
-  - The service worker serves the cached app shell.
+  - The service worker serves the cached app shell. `/` and `/capture` are static public shells (ADR-032), precached (`app/serwist/[path]/route.ts`) under a revision hashed from the commit and every precached file, so any code change refetches them. Navigation preload is off (and disabled on activate, since the setting outlives workers), so they open cache-first and a dead Wi-Fi never hangs a cold start. Other pages fall back to `/~offline`, which reloads itself when the connection returns.
+  - Clerk's script can't load offline, and it doesn't retry (its status becomes `error`). When the Convex connection comes back, which also covers "Wi-Fi was on, internet returned", `AppUpdater` reloads once the app is idle, at most once every 5 minutes, so sign-in and sync start again.
   - **Clerk cannot load offline**, so the UI must **not** wrap capture in `<SignedIn>`. The shell checks a local "signed-in member" record in Dexie and renders from the caches. Sync waits until Clerk and Convex connect.
   - Offline this is best effort. Recommend keeping mobile data on as a fallback to shop Wi-Fi.
+- **Updates never land mid-bill.** A new service worker waits (`skipWaiting: false`). `AppUpdater` acts only after the app has sat idle and on screen for 3 s, with no camera open. It sends `SKIP_WAITING` only if no tab holds the shared `mp-capture-busy` Web Lock, which every tab holds while a bill is open. Each tab then reloads once it is idle. Serwist's own reload on reconnect is off, since it would drop the bill on screen.
+- **Clerk traffic is network-only** in the service worker: no session tokens in Cache Storage, and offline Clerk fails instead of reading a stale answer.
+- Test the service worker locally with `just preview` (production build; it's off in `just dev`).
 - **Xiaomi HyperOS** can restrict background activity. Sync runs whenever the app is open, and background sync is a bonus. Setup checklist:
   - Chrome battery → "No restrictions"
   - Chrome set as the default browser
@@ -598,7 +602,7 @@ stateDiagram-v2
    ```ts
    export default { providers: [{ domain: process.env.CLERK_JWT_ISSUER_DOMAIN!, applicationID: "convex" }] };
    ```
-3. Web: `ClerkProvider` → `ConvexProviderWithClerk` (client). `src/proxy.ts` uses `clerkMiddleware()` and protects every route except `/sign-in` and static assets.
+3. Web: `ClerkProvider` → `ConvexProviderWithClerk` (client). `src/proxy.ts` uses `clerkMiddleware()` and protects every route except `/sign-in`, static assets, the service worker, `/~offline`, and the app shells `/` and `/capture` (ADR-032). The shells are static and hold no data; `MemberGate` sends a signed-out visitor to `/sign-in`, and Convex refuses every query without a valid member.
 4. **Authorization lives in Convex, not in `proxy.ts`.** Every function resolves `identity.subject` → `members` row → role and `shopId`, through the wrappers in §6. `/admin` pages also hide themselves for non-admins, but that is cosmetic; the server enforces it.
 5. **Role matrix:**
 

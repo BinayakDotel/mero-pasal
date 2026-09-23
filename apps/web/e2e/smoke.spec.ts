@@ -24,7 +24,11 @@ test("ADR-004: the service worker is served for the whole app scope", async ({ r
   const res = await request.get("/serwist/sw.js");
   expect(res.ok()).toBe(true);
   expect(res.headers()["service-worker-allowed"]).toBe("/");
-  expect(await res.text()).toContain("~offline");
+  const worker = await res.text();
+  expect(worker).toContain("~offline");
+  // Architecture §8.4 / ADR-032: the app shells are precached, so the app opens offline.
+  expect(worker).toMatch(/url:\s*"\/capture"|"url":"\/capture"/);
+  expect(worker).toMatch(/url:\s*"\/"|"url":"\/"/);
 });
 
 test.describe("with Clerk", () => {
