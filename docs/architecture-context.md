@@ -384,12 +384,14 @@ Importing raw `query` or `mutation` from `_generated/server` in feature modules 
 
 ### 7.2 Dates (BS and NPT)
 
-- `todayBs(now = Date.now())`: converts `now` to NPT (UTC+05:45; Nepal has no DST), then to BS. **Never** use `new Date().toISOString().slice(0, 10)`, which returns the UTC date and is wrong between 00:00 and 05:45 NPT.
+- `todayBs(now)`: converts `now` (required, so the caller's clock is explicit) to NPT (UTC+05:45; Nepal has no DST), then to BS. **Never** use `new Date().toISOString().slice(0, 10)`, which returns the UTC date and is wrong between 00:00 and 05:45 NPT.
 - `bsToAdMs(dateBs)` gives NPT midnight as UTC ms. `adMsToBs(ms)` is the reverse.
-- `formatBs(dateBs, locale, style)` gives "७ असोज २०८३" or "7 Asoj 2083".
+- `formatBs(dateBs, locale, style)` gives "७ असोज २०८३" / "7 Asoj 2083" (`long`), "७ असोज" (`dayMonth`, list headers) or "बुधबार, ७ असोज" (`weekdayDayMonth`, Today header). Month names are the everyday ones (साउन, असोज, कात्तिक…).
 - `monthOf(dateBs)` gives `"2083-06"`. `fiscalYearOf(dateBs)` gives `"2083/84"` (Shrawan = month 4 starts a new FY).
+- Also: `parseBs`, `isValidBs`, `addDaysBs`, `diffDaysBs`, `daysInMonthBs`, `weekdayOf`, `toDevanagariDigits`.
 - **Queries must not compute "today"**: Convex caches query results, so `Date.now()` inside a query goes stale. The client passes `dateBs`, and the server validates it.
-- The underlying library supports BS 2000–2090 only. The wrapper throws a clear error outside that range, and a unit test fails loudly once today is within 2 years of the limit.
+- **Only the month-length table** (`dateConfigMap`) is taken from `nepali-date-converter`; all arithmetic is ours, in UTC ms. The library's own AD→BS conversion reads the host's *local* time, which differs between the phone (NPT) and Convex (UTC). A test checks all 33,238 supported days against the library's BS→AD output.
+- The table covers BS 2000-01-01 to 2090-12-30 (AD 2034-04-13). The wrapper throws a clear error outside that range, and a unit test fails loudly once today is within 2 years of the limit (from about April 2032).
 
 ### 7.3 Name matching across scripts
 
