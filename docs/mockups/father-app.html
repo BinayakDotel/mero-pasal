@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="ne">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mero Pasal — Buwa's app (concept mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Mukta:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F2F4F1; --card:#FFFFFF; --ink:#1B2433; --ink-soft:#566074; --rule:#C7D3E3;
+  --sale:#1E7A4C; --sale-dk:#145A37; --sale-tint:#E3F1E9;
+  --buy:#2C3D9A; --buy-dk:#1F2C75; --buy-tint:#E4E8F7;
+  --udharo:#D98E0B; --udharo-tint:#FBEFD6; --bahi:#9E2A2B;
+  --grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .32  0 0 0 0 .30  0 0 0 0 .26  0 0 0 .09 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  --f-body:"Mukta","Noto Sans Devanagari",system-ui,sans-serif;
+  --f-display:"Baloo 2","Mukta","Noto Sans Devanagari",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--f-body);color:var(--ink);background:#DDE3DA;min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---------- stage ---------- */
+.stage{display:flex;gap:32px;justify-content:center;align-items:flex-start;padding:32px 24px;flex-wrap:wrap}
+.device{width:402px;height:860px;border-radius:48px;background:#1B2433;padding:10px;flex:none;box-shadow:0 30px 60px -30px rgba(27,36,51,.5)}
+.app{position:relative;width:100%;height:100%;border-radius:38px;overflow:hidden;background:var(--paper);font-size:18px;line-height:1.35}
+.statusbar{height:30px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:13px;font-weight:600;color:var(--ink)}
+.screen{position:absolute;inset:30px 0 0 0;display:none;flex-direction:column;background:var(--paper) var(--grain)}
+.screen.active{display:flex}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ---------- common ---------- */
+.topbar{display:flex;align-items:center;gap:6px;padding:6px 10px;min-height:60px}
+.topbar .title{font-family:var(--f-display);font-weight:700;font-size:25px;line-height:1.1;flex:1;min-width:0}
+.iconbtn{width:48px;height:48px;border-radius:50%;border:0;background:transparent;display:grid;place-items:center;flex:none}
+.iconbtn:active{background:var(--rule)}
+.step{font-size:15px;font-weight:600;color:var(--ink-soft);padding:0 6px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:700;padding:3px 10px;border-radius:999px}
+.badge.sale{background:var(--sale-tint);color:var(--sale)}
+.badge.buy{background:var(--buy-tint);color:var(--buy)}
+.mini-thumb{width:44px;height:56px;border-radius:6px;overflow:hidden;border:1px solid var(--rule);flex:none;background:#fff}
+.mini-thumb svg{width:100%;height:100%;display:block}
+.section-label{font-size:15px;font-weight:700;color:var(--ink-soft);margin:18px 16px 6px}
+.btn-primary{width:100%;min-height:64px;border:0;border-radius:16px;background:var(--ink);color:#fff;font-family:var(--f-display);font-weight:700;font-size:24px;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-primary.sale{background:var(--sale)} .btn-primary.buy{background:var(--buy)}
+.btn-primary:active{filter:brightness(.92)}
+.btn-secondary{min-height:56px;border:2px solid var(--ink);background:var(--card);border-radius:14px;font-weight:700;font-size:18px;padding:0 14px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-link{min-height:48px;border:0;background:none;font-size:17px;font-weight:600;color:var(--ink-soft);text-decoration:underline;text-underline-offset:4px}
+.footer{padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px;background:var(--paper) var(--grain);border-top:1px solid var(--rule)}
+.v11{display:none!important}
+body.show-v11 .v11{display:revert!important}
+body.show-v11 .v11.flex{display:flex!important}
+body.show-v11 .v11.grid{display:grid!important}
+.v11-mark{outline:2px dashed var(--udharo);outline-offset:3px}
+
+/* ---------- today ---------- */
+.today-head{display:flex;align-items:flex-start;gap:10px;padding:10px 16px 4px}
+.today-head .when{flex:1}
+.date-big{font-family:var(--f-display);font-weight:800;font-size:30px;line-height:1.05}
+.shop{font-size:16px;color:var(--ink-soft);font-weight:500}
+.lang{width:48px;height:48px;border-radius:50%;border:2px solid var(--rule);background:var(--card);font-family:var(--f-display);font-weight:700;font-size:17px}
+.pill{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border-radius:999px;border:0;font-size:15px;font-weight:600;margin:6px 16px 0}
+.pill.ok{background:var(--sale-tint);color:var(--sale)}
+.pill.pending,.pill.offline{background:var(--udharo-tint);color:var(--ink)}
+.pill svg{width:18px;height:18px}
+.bigbtns{display:grid;gap:12px;padding:14px 16px 4px}
+.bigbtn{display:grid;grid-template-columns:64px 1fr;align-items:center;gap:14px;min-height:112px;border:0;border-radius:20px;padding:14px 18px;color:#fff;text-align:left;border-bottom:5px solid}
+.bigbtn.sale{background:var(--sale);border-color:var(--sale-dk)}
+.bigbtn.buy{background:var(--buy);border-color:var(--buy-dk)}
+.bigbtn:active{transform:translateY(3px);border-bottom-width:2px}
+.bigbtn .ic{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.16);display:grid;place-items:center}
+.bigbtn .ic svg{width:34px;height:34px}
+.bigbtn .lbl{display:block;font-family:var(--f-display);font-weight:800;font-size:30px;line-height:1.05}
+.bigbtn .sub{display:block;font-size:16px;opacity:.9;margin-top:2px}
+
+/* ledger strip: ruled lines + red margin, like a bahi page */
+.ledger{position:relative;margin:14px 16px 0;background:var(--card);border-top:2px solid var(--ink);padding:0 14px 0 30px;
+  background-image:repeating-linear-gradient(to bottom,transparent 0 47px,var(--rule) 47px 48px)}
+.ledger::before{content:"";position:absolute;top:0;bottom:0;left:18px;width:2px;background:var(--bahi);opacity:.55}
+.ledger .lrow{height:48px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ledger .lhead{font-family:var(--f-display);font-weight:700;font-size:18px;color:var(--ink-soft)}
+.ledger .lab{display:flex;align-items:center;gap:8px;font-weight:600}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.dot.sale{background:var(--sale)} .dot.buy{background:var(--buy)} .dot.udh{background:var(--udharo)}
+.ledger .val{display:flex;align-items:baseline;gap:8px}
+.amt{font-family:var(--f-display);font-weight:700;font-size:23px;font-variant-numeric:tabular-nums}
+.cnt{font-size:15px;color:var(--ink-soft);min-width:52px;text-align:right}
+.lrow.warn .lab{color:#7a4f00}
+.dayclose-btn{margin:10px 16px 0;width:calc(100% - 32px)}
+
+/* bill rows */
+.list-head{display:flex;justify-content:space-between;align-items:center;margin:18px 16px 4px}
+.list-head b{font-size:16px;color:var(--ink-soft)}
+.row{display:grid;grid-template-columns:6px 50px 1fr auto;gap:12px;align-items:center;min-height:70px;padding:8px 16px 8px 0;border-bottom:1px solid var(--rule);width:100%;border-left:0;border-right:0;border-top:0;background:transparent;text-align:left}
+.row:active,.row.new{background:var(--sale-tint)}
+.row .edge{align-self:stretch;border-radius:0 3px 3px 0}
+.edge.sale{background:var(--sale)} .edge.buy{background:var(--buy)}
+.row .thumb{width:50px;height:56px;border-radius:6px;overflow:hidden;border:1px solid var(--rule);background:#fff}
+.row .thumb svg{width:100%;height:100%;display:block}
+.row .nm{font-size:19px;font-weight:600;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .meta{font-size:15px;color:var(--ink-soft);display:flex;align-items:center;gap:6px}
+.row .meta svg{width:16px;height:16px}
+.row .ra{text-align:right}
+.tag-missing{display:inline-block;background:var(--udharo-tint);color:#6b4500;font-size:15px;font-weight:700;border-radius:999px;padding:2px 10px}
+.pay-tag{font-size:14px;font-weight:700;color:var(--ink-soft)}
+.pay-tag.udh{color:#8a5a00}
+.empty{padding:28px 20px;color:var(--ink-soft);text-align:center}
+
+/* bottom nav */
+.nav{height:74px;display:grid;grid-template-columns:repeat(3,1fr);background:var(--card);border-top:1px solid var(--rule);flex:none}
+.nav button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:15px;font-weight:600;color:var(--ink-soft);position:relative}
+.nav button.on{color:var(--ink)}
+.nav button.on::before{content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--ink)}
+
+/* ---------- camera + preview ---------- */
+#s-camera{background:#000;color:#fff}
+.cam-top{display:flex;align-items:center;justify-content:space-between;padding:8px 10px}
+.cam-top .iconbtn{color:#fff}
+.cam-hint{font-size:16px;opacity:.9}
+.viewfinder{flex:1;position:relative;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#3b3a36,#141414 70%)}
+.viewfinder .paper{width:64%;transform:rotate(-3deg);box-shadow:0 18px 40px rgba(0,0,0,.6)}
+.viewfinder .paper svg{display:block;width:100%}
+.corner{position:absolute;width:34px;height:34px;border:4px solid rgba(255,255,255,.85)}
+.c1{top:12%;left:10%;border-right:0;border-bottom:0}.c2{top:12%;right:10%;border-left:0;border-bottom:0}
+.c3{bottom:10%;left:10%;border-right:0;border-top:0}.c4{bottom:10%;right:10%;border-left:0;border-top:0}
+.cam-bottom{height:150px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 24px}
+.shutter{width:84px;height:84px;border-radius:50%;background:#fff;border:7px solid rgba(255,255,255,.35);background-clip:padding-box}
+.shutter:active{transform:scale(.94)}
+.pagecount{justify-self:end;font-size:15px;font-weight:600;opacity:.85}
+#s-preview{background:var(--ink)}
+.preview-photo{flex:1;display:grid;place-items:center;padding:14px;min-height:0}
+.preview-photo svg{height:100%;max-height:470px;width:auto;max-width:100%;display:block;box-shadow:0 12px 30px rgba(0,0,0,.45)}
+.pages{display:flex;gap:8px;justify-content:center;padding:0 0 10px}
+.pages .p{width:40px;height:50px;border-radius:6px;overflow:hidden;border:2px solid rgba(255,255,255,.35)}
+.pages .p.on{border-color:#fff}
+.pages .p svg{width:100%;height:100%;display:block}
+.preview-actions{background:var(--paper);border-radius:24px 24px 0 0;padding:16px;display:grid;gap:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ---------- party picker ---------- */
+.searchbox{position:relative;margin:4px 16px 0;display:flex;gap:8px}
+.searchbox .field{position:relative;flex:1}
+.searchbox input{width:100%;height:56px;border-radius:14px;border:2px solid var(--rule);background:var(--card);font:inherit;font-size:19px;padding:0 14px 0 46px;color:var(--ink)}
+.searchbox input:focus{border-color:var(--ink);outline:none}
+.searchbox .field svg{position:absolute;left:14px;top:16px;color:var(--ink-soft)}
+.mic{width:56px;height:56px;border-radius:14px;border:0;background:var(--ink);color:#fff;place-items:center}
+body.offline .mic{opacity:.4}
+.mic.listening{background:var(--bahi)}
+.walkin{display:flex;align-items:center;gap:14px;margin:12px 16px 0;padding:10px 14px;min-height:64px;width:calc(100% - 32px);border:0;border-radius:14px;background:var(--sale-tint);text-align:left}
+.walkin .av{background:var(--sale);color:#fff}
+.av{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:21px;background:var(--buy-tint);color:var(--buy);flex:none}
+.prow{display:flex;align-items:center;gap:14px;width:100%;min-height:68px;padding:8px 16px;border:0;border-bottom:1px solid var(--rule);background:transparent;text-align:left}
+.prow:active{background:var(--sale-tint)}
+.prow .nm{font-size:19px;font-weight:600;line-height:1.2}
+.prow .tg{color:var(--ink-soft);font-weight:500}
+.prow .meta{font-size:15px;color:var(--ink-soft)}
+.prow .bal{margin-left:auto;text-align:right;flex:none}
+.prow .bal .pay-tag{white-space:nowrap}
+
+/* register look: names sit in the margin column like a khata register */
+.reg{position:relative}
+.reg::before{content:"";position:absolute;top:0;bottom:0;left:72px;width:1.5px;background:var(--bahi);opacity:.4;pointer-events:none;z-index:1}
+/* voice: heard strip, not-found card, listening screen */
+.heard{display:flex;align-items:center;gap:10px;margin:10px 16px 0;padding:6px 6px 6px 12px;border-radius:12px;background:var(--card);border:1.5px dashed var(--ink-soft)}
+.heard .q{flex:1;font-size:16px;color:var(--ink-soft);line-height:1.25}
+.heard .q b{display:block;color:var(--ink);font-size:20px}
+.heard button{min-height:48px;border:0;background:none;font-weight:700;font-size:16px;text-decoration:underline;text-underline-offset:4px}
+.addcard{margin:12px 16px 6px;padding:14px;border-radius:16px;background:var(--card);border:2px solid var(--ink)}
+.addcard .nf{font-size:17px;color:var(--ink-soft);margin:0 0 10px}
+.addcard .nf b{color:var(--ink);font-size:21px;display:block}
+.addcard .btn-primary{font-size:21px;line-height:1.15;padding:8px 14px;text-align:left}
+.addrow{display:flex;align-items:center;gap:10px;width:calc(100% - 32px);margin:12px 16px;min-height:56px;padding:6px 14px;border-radius:14px;border:2px dashed var(--ink-soft);background:var(--card);font-weight:700;font-size:17px;text-align:left}
+.listen{position:absolute;inset:0;z-index:25;background:var(--paper) var(--grain);display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center}
+.listen.open{display:flex}
+.listen .ring{width:124px;height:124px;border-radius:50%;background:var(--bahi);color:#fff;display:grid;place-items:center;animation:pulse 1.2s ease-out infinite}
+.listen .ring svg{width:54px;height:54px}
+@keyframes pulse{from{box-shadow:0 0 0 0 rgba(158,42,43,.35)}to{box-shadow:0 0 0 30px rgba(158,42,43,0)}}
+@media (prefers-reduced-motion:reduce){.listen .ring{animation:none}}
+.listen .lt{font-family:var(--f-display);font-weight:700;font-size:25px}
+.listen .tr{font-size:28px;font-weight:600;min-height:46px;min-width:220px;border-bottom:2px solid var(--rule);padding:0 12px}
+.sheet .confirm-sub{margin:-6px 0 4px;color:var(--ink-soft)}
+.say{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 0;font-size:14px;color:var(--ink-soft)}
+.say button{min-height:34px;padding:0 10px;border-radius:8px;border:1px solid var(--rule);background:#fff;font-size:14px;font-weight:600;color:var(--ink)}
+.say button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* sheets */
+.sheet-wrap{position:absolute;inset:0;background:rgba(27,36,51,.45);display:none;z-index:20}
+.sheet-wrap.open{display:block}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:24px 24px 0 0;padding:10px 16px 20px;max-height:88%;overflow:auto}
+.handle{width:44px;height:5px;border-radius:3px;background:var(--rule);margin:0 auto 10px}
+.sheet h2{font-family:var(--f-display);font-size:24px;margin:4px 0 10px}
+.sheet label{display:block;font-size:16px;font-weight:600;color:var(--ink-soft);margin:12px 0 4px}
+.sheet input{width:100%;height:56px;border-radius:12px;border:2px solid var(--rule);font:inherit;font-size:19px;padding:0 14px;color:var(--ink)}
+.sheet input:focus{border-color:var(--ink);outline:none}
+.similar{margin-top:14px;padding:12px;border-radius:14px;background:var(--udharo-tint)}
+.similar b{display:block;margin-bottom:8px}
+.similar .prow{background:var(--card);border-radius:12px;border:0;margin-bottom:10px}
+.opt{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:60px;border:0;border-bottom:1px solid var(--rule);background:none;font-size:19px;font-weight:600;text-align:left;padding:0 4px}
+.opt small{font-weight:500;color:var(--ink-soft);font-size:16px}
+
+/* ---------- amount ---------- */
+.amt-wrap{padding:4px 16px 0}
+.amt-q{font-size:17px;font-weight:600;color:var(--ink-soft)}
+.amt-display{font-family:var(--f-display);font-weight:800;font-size:48px;line-height:1.1;text-align:right;border-bottom:5px double var(--ink);padding:4px 2px 4px;font-variant-numeric:tabular-nums;min-height:66px}
+.amt-display.ph{color:#9aa3b2}
+.chips{display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px 0}
+.chip{min-height:48px;padding:0 16px;border-radius:999px;border:2px solid var(--rule);background:var(--card);font-size:17px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.chip.on{border-color:var(--ink);background:var(--ink);color:#fff}
+.chip.on.cash{background:var(--sale);border-color:var(--sale)}
+.chip.on.qr{background:var(--buy);border-color:var(--buy)}
+.chip.on.udh{background:var(--udharo);border-color:var(--udharo);color:var(--ink)}
+.chip svg{width:18px;height:18px}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:10px 16px 0}
+.numpad button{height:64px;border-radius:14px;border:1px solid var(--rule);background:var(--card);font-family:var(--f-display);font-weight:700;font-size:29px}
+.numpad button:active{background:var(--rule)}
+
+/* saved moment */
+.saved{position:absolute;inset:0;z-index:30;background:rgba(242,244,241,.97);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.saved.open{display:flex}
+.saved .card{position:relative;width:190px;box-shadow:0 14px 30px rgba(27,36,51,.25)}
+.saved .card svg{width:100%;display:block}
+.stamp{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%) rotate(-8deg);border:4px double var(--sale);color:var(--sale);background:rgba(255,255,255,.72);padding:4px 16px;border-radius:10px;font-family:var(--f-display);font-weight:800;font-size:32px;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.saved.open .stamp{animation:stamp .36s cubic-bezier(.2,.9,.3,1.2) both .12s}
+@keyframes stamp{from{opacity:0;transform:translate(-50%,-50%) rotate(-8deg) scale(1.45)}to{opacity:1;transform:translate(-50%,-50%) rotate(-8deg) scale(1)}}
+@media (prefers-reduced-motion:reduce){.saved.open .stamp{animation:none}}
+.saved .msg{text-align:center}
+.saved .msg b{display:block;font-family:var(--f-display);font-size:28px}
+.saved .msg span{color:var(--ink-soft)}
+
+/* ---------- filters / tabs ---------- */
+.filters{display:flex;gap:8px;overflow-x:auto;padding:4px 16px 8px;scrollbar-width:none}
+.filters .chip{flex:none}
+.group-h{position:sticky;top:0;z-index:2;background:var(--paper);padding:10px 16px 6px;font-weight:700;color:var(--ink-soft);font-size:16px;border-bottom:2px solid var(--ink)}
+.tabs{display:grid;grid-template-columns:1fr 1fr;margin:4px 16px 8px;border:2px solid var(--ink);border-radius:14px;overflow:hidden}
+.tabs button{min-height:48px;border:0;background:var(--card);font-weight:700;font-size:17px}
+.tabs button.on{background:var(--ink);color:#fff}
+
+/* ---------- account + bill detail ---------- */
+.acct-head{padding:0 16px 4px}
+.acct-head .nm{font-family:var(--f-display);font-weight:800;font-size:28px;line-height:1.1}
+.acct-head .tg{color:var(--ink-soft)}
+.balance{margin:14px 16px 0;padding:14px 16px;border-radius:16px;background:var(--udharo-tint);align-items:center;justify-content:space-between;gap:12px}
+.balance .k{font-weight:700;color:#6b4500}
+.balance .amt{font-size:32px}
+.balance button{min-height:56px;border:0;border-radius:14px;background:var(--ink);color:#fff;font-weight:700;font-size:18px;padding:0 16px}
+.photo-stage{background:var(--ink);height:400px;overflow:auto;display:grid;place-items:center;flex:none}
+.photo-stage svg{height:370px;width:auto;display:block;transition:height .2s}
+.photo-stage.zoom{place-items:start}
+.photo-stage.zoom svg{height:760px}
+.fields{margin:12px 16px 0}
+.fields .lrow .k{color:var(--ink-soft);font-weight:600}
+.fields .lrow .v{font-weight:700;text-align:right}
+.danger{color:var(--bahi);border-color:var(--bahi)}
+.toast{position:absolute;left:14px;right:14px;bottom:88px;z-index:40;background:var(--ink);color:#fff;border-radius:14px;padding:12px 14px 12px 18px;display:none;align-items:center;justify-content:space-between;gap:10px;font-weight:600}
+.toast.open{display:flex}
+.toast button{border:0;background:none;color:#FFD27A;font-weight:700;font-size:17px;min-height:44px}
+
+/* day close */
+.dc-field{margin:12px 16px 0}
+.dc-field label{display:block;font-weight:700}
+.dc-field small{display:block;color:var(--ink-soft);font-size:15px}
+.dc-field input{margin-top:6px;width:100%;height:60px;border-radius:14px;border:2px solid var(--rule);background:var(--card);font-family:var(--f-display);font-weight:700;font-size:28px;text-align:right;padding:0 14px;color:var(--ink)}
+
+/* ---------- notes panel ---------- */
+.notes{width:400px;max-width:100%;background:var(--card);border-radius:20px;padding:22px 24px;font-size:16px;line-height:1.5;border:1px solid var(--rule)}
+.notes h1{font-family:var(--f-display);font-size:26px;line-height:1.1;margin:0 0 4px}
+.notes .lead{color:var(--ink-soft);margin:0 0 16px}
+.notes h2{font-family:var(--f-display);font-size:20px;margin:18px 0 6px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.ctl button{min-height:40px;padding:0 12px;border-radius:10px;border:2px solid var(--rule);background:#fff;font-weight:600;font-size:15px}
+.ctl button.on{border-color:var(--ink);background:var(--ink);color:#fff}
+.ctl button.warn.on{background:var(--udharo);border-color:var(--udharo);color:var(--ink)}
+.jump{display:flex;flex-wrap:wrap;gap:6px}
+.jump button{min-height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--rule);background:var(--paper);font-size:14px;font-weight:600}
+.jump button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.specs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}
+.specs span{font-size:13px;font-weight:700;background:var(--buy-tint);color:var(--buy);border-radius:6px;padding:2px 8px}
+.specs span.n{background:var(--udharo-tint);color:#6b4500}
+.notes ul{margin:0;padding-left:18px}
+.notes li{margin:4px 0}
+.notes code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:14px}
+@media (max-width:480px){
+  .stage{padding:0;gap:0}
+  .device{width:100vw;height:100dvh;border-radius:0;padding:0;box-shadow:none}
+  .app{border-radius:0}
+  .notes{border-radius:0;width:100%}
+}
+</style>
+</head>
+<body>
+<div class="stage">
+<div class="device"><div class="app" id="app">
+  <div class="statusbar"><span>10:45</span><span>4G ▮▮▮ 78%</span></div>
+
+  <!-- TODAY (F-02) -->
+  <section class="screen active" id="s-today">
+    <div class="scroll">
+      <div class="today-head">
+        <div class="when"><div class="date-big" id="today-date"></div><div class="shop" data-t="shop"></div></div>
+        <button class="lang" id="lang-btn" onclick="toggleLang()" aria-label="Language">EN</button>
+      </div>
+      <button class="pill ok" id="sync-pill" onclick="toast(t('syncExplain'))"></button>
+      <div class="bigbtns">
+        <button class="bigbtn sale" onclick="startCapture('sale')"><span class="ic" data-icon="bagOut"></span><span><span class="lbl" data-t="sale"></span><span class="sub" data-t="saleSub"></span></span></button>
+        <button class="bigbtn buy" onclick="startCapture('purchase')"><span class="ic" data-icon="boxIn"></span><span><span class="lbl" data-t="buy"></span><span class="sub" data-t="buySub"></span></span></button>
+      </div>
+      <div class="ledger" id="today-ledger"></div>
+      <button class="btn-secondary dayclose-btn v11 flex v11-mark" onclick="go('dayclose')"><span data-icon="calc"></span><span data-t="dayClose"></span></button>
+      <div class="list-head"><b data-t="recent"></b><button class="btn-link" onclick="go('bills')" data-t="seeAll"></button></div>
+      <div id="today-recent"></div>
+      <div style="height:16px"></div>
+    </div>
+    <nav class="nav" data-nav="today"></nav>
+  </section>
+
+  <!-- CAMERA (simulates the phone's own camera) -->
+  <section class="screen" id="s-camera">
+    <div class="cam-top"><button class="iconbtn" onclick="cancelCapture()" aria-label="Close" data-icon="close"></button><span class="cam-hint" data-t="camHint"></span><span style="width:48px"></span></div>
+    <div class="viewfinder"><div class="paper" id="cam-paper"></div><i class="corner c1"></i><i class="corner c2"></i><i class="corner c3"></i><i class="corner c4"></i></div>
+    <div class="cam-bottom"><span></span><button class="shutter" onclick="shutter()" aria-label="Take photo"></button><span class="pagecount" id="cam-page"></span></div>
+  </section>
+
+  <!-- PREVIEW (F-03) -->
+  <section class="screen" id="s-preview">
+    <div class="topbar" style="color:#fff"><button class="iconbtn" style="color:#fff" onclick="cancelCapture()" aria-label="Back" data-icon="back"></button><span class="title" id="prev-title"></span><span class="step" style="color:#c9d2e0">1/3</span></div>
+    <div class="preview-photo" id="prev-photo"></div>
+    <div class="pages" id="prev-pages"></div>
+    <div class="preview-actions">
+      <button class="btn-primary" id="prev-use" onclick="go('party')"><span data-icon="check"></span><span data-t="usePhoto"></span></button>
+      <div class="two"><button class="btn-secondary" onclick="retake()" data-t="retake"></button><button class="btn-secondary" onclick="addPage()"><span data-icon="plus"></span><span data-t="addPage"></span></button></div>
+    </div>
+  </section>
+
+  <!-- WHOSE BILL? (F-04, mic = F-24 v1.1) -->
+  <section class="screen" id="s-party">
+    <div class="topbar"><button class="iconbtn" onclick="back()" aria-label="Back" data-icon="back"></button><span class="title" data-t="whose"></span><span class="step">2/3</span><span class="mini-thumb" id="party-thumb"></span></div>
+    <div style="padding:0 16px"><span class="badge" id="party-badge"></span></div>
+    <div class="searchbox"><div class="field"><span data-icon="search"></span><input id="party-q" autocomplete="off" oninput="S.voice=null;renderParty()" data-ph="search"></div><button class="mic v11 grid v11-mark" id="mic" onclick="listen()" aria-label="Voice" data-icon="mic"></button></div>
+    <div class="scroll" id="party-list"></div>
+    <div class="listen" id="listen" role="dialog" aria-live="polite"><div class="ring" data-icon="mic"></div><div class="lt" data-t="listening"></div><div class="tr" id="listen-tr"></div><button class="btn-link" onclick="stopListen()" data-t="cancel"></button></div>
+    <div class="footer"><button class="btn-secondary" onclick="openNewName(false)"><span data-icon="plus"></span><span data-t="addName"></span></button><button class="btn-link" onclick="pickParty(null)" data-t="laterNoName"></button></div>
+  </section>
+
+  <!-- AMOUNT (F-03, F-05; payment chips F-20 v1.1) -->
+  <section class="screen" id="s-amount">
+    <div class="topbar"><button class="iconbtn" onclick="back()" aria-label="Back" data-icon="back"></button><span class="title" id="amt-party" style="font-size:22px"></span><span class="step">3/3</span><button class="mini-thumb" id="amt-thumb" style="padding:0" onclick="toast(t('thumbHint'))"></button></div>
+    <div class="amt-wrap"><div class="amt-q" data-t="amountQ"></div><div class="amt-display ph" id="amt-display"></div></div>
+    <div class="chips v11 flex v11-mark" id="pay-chips" style="margin:10px 16px 0;padding:8px"></div>
+    <div class="chips"><button class="chip" id="date-chip" onclick="openSheet('date-sheet')"></button></div>
+    <div class="numpad" id="numpad"></div>
+    <div style="flex:1"></div>
+    <div class="footer"><button class="btn-link" onclick="saveBill(true)" data-t="amountLater"></button><button class="btn-primary" id="save-btn" onclick="saveBill(false)"><span data-icon="check"></span><span data-t="saveBill"></span></button></div>
+    <div class="saved" id="saved"><div class="card" id="saved-card"><div class="stamp"><span data-icon="check"></span><span data-t="saved"></span></div></div><div class="msg"><b data-t="billSaved"></b><span id="saved-sub"></span></div></div>
+  </section>
+
+  <!-- BILLS (F-06) -->
+  <section class="screen" id="s-bills">
+    <div class="topbar"><span class="title" style="padding-left:6px" data-t="navBills"></span></div>
+    <div class="filters" id="bill-filters"></div>
+    <div class="scroll" id="bills-list"></div>
+    <nav class="nav" data-nav="bills"></nav>
+  </section>
+
+  <!-- ACCOUNTS (F-07) -->
+  <section class="screen" id="s-accounts">
+    <div class="topbar"><span class="title" style="padding-left:6px" data-t="navAccounts"></span></div>
+    <div class="tabs" id="acct-tabs"></div>
+    <div class="searchbox" style="margin-bottom:6px"><div class="field"><span data-icon="search"></span><input id="acct-q" autocomplete="off" oninput="renderAccounts()" data-ph="search"></div></div>
+    <div class="scroll" id="acct-list"></div>
+    <nav class="nav" data-nav="accounts"></nav>
+  </section>
+
+  <!-- ACCOUNT PAGE (F-07; balance F-21/F-22 v1.1) -->
+  <section class="screen" id="s-account">
+    <div class="topbar"><button class="iconbtn" onclick="back()" aria-label="Back" data-icon="back"></button><span class="title"></span><button class="iconbtn" id="acct-call" onclick="toast(t('callHint'))" aria-label="Call" data-icon="phone"></button></div>
+    <div class="scroll">
+      <div class="acct-head" id="acct-head"></div>
+      <div class="balance v11 flex v11-mark" id="acct-balance"></div>
+      <div class="ledger" id="acct-ledger"></div>
+      <div class="list-head"><b data-t="navBills"></b></div>
+      <div id="acct-bills"></div>
+    </div>
+  </section>
+
+  <!-- BILL DETAIL (F-08) -->
+  <section class="screen" id="s-bill">
+    <div class="topbar"><button class="iconbtn" onclick="back()" aria-label="Back" data-icon="back"></button><span class="title" id="bill-title"></span></div>
+    <div class="scroll">
+      <div class="photo-stage" id="bill-photo" onclick="this.classList.toggle('zoom')"></div>
+      <div class="ledger fields" id="bill-fields"></div>
+      <div style="padding:16px;display:grid;gap:10px">
+        <button class="btn-secondary" onclick="toast(t('correctNote'))" data-t="correct"></button>
+        <button class="btn-link danger" onclick="openSheet('remove-sheet')" data-t="remove"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- DAY CLOSE (F-23, v1.1) -->
+  <section class="screen" id="s-dayclose">
+    <div class="topbar"><button class="iconbtn" onclick="back()" aria-label="Back" data-icon="back"></button><span class="title" data-t="dayClose"></span></div>
+    <div class="scroll">
+      <div class="dc-field"><label data-t="totalSales"></label><small data-t="totalSalesSub"></small><input inputmode="numeric" id="dc-total" value="31,200" oninput="renderDayClose()"></div>
+      <div class="dc-field"><label data-t="qrToday"></label><small data-t="qrSub"></small><input inputmode="numeric" id="dc-qr" value="14,650" oninput="renderDayClose()"></div>
+      <div class="ledger" id="dc-ledger"></div>
+    </div>
+    <div class="footer"><button class="btn-primary" onclick="toast(t('dcSaved'));back()" data-t="saveDayClose"></button></div>
+  </section>
+
+  <!-- SHEETS -->
+  <div class="sheet-wrap" id="newname-sheet" onclick="if(event.target===this)closeSheets()"><div class="sheet">
+    <div class="handle"></div><h2 id="nn-title"></h2><p class="confirm-sub" id="nn-sub"></p>
+    <label for="nn-name" data-t="fName"></label><input id="nn-name" oninput="checkSimilar()">
+    <div class="similar" id="nn-similar" style="display:none"></div>
+    <label for="nn-phone" data-t="fPhone"></label><input id="nn-phone" inputmode="tel">
+    <label for="nn-tag" data-t="fTag"></label><input id="nn-tag" data-ph="fTagPh">
+    <div style="height:14px"></div><button class="btn-primary" onclick="createParty()" data-t="saveName"></button>
+  </div></div>
+
+  <div class="sheet-wrap" id="date-sheet" onclick="if(event.target===this)closeSheets()"><div class="sheet"><div class="handle"></div><h2 data-t="date"></h2><div id="date-opts"></div></div></div>
+
+  <div class="sheet-wrap" id="remove-sheet" onclick="if(event.target===this)closeSheets()"><div class="sheet">
+    <div class="handle"></div><h2 data-t="removeQ"></h2><p style="margin:0 0 16px;color:var(--ink-soft)" data-t="removeSub"></p>
+    <div style="display:grid;gap:10px"><button class="btn-primary" style="background:var(--bahi)" onclick="removeBill()" data-t="remove"></button><button class="btn-secondary" onclick="closeSheets()" data-t="keepIt"></button></div>
+  </div></div>
+
+  <div class="toast" id="toast"><span id="toast-msg"></span><button id="toast-undo" onclick="undoRemove()" data-t="undo"></button></div>
+</div></div>
+
+<aside class="notes">
+  <h1>Mero Pasal — Buwa's app</h1>
+  <p class="lead">Clickable concept mockup (v1.0). Names, amounts and the shop name are placeholders. Everything on the phone is tappable.</p>
+  <h2>Controls</h2>
+  <div class="ctl">
+    <button id="c-ne" class="on" onclick="setLang('ne')">नेपाली</button><button id="c-en" onclick="setLang('en')">English</button>
+  </div>
+  <div class="ctl">
+    <button id="c-v11" onclick="toggleV11()">Show v1.1 features</button>
+    <button id="c-net" class="warn" onclick="toggleNet()">Internet off</button>
+    <button onclick="resetDemo()">Reset demo</button>
+  </div>
+  <div class="say" id="say-ctl"></div>
+  <p style="font-size:14px;color:var(--ink-soft);margin:4px 0 0">v1.1 items get a dashed marigold outline. With "Internet off", saved bills queue on the phone; switch it back to watch them upload.</p>
+  <h2>Jump to screen</h2>
+  <div class="jump" id="jump"></div>
+  <h2 id="n-title"></h2>
+  <div class="specs" id="n-specs"></div>
+  <ul id="n-points"></ul>
+</aside>
+</div>
+<script>
+/* ================= icons ================= */
+const ICONS = {
+  bagOut:'<path d="M6 8h12l-1.2 12H7.2z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/><path d="M12 17.5v-6"/><path d="M9.5 14 12 11.5 14.5 14"/>',
+  boxIn:'<path d="M4 8.5 12 5l8 3.5v8L12 20l-8-3.5z"/><path d="M4 8.5 12 12l8-3.5"/><path d="M12 12v8"/>',
+  calc:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h2M12 12h2M16 12h0M8 16h2M12 16h2M16 16h0"/>',
+  close:'<path d="M6 6l12 12M18 6 6 18"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
+  phone:'<path d="M5 4h3.5l2 5-2.5 1.6a11 11 0 0 0 5.4 5.4L15 13.5l5 2V19a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
+  person:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+  clock:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/>',
+  cloudOff:'<path d="M4 4l16 16"/><path d="M8 8.5A5 5 0 0 0 7 18h10.5M13 7a5 5 0 0 1 4.9 4A3.5 3.5 0 0 1 20 17"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/>',
+  receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  book:'<path d="M5 5a2 2 0 0 1 2-2h12v15H7a2 2 0 0 0-2 2z"/><path d="M5 20a2 2 0 0 0 2 2h12v-4"/>',
+  calendar:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+  chevron:'<path d="M6 9l6 6 6-6"/>'
+};
+const icon = (n, cls='') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||''}</svg>`;
+
+/* ================= copy (ne default) ================= */
+const T = {
+ ne:{shop:'लक्ष्मी किराना पसल',sale:'बेचेको बिल',saleSub:'ग्राहकलाई बेचेको',buy:'किनेको बिल',buySub:'सप्लायरबाट किनेको',
+  todayBills:'आजका बिल',sold:'बेचेको',bought:'किनेको',noAmountRow:'रकम नहालेका',udharoGiven:'उधारो दिएको',dayClose:'दिनको हिसाब',
+  recent:'हालै राखेका',seeAll:'सबै हेर्नुहोस्',navToday:'आज',navBills:'बिलहरू',navAccounts:'खाता',cnt:'{n} बिल',
+  syncOk:'सबै सुरक्षित',syncPending:'{n} पठाउन बाँकी',syncOffline:'इन्टरनेट छैन — बिल फोनमा सुरक्षित छन्',
+  syncExplain:'बिल पहिले फोनमा राखिन्छ, इन्टरनेट भएपछि आफैँ पठाइन्छ।',
+  camHint:'बिल पूरै देखिने गरी खिच्नुहोस्',page:'पाना {n}',photoOf:'बिलको फोटो',usePhoto:'ठीक छ',retake:'फेरि खिच्नुहोस्',addPage:'अर्को पाना',
+  whose:'कसको बिल?',search:'नाम खोज्नुहोस् (नेपाली वा English)',walkIn:'नगद ग्राहक',walkInSub:'नाम नचाहिने बिक्री',
+  recentNames:'हालैका',results:'खोजेका',noResults:'"{q}" नाम भेटिएन — तल "नयाँ नाम" थिच्नुहोस्',addName:'नयाँ नाम थप्नुहोस्',laterNoName:'नाम पछि छान्छु',
+  newName:'नयाँ नाम',fName:'नाम',fPhone:'फोन (नभए खाली)',fTag:'चिनाउने शब्द (नभए खाली)',fTagPh:'जस्तै: चोक, ड्राइभर, पसल छेउ',saveName:'नाम राख्नुहोस्',
+  similar:'यस्तै नाम पहिले नै छ। उही मान्छे हो?',same:'हो, उही हो',createNew:'होइन, नयाँ बनाउनुहोस्',
+  amountQ:'जम्मा कति?',amountLater:'रकम पछि हाल्छु',date:'मिति',today:'आज',yesterday:'हिजो',dayBefore:'अस्ति',pickDate:'अरू मिति',pickDateSub:'पात्रो खुल्छ (९० दिनसम्म पछाडि)',
+  saveBill:'बिल राख्नुहोस्',saved:'राखियो',billSaved:'बिल राखियो',
+  cash:'नगद',qr:'QR',udharo:'उधारो',partUdharo:'केही उधारो',paid:'तिरेँ',due:'बाँकी',partDue:'केही बाँकी',
+  all:'सबै',noAmount:'रकम छैन',customers:'ग्राहक',suppliers:'सप्लायर',thisMonth:'यो महिना',allTime:'जम्मा',
+  balance:'उधारो बाँकी',weOwe:'हामीले तिर्न बाँकी',received:'पैसा आयो',paidOut:'पैसा तिरेँ',
+  type:'प्रकार',nameL:'नाम',amountL:'रकम',dateL:'मिति',capturedBy:'राख्ने',payL:'भुक्तानी',time:'समय',pagesL:'पाना',buwa:'बुवा',walkInName:'नगद ग्राहक',noName:'नाम छैन',
+  correct:'सच्याउनुहोस्',correctNote:'मकअप: नाम र रकमका उही चरणहरू फेरि खुल्छन्',remove:'हटाउनुहोस्',removeQ:'यो बिल हटाउने?',
+  removeSub:'हटाएको बिल हिसाबमा गनिँदैन। बिनायकले फर्काउन सक्छन्।',keepIt:'होइन, राख्ने',removed:'बिल हटाइयो',undo:'फर्काउनुहोस्',
+  totalSales:'आजको जम्मा बिक्री',totalSalesSub:'बिल नभएको बिक्री समेत',qrToday:'Fonepay QR मा आएको',qrSub:'Fonepay एपबाट हेरेर लेख्नुहोस्',
+  billedSales:'बिल गरिएको बिक्री',moneyIn:'उधारो उठेको',cashCalc:'नगद (हिसाबले)',saveDayClose:'हिसाब राख्नुहोस्',dcSaved:'दिनको हिसाब राखियो',
+  listening:'सुन्दैछ… नाम भन्नुहोस्',cancel:'रद्द गर्नुहोस्',needsInternet:'आवाजले खोज्न इन्टरनेट चाहिन्छ — टाइप गरेर खोज्नुहोस्',heard:'सुनियो',sayAgain:'फेरि भन्नुहोस्',
+  notFound:'{q} नाम अहिलेसम्म छैन',addThis:'“{q}” नाम थप्नुहोस्',notThem:'“{q}” अर्कै मान्छे हो? नयाँ थप्नुहोस्',isItThis:'यीमध्ये कोही हो?',
+  confirmName:'नाम ठीक छ?',confirmSub:'सुनेको नाम हो। मिलेन भने सच्याएर राख्नुहोस्।',thumbHint:'फोटो ठूलो गरेर जम्मा पढ्न सकिन्छ',callHint:'फोन एप खुल्छ',emptyBills:'यहाँ कुनै बिल छैन।',
+  bigAmt:'रु {a} — ठीक हो?',offlineSaved:'इन्टरनेट छैन। बिल फोनमा सुरक्षित छ।'},
+ en:{shop:'Laxmi Kirana Pasal',sale:'Sold bill',saleSub:'Sold to a customer',buy:'Bought bill',buySub:'Bought from a supplier',
+  todayBills:"Today's bills",sold:'Sold',bought:'Bought',noAmountRow:'Without amount',udharoGiven:'Udharo given',dayClose:'Day close',
+  recent:'Recently saved',seeAll:'See all',navToday:'Today',navBills:'Bills',navAccounts:'Accounts',cnt:'{n} bills',
+  syncOk:'All saved',syncPending:'{n} waiting to upload',syncOffline:'No internet — bills are safe on this phone',
+  syncExplain:'Bills are saved on the phone first and upload by themselves when internet returns.',
+  camHint:'Fit the whole bill in the frame',page:'Page {n}',photoOf:'Bill photo',usePhoto:'Use photo',retake:'Retake',addPage:'Add page',
+  whose:'Whose bill?',search:'Search name (Nepali or English)',walkIn:'Walk-in customer',walkInSub:'Sale without a name',
+  recentNames:'Recent',results:'Results',noResults:'No name matches "{q}" — tap "Add new name" below',addName:'Add new name',laterNoName:'Choose name later',
+  newName:'New name',fName:'Name',fPhone:'Phone (optional)',fTag:'Tag to tell apart (optional)',fTagPh:'e.g. Chowk, driver, next to shop',saveName:'Save name',
+  similar:'A similar name already exists. Same person?',same:'Yes, same person',createNew:'No, create new',
+  amountQ:'Bill total?',amountLater:'Add amount later',date:'Date',today:'Today',yesterday:'Yesterday',dayBefore:'Day before',pickDate:'Pick date',pickDateSub:'Opens a BS calendar (up to 90 days back)',
+  saveBill:'Save bill',saved:'Saved',billSaved:'Bill saved',
+  cash:'Cash',qr:'QR',udharo:'Udharo',partUdharo:'Part udharo',paid:'Paid',due:'Due',partDue:'Part due',
+  all:'All',noAmount:'No amount',customers:'Customers',suppliers:'Suppliers',thisMonth:'This month',allTime:'All time',
+  balance:'Udharo due',weOwe:'We owe',received:'Money received',paidOut:'Money paid',
+  type:'Type',nameL:'Name',amountL:'Amount',dateL:'Date',capturedBy:'Saved by',payL:'Payment',time:'Time',pagesL:'Pages',buwa:'Buwa',walkInName:'Walk-in customer',noName:'No name',
+  correct:'Correct',correctNote:'Mockup: reopens the same name and amount steps',remove:'Remove',removeQ:'Remove this bill?',
+  removeSub:"A removed bill isn't counted. Binayak can restore it.",keepIt:'No, keep it',removed:'Bill removed',undo:'Undo',
+  totalSales:'Total sales today',totalSalesSub:'Including unbilled sales',qrToday:'Received via Fonepay QR',qrSub:'Copy it from the Fonepay app',
+  billedSales:'Billed sales',moneyIn:'Udharo collected',cashCalc:'Cash (calculated)',saveDayClose:'Save day close',dcSaved:'Day close saved',
+  listening:'Listening… say the name',cancel:'Cancel',needsInternet:'Voice needs internet — type the name instead',heard:'Heard',sayAgain:'Say again',
+  notFound:'No name {q} yet',addThis:'Add “{q}” as a new name',notThem:'A different “{q}”? Add as new',isItThis:'Is it one of these?',
+  confirmName:'Is the name right?',confirmSub:"This is what I heard. Fix it if it's wrong, then save.",thumbHint:'Zoom the photo to read the total',callHint:'Opens the phone app',emptyBills:'No bills here.',
+  bigAmt:'Rs {a} — is this right?',offlineSaved:'No internet. The bill is safe on this phone.'}
+};
+
+/* ================= demo data (placeholders) ================= */
+const PARTIES0 = [
+ {id:'p1',name:'राम बहादुर थापा',alt:'Ram Bahadur Thapa',tag:'चोक',kind:'c',phone:1,base:14200,bal:12300},
+ {id:'p2',name:'सीता श्रेष्ठ',alt:'Sita Shrestha',tag:'स्कुल अगाडि',kind:'c',phone:1,base:6400,bal:0},
+ {id:'p3',name:'Hari Prasad Adhikari',alt:'हरि प्रसाद अधिकारी',tag:'Driver',kind:'c',phone:1,base:9100,bal:7250},
+ {id:'p4',name:'Binayak Hotel',alt:'विनायक होटल',tag:'',kind:'c',phone:1,base:22800,bal:18400},
+ {id:'p5',name:'गोपाल महर्जन',alt:'Gopal Maharjan',tag:'मन्दिर छेउ',kind:'c',phone:0,base:5300,bal:0},
+ {id:'p6',name:'कमला तामाङ',alt:'Kamala Tamang',tag:'',kind:'c',phone:1,base:3900,bal:1500},
+ {id:'p7',name:'राम कुमार के.सी.',alt:'Ram Kumar KC',tag:'पसल छेउ',kind:'c',phone:1,base:7700,bal:4400},
+ {id:'s1',name:'Everest Traders',alt:'एभरेस्ट ट्रेडर्स',tag:'',kind:'s',phone:1,base:96000,bal:-42300},
+ {id:'s2',name:'हिमालयन डिस्ट्रिब्युटर्स',alt:'Himalayan Distributors',tag:'',kind:'s',phone:1,base:61000,bal:0},
+ {id:'s3',name:'Bhaktapur Dairy',alt:'भक्तपुर डेरी',tag:'दूध, दही',kind:'s',phone:1,base:28500,bal:0}
+];
+const BILLS0 = [
+ {id:'b1',type:'sale',party:'p1',amt:2340,day:0,time:'10:42',pages:1,pay:'udharo'},
+ {id:'b2',type:'sale',party:'w',amt:1850,day:0,time:'10:15',pages:1,pay:'qr'},
+ {id:'b3',type:'purchase',party:'s1',amt:42300,day:0,time:'09:40',pages:2,pay:'due'},
+ {id:'b4',type:'sale',party:'p4',amt:5600,day:0,time:'09:20',pages:1,pay:'udharo'},
+ {id:'b5',type:'sale',party:'p2',amt:null,day:0,time:'08:55',pages:1,pay:null},
+ {id:'b6',type:'sale',party:'p5',amt:3120,day:0,time:'08:30',pages:1,pay:'cash'},
+ {id:'b7',type:'sale',party:'w',amt:1540,day:0,time:'08:05',pages:1,pay:'qr'},
+ {id:'b8',type:'sale',party:'p3',amt:2890,day:0,time:'07:50',pages:1,pay:'udharo'},
+ {id:'b9',type:'sale',party:'p1',amt:1200,day:1,time:'18:20',pages:1,pay:'udharo'},
+ {id:'b10',type:'purchase',party:'s3',amt:8750,day:1,time:'16:05',pages:1,pay:'paid'},
+ {id:'b11',type:'sale',party:'p6',amt:2210,day:1,time:'14:40',pages:1,pay:'cash'},
+ {id:'b12',type:'sale',party:'p7',amt:4400,day:1,time:'11:10',pages:1,pay:'udharo'},
+ {id:'b13',type:'sale',party:'w',amt:1675,day:1,time:'09:30',pages:1,pay:'cash'},
+ {id:'b14',type:'sale',party:'p2',amt:3300,day:2,time:'17:45',pages:1,pay:'qr'},
+ {id:'b15',type:'purchase',party:'s2',amt:26800,day:2,time:'12:00',pages:1,pay:'paid'},
+ {id:'b16',type:'sale',party:'p1',amt:980,day:2,time:'08:15',pages:1,pay:'cash'}
+];
+
+/* ================= helpers ================= */
+const NE_DIG='०१२३४५६७८९';
+const neDigits = s => String(s).replace(/\d/g, d => NE_DIG[d]);
+const WEEK = {ne:['आइतबार','सोमबार','मङ्गलबार','बुधबार','बिहीबार','शुक्रबार','शनिबार'],en:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']};
+const MONTH = {ne:'असोज',en:'Asoj'};
+const TODAY = {d:7, wd:3}; // Wednesday, 7 Asoj 2083 (2026-09-23)
+function t(k, p={}){ let s=(T[S.lang][k] ?? T.ne[k] ?? k); for(const [a,b] of Object.entries(p)) s=s.replace('{'+a+'}',b); return s; }
+function npr(n){ return (S.lang==='ne'?'रु ':'Rs ') + Number(n).toLocaleString('en-IN'); }
+function dnum(n){ return S.lang==='ne'?neDigits(n):String(n); }
+function dayWord(day){ return day===0?t('today'):day===1?t('yesterday'):day===2?t('dayBefore'):WEEK[S.lang][(TODAY.wd-day+7)%7]; }
+function dateLabel(day, weekday=false){
+  const d = TODAY.d - day, wd = WEEK[S.lang][(TODAY.wd-day+7)%7];
+  const base = `${dnum(d)} ${MONTH[S.lang]}`;
+  return weekday ? `${wd}, ${base}` : `${dayWord(day)} · ${base}`;
+}
+function hhmm(s){ return dnum(s); }
+
+/* seeded pseudo-random so each bill photo looks the same every time */
+function rng(seed){ let s=(seed*9301+49297)%233280; return ()=> (s=(s*9301+49297)%233280)/233280; }
+function billSvg(type, seed){
+  const r = rng(seed);
+  if(type==='sale'){ // handwritten carbon copy on a ruled bill-book page
+    let g='';
+    for(let i=0;i<15;i++){ const y=46+i*17; g+=`<line x1="0" y1="${y}" x2="220" y2="${y}" stroke="#b9cbe6" stroke-width=".8"/>`; }
+    g+=`<line x1="30" y1="0" x2="30" y2="300" stroke="#d58b8b" stroke-width="1"/><line x1="160" y1="30" x2="160" y2="300" stroke="#d58b8b" stroke-width=".8"/>`;
+    const ink='#2b3f93'; const stroke = (x0,y,len,w=1.5)=>{ let x=x0, d=`M${x} ${y}`; while(x<x0+len){ const nx=x+5+r()*8; d+=` Q${(x+nx)/2} ${y-4-r()*5} ${nx} ${y+(r()*3-1.5)}`; x=nx; } return `<path d="${d}" fill="none" stroke="${ink}" stroke-width="${w}" stroke-linecap="round"/>`; };
+    g+=stroke(70,22,70,2.2)+`<rect x="176" y="10" width="34" height="18" rx="3" fill="none" stroke="${ink}" stroke-width="1"/>`+stroke(180,21,22,1.2);
+    const rows=5+Math.floor(r()*4);
+    for(let i=0;i<rows;i++){ const y=58+i*17; g+=stroke(36,y,50+r()*70); g+=stroke(166,y,22+r()*18); }
+    const ty=58+rows*17+14;
+    g+=`<line x1="150" y1="${ty-9}" x2="214" y2="${ty-9}" stroke="${ink}" stroke-width="1.2"/>`+stroke(40,ty,34,1.8)+stroke(166,ty,34,2.2);
+    g+=`<ellipse cx="184" cy="${ty-2}" rx="28" ry="11" fill="none" stroke="${ink}" stroke-width="1.1" transform="rotate(-4 184 ${ty})"/>`;
+    return `<svg viewBox="0 0 220 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><rect width="220" height="300" fill="#FBF9F4"/>${g}</svg>`;
+  }
+  // printed supplier invoice
+  let g=`<rect width="220" height="300" fill="#fff"/><rect x="14" y="14" width="110" height="12" fill="#27304a"/><rect x="14" y="31" width="80" height="5" fill="#8b93a6"/><rect x="14" y="40" width="96" height="5" fill="#8b93a6"/>`;
+  g+=`<rect x="150" y="14" width="56" height="30" fill="none" stroke="#27304a" stroke-width="1.2"/><rect x="156" y="20" width="30" height="5" fill="#27304a"/><rect x="156" y="31" width="42" height="6" fill="#27304a"/>`;
+  g+=`<rect x="14" y="60" width="192" height="12" fill="#e3e6ee"/>`;
+  const rows=7+Math.floor(r()*5);
+  for(let i=0;i<rows;i++){ const y=80+i*13; g+=`<rect x="18" y="${y}" width="${40+r()*70}" height="5" fill="#5b6479"/><rect x="${140+r()*6}" y="${y}" width="14" height="5" fill="#5b6479"/><rect x="${178+r()*6}" y="${y}" width="${18+r()*6}" height="5" fill="#27304a"/><line x1="14" y1="${y+9}" x2="206" y2="${y+9}" stroke="#e3e6ee"/>`; }
+  const ty=80+rows*13+8;
+  g+=`<rect x="120" y="${ty}" width="86" height="34" fill="none" stroke="#27304a" stroke-width="1.4"/><rect x="126" y="${ty+8}" width="30" height="6" fill="#5b6479"/><rect x="164" y="${ty+7}" width="36" height="9" fill="#27304a"/><rect x="126" y="${ty+21}" width="44" height="5" fill="#8b93a6"/>`;
+  g+=`<rect x="14" y="${ty+48}" width="70" height="5" fill="#8b93a6"/><line x1="140" y1="${ty+70}" x2="206" y2="${ty+70}" stroke="#27304a"/>`;
+  return `<svg viewBox="0 0 220 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
+}
+const seedOf = id => [...id].reduce((a,c)=>a*31+c.charCodeAt(0),7)%100000;
+
+/* ---- cross-script name matching (demo of shared/names; see architecture §7.3) ---- */
+const DV_CONS={'क':'k','ख':'kh','ग':'g','घ':'gh','ङ':'ng','च':'ch','छ':'chh','ज':'j','झ':'jh','ञ':'n','ट':'t','ठ':'th','ड':'d','ढ':'dh','ण':'n','त':'t','थ':'th','द':'d','ध':'dh','न':'n','प':'p','फ':'ph','ब':'b','भ':'bh','म':'m','य':'y','र':'r','ल':'l','व':'w','श':'sh','ष':'sh','स':'s','ह':'h'};
+const DV_VOW={'अ':'a','आ':'aa','इ':'i','ई':'i','उ':'u','ऊ':'u','ए':'e','ऐ':'ai','ओ':'o','औ':'au','ऋ':'ri'};
+const DV_MAT={'ा':'aa','ि':'i','ी':'i','ु':'u','ू':'u','े':'e','ै':'ai','ो':'o','ौ':'au','ृ':'ri','ं':'n','ँ':'n','ः':''};
+function translit(s){
+  let out='', pend=false;
+  for(const ch of s){
+    if(DV_CONS[ch]){ if(pend) out+='a'; out+=DV_CONS[ch]; pend=true; }
+    else if(DV_MAT[ch]!==undefined){ out+=DV_MAT[ch]; pend=false; }
+    else if(ch==='्'){ pend=false; }
+    else if(DV_VOW[ch]){ if(pend) out+='a'; out+=DV_VOW[ch]; pend=false; }
+    else { if(pend) out+='a'; pend=false; out+=ch; }
+  }
+  if(pend) out+='a';
+  return out;
+}
+function keys(s){
+  s = translit(s).toLowerCase().replace(/\bbdr\b/g,'bahadur').replace(/\bp(r)?d\b/g,'prasad').replace(/\bkr\b/g,'kumar').replace(/[^a-z ]/g,' ');
+  s = s.replace(/chh/g,'c').replace(/ch/g,'c').replace(/([kgjtdpb])h/g,'$1').replace(/sh/g,'s').replace(/[vw]/g,'b').replace(/z/g,'j').replace(/f/g,'p').replace(/(.)\1+/g,'$1');
+  return s.split(/\s+/).filter(Boolean).map(w => w[0] + w.slice(1).replace(/[aeiouy]/g,''));
+}
+function matchScore(q, p){
+  const qk = keys(q); if(!qk.length) return 0;
+  const pk = [...keys(p.name), ...keys(p.alt||'')];
+  let hits=0; for(const k of qk){ if(pk.some(x=>x.startsWith(k))) hits++; else return 0; }
+  return hits;
+}
+</script>
+<script>
+/* ================= state ================= */
+let S;
+function fresh(prev){ return {lang:prev?.lang||'ne', v11:prev?.v11||false, say:prev?.say||'newName', voice:null, online:true, screen:'today', hist:[],
+  parties:structuredClone(PARTIES0), bills:structuredClone(BILLS0), cap:null, billFilter:'all', acctTab:'c',
+  acctId:'p1', billId:'b1', removed:null, newId:null, seq:100, clock:45}; }
+S = fresh();
+const $ = id => document.getElementById(id);
+const party = id => id==='w' ? {id:'w',name:t('walkInName'),walk:true,kind:'c'} : (S.parties.find(p=>p.id===id) || {id:null,name:t('noName'),kind:'c'});
+const initial = s => Array.from(s.trim())[0] || '?';
+function lastBill(pid){ return S.bills.filter(b=>b.party===pid).sort((a,b)=>a.day-b.day || b.time.localeCompare(a.time))[0]; }
+function lastUsedRank(pid){ const b=lastBill(pid); return b ? b.day*10000 - Number(b.time.replace(':','')) : 1e9; }
+function monthTotal(pid){ const p=S.parties.find(x=>x.id===pid); return (p?.base||0) + S.bills.filter(b=>b.party===pid && b.amt).reduce((a,b)=>a+b.amt,0); }
+function now(){ S.clock++; const m=S.clock%60, h=10+Math.floor(S.clock/60); return `${h}:${String(m).padStart(2,'0')}`; }
+
+/* ================= navigation ================= */
+function go(name, opt={}){
+  if(opt.root) S.hist=[]; else if(!opt.replace && S.screen!==name) S.hist.push(S.screen);
+  S.screen=name;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id==='s-'+name));
+  document.querySelectorAll('#s-'+name+' .scroll').forEach(s=>s.scrollTop=0);
+  render();
+}
+function back(){ const prev=S.hist.pop(); if(prev){ S.screen=prev; document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id==='s-'+prev)); render(); } else go('today',{root:true}); }
+function navHtml(on){ return [['today','sun','navToday'],['bills','receipt','navBills'],['accounts','book','navAccounts']]
+  .map(([k,ic,l])=>`<button class="${k===on?'on':''}" onclick="go('${k}',{root:true})" ${k===on?'aria-current="page"':''}>${icon(ic)}<span>${t(l)}</span></button>`).join(''); }
+
+/* ================= render ================= */
+function applyStatic(){
+  document.documentElement.lang = S.lang;
+  document.querySelectorAll('[data-t]').forEach(el=>el.textContent=t(el.dataset.t));
+  document.querySelectorAll('[data-ph]').forEach(el=>el.placeholder=t(el.dataset.ph));
+  document.querySelectorAll('[data-icon]').forEach(el=>{ if(!el.querySelector('svg')) el.insertAdjacentHTML('afterbegin', icon(el.dataset.icon)); });
+  document.querySelectorAll('nav[data-nav]').forEach(n=>n.innerHTML=navHtml(n.dataset.nav));
+  $('lang-btn').textContent = S.lang==='ne' ? 'EN' : 'ने';
+  $('c-ne').classList.toggle('on', S.lang==='ne'); $('c-en').classList.toggle('on', S.lang==='en');
+  $('c-v11').classList.toggle('on', S.v11); document.body.classList.toggle('show-v11', S.v11);
+  $('say-ctl').innerHTML = 'Voice demo — Buwa says:' + [['newName','गोपाल श्रेष्ठ (new)'],['existing','राम बहादुर (exists)'],['english','Binayak Hotel (exists)']]
+    .map(([k,l])=>`<button class="${S.say===k?'on':''}" onclick="S.say='${k}';applyStatic()">${l}</button>`).join('');
+  document.body.classList.toggle('offline', !S.online);
+  $('c-net').classList.toggle('on', !S.online); $('c-net').textContent = S.online ? 'Internet off' : 'Internet back on';
+}
+function render(){
+  applyStatic(); renderToday();
+  ({camera:renderCamera, preview:renderPreview, party:renderParty, amount:renderAmount, bills:renderBills,
+    accounts:renderAccounts, account:renderAccount, bill:renderBill, dayclose:renderDayClose}[S.screen]||(()=>{}))();
+  renderNotes();
+}
+function billRow(b, showDay=false){
+  const p = party(b.party), missing = b.amt==null;
+  const when = (showDay ? dayWord(b.day)+' · ' : '') + hhmm(b.time);
+  const pay = b.pay ? `<div class="pay-tag v11 ${b.pay==='udharo'||b.pay==='due'?'udh':''}">${t(b.pay)}</div>` : '';
+  return `<button class="row ${b.id===S.newId?'new':''}" onclick="openBill('${b.id}')">
+    <span class="edge ${b.type==='sale'?'sale':'buy'}"></span>
+    <span class="thumb">${billSvg(b.type, b.seed ?? seedOf(b.id))}</span>
+    <span style="min-width:0"><div class="nm">${p.name}</div><div class="meta">${b.pending?icon('clock'):''}${when}${b.pages>1?' · '+b.pages+' '+t('pagesL'):''}</div></span>
+    <span class="ra">${missing?`<span class="tag-missing">${t('noAmount')}</span>`:`<span class="amt">${npr(b.amt)}</span>`}${pay}</span></button>`;
+}
+function renderToday(){
+  $('today-date').textContent = dateLabel(0,true);
+  const pend = S.bills.filter(b=>b.pending).length + S.parties.filter(p=>p.pending).length;
+  const pill=$('sync-pill');
+  if(!S.online){ pill.className='pill offline'; pill.innerHTML=icon('cloudOff')+t('syncOffline')+(pend?` (${pend})`:''); }
+  else if(pend){ pill.className='pill pending'; pill.innerHTML=icon('clock')+t('syncPending',{n:pend}); }
+  else { pill.className='pill ok'; pill.innerHTML=icon('check')+t('syncOk'); }
+  const td = S.bills.filter(b=>b.day===0);
+  const sum = arr => arr.reduce((a,b)=>a+(b.amt||0),0);
+  const sales = td.filter(b=>b.type==='sale'), buys = td.filter(b=>b.type==='purchase'), miss = td.filter(b=>b.amt==null);
+  const udh = sales.filter(b=>b.pay==='udharo');
+  $('today-ledger').innerHTML = `
+    <div class="lrow"><span class="lhead">${t('todayBills')}</span></div>
+    <div class="lrow"><span class="lab"><i class="dot sale"></i>${t('sold')}</span><span class="val"><span class="amt">${npr(sum(sales))}</span><span class="cnt">${t('cnt',{n:sales.length})}</span></span></div>
+    <div class="lrow"><span class="lab"><i class="dot buy"></i>${t('bought')}</span><span class="val"><span class="amt">${npr(sum(buys))}</span><span class="cnt">${t('cnt',{n:buys.length})}</span></span></div>
+    <div class="lrow v11 flex"><span class="lab"><i class="dot udh"></i>${t('udharoGiven')}</span><span class="val"><span class="amt">${npr(sum(udh))}</span><span class="cnt">${t('cnt',{n:udh.length})}</span></span></div>
+    ${miss.length?`<div class="lrow warn"><span class="lab"><i class="dot udh"></i>${t('noAmountRow')}</span><span class="val"><span class="cnt">${t('cnt',{n:miss.length})}</span></span></div>`:''}`;
+  const rec = td.slice().sort((a,b)=>b.time.localeCompare(a.time)).slice(0,5);
+  $('today-recent').innerHTML = rec.map(b=>billRow(b)).join('') || `<p class="empty">${t('emptyBills')}</p>`;
+}
+
+/* ---------- capture ---------- */
+function startCapture(type){ S.voice=null; S.cap={type, pages:0, party:undefined, digits:'', dateOpt:0, pay:null, seed:S.seq++, bigOk:false}; go('camera'); }
+function cancelCapture(){ S.cap=null; go('today',{root:true}); }
+function renderCamera(){ const c=S.cap; $('cam-paper').innerHTML=billSvg(c.type, c.seed+c.pages*7); $('cam-page').textContent = c.pages ? t('page',{n:c.pages+1}) : ''; }
+function shutter(){ S.cap.pages++; go('preview',{replace:true}); }
+function renderPreview(){
+  const c=S.cap; $('prev-title').textContent = t('page',{n:c.pages});
+  $('prev-photo').innerHTML = billSvg(c.type, c.seed+(c.pages-1)*7);
+  $('prev-pages').innerHTML = c.pages>1 ? Array.from({length:c.pages},(_,i)=>`<span class="p ${i===c.pages-1?'on':''}">${billSvg(c.type,c.seed+i*7)}</span>`).join('') : '';
+  $('prev-use').className = 'btn-primary '+(c.type==='sale'?'sale':'buy');
+}
+function retake(){ S.cap.pages--; go('camera',{replace:true}); }
+function addPage(){ if(S.cap.pages<5) go('camera',{replace:true}); }
+function typeBadge(type){ return `<span class="badge ${type==='sale'?'sale':'buy'}">${icon(type==='sale'?'bagOut':'boxIn')}${t(type==='sale'?'sold':'bought')}</span>`; }
+function prow(p, onclick, right=''){
+  const lb = lastBill(p.id);
+  const meta = lb ? `${dayWord(lb.day)} · ${lb.amt?npr(lb.amt):t('noAmount')}` : '';
+  return `<button class="prow" onclick="${onclick}"><span class="av">${initial(p.name)}</span>
+    <span style="min-width:0"><div class="nm">${p.name}${p.tag?` <span class="tg">· ${p.tag}</span>`:''}</div><div class="meta">${meta}</div></span>${right}</button>`;
+}
+function renderParty(){
+  const c=S.cap; if(!c) return;
+  $('party-thumb').innerHTML = billSvg(c.type, c.seed);
+  $('party-badge').className=''; $('party-badge').innerHTML = typeBadge(c.type);
+  const kind = c.type==='sale'?'c':'s', q=$('party-q').value.trim();
+  let list = S.parties.filter(p=>p.kind===kind);
+  let html='';
+  if(!q){
+    if(c.type==='sale') html += `<button class="walkin" onclick="pickParty('w')"><span class="av">${icon('person')}</span><span><div style="font-size:19px;font-weight:700">${t('walkIn')}</div><div style="font-size:15px;color:var(--ink-soft)">${t('walkInSub')}</div></span></button>`;
+    list.sort((a,b)=>lastUsedRank(a.id)-lastUsedRank(b.id));
+    html += `<div class="section-label">${t('recentNames')}</div><div class="reg">` + list.map(p=>prow(p,`pickParty('${p.id}')`)).join('') + '</div>';
+  } else {
+    const voice = !!S.voice, qe = esc(q);
+    if(voice) html += `<div class="heard">${icon('mic')}<span class="q">${t('heard')}<b>“${qe}”</b></span><button onclick="listen()">${t('sayAgain')}</button></div>`;
+    const full = list.map(p=>({p,s:matchScore(q,p) || (p.name.includes(q)||(p.alt||'').toLowerCase().includes(q.toLowerCase())?1:0)})).filter(x=>x.s>0)
+      .sort((a,b)=>b.s-a.s || lastUsedRank(a.p.id)-lastUsedRank(b.p.id));
+    if(full.length){
+      html += `<div class="section-label">${t('results')}</div><div class="reg">` + full.map(x=>prow(x.p,`pickParty('${x.p.id}')`)).join('') + '</div>'
+        + `<button class="addrow" onclick="openNewName(${voice})">${icon('plus')}<span>${t('notThem',{q:qe})}</span></button>`;
+    } else {
+      const partial = list.map(p=>({p,s:partialScore(q,p)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s || lastUsedRank(a.p.id)-lastUsedRank(b.p.id));
+      html += `<div class="addcard"><p class="nf">${t('notFound',{q:`<b>“${qe}”</b>`})}</p>
+        <button class="btn-primary ${c.type==='sale'?'sale':'buy'}" onclick="openNewName(${voice})">${icon('plus')}<span>${t('addThis',{q:qe})}</span></button></div>`;
+      if(partial.length) html += `<div class="section-label">${t('isItThis')}</div><div class="reg">` + partial.map(x=>prow(x.p,`pickParty('${x.p.id}')`)).join('') + '</div>';
+    }
+  }
+  $('party-list').innerHTML = html;
+}
+function pickParty(id){ S.cap.party = id; S.voice=null; $('party-q').value=''; go('amount'); }
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+function partialScore(q, p){ const qk=keys(q).filter(k=>k.length>=2), pk=[...keys(p.name), ...keys(p.alt||'')]; return qk.filter(k=>pk.some(x=>x.startsWith(k))).length; } // 1-letter keys (e.g. "Rai" → r) are too weak to suggest
+/* Voice (F-24): simulated. In the app this is the browser speech API (ne-NP → en-IN); the heard text feeds the same matching. */
+const SAY = {newName:'गोपाल श्रेष्ठ', existing:'राम बहादुर', english:'Binayak Hotel'};
+let voiceTimers=[];
+function listen(){
+  if(!S.online){ toast(t('needsInternet')); return; }
+  stopListen(); const words=SAY[S.say].split(' '), tr=$('listen-tr'); tr.textContent=''; $('listen').classList.add('open');
+  words.forEach((w,i)=>voiceTimers.push(setTimeout(()=>{ tr.textContent=words.slice(0,i+1).join(' '); }, 700+i*600)));
+  voiceTimers.push(setTimeout(()=>{ $('listen').classList.remove('open'); S.voice=SAY[S.say]; $('party-q').value=S.voice; renderParty(); }, 700+words.length*600+450));
+}
+function stopListen(){ voiceTimers.forEach(clearTimeout); voiceTimers=[]; $('listen').classList.remove('open'); }
+function openNewName(fromVoice){
+  $('nn-title').textContent = t(fromVoice?'confirmName':'newName');
+  $('nn-sub').textContent = fromVoice ? t('confirmSub') : ''; $('nn-sub').style.display = fromVoice ? '' : 'none';
+  $('nn-name').value=$('party-q').value; $('nn-phone').value=''; $('nn-tag').value=''; checkSimilar(); openSheet('newname-sheet');
+  if(!fromVoice) setTimeout(()=>$('nn-name').focus(),50);
+}
+function checkSimilar(){
+  const name=$('nn-name').value.trim(), box=$('nn-similar'), kind=S.cap?.type==='purchase'?'s':'c', k=keys(name);
+  const hit = k.length>=2 ? S.parties.filter(p=>p.kind===kind).map(p=>({p,s:matchScore(name,p)})).filter(x=>x.s===k.length).sort((a,b)=>lastUsedRank(a.p.id)-lastUsedRank(b.p.id))[0] : null;
+  if(!hit){ box.style.display='none'; return; }
+  box.style.display='block';
+  box.innerHTML = `<b>${t('similar')}</b>${prow(hit.p,`useSimilar('${hit.p.id}')`)}
+    <div class="two"><button class="btn-secondary" onclick="useSimilar('${hit.p.id}')">${t('same')}</button><button class="btn-secondary" onclick="createParty()">${t('createNew')}</button></div>`;
+}
+function useSimilar(id){ closeSheets(); pickParty(id); }
+function createParty(){
+  const name=$('nn-name').value.trim(); if(!name){ $('nn-name').focus(); return; }
+  const p={id:'n'+(S.seq++), name, alt:'', tag:$('nn-tag').value.trim(), kind:S.cap?.type==='purchase'?'s':'c', phone:!!$('nn-phone').value, base:0, bal:0, pending:true};
+  S.parties.push(p); closeSheets(); scheduleSync(); pickParty(p.id);
+}
+const PAY = {sale:[['cash','cash'],['qr','qr'],['udharo','udh'],['partUdharo','udh']], purchase:[['paid','cash'],['due','udh'],['partDue','udh']]};
+function renderAmount(){
+  const c=S.cap; if(!c) return; const p=party(c.party);
+  $('amt-party').textContent = p.name; $('amt-thumb').innerHTML = billSvg(c.type, c.seed);
+  const d=$('amt-display'); d.textContent = npr(c.digits?Number(c.digits):0); d.classList.toggle('ph', !c.digits);
+  $('pay-chips').innerHTML = PAY[c.type].map(([k,cls])=>{ const dis = p.walk && (k==='udharo'||k==='partUdharo');
+    return `<button class="chip ${c.pay===k?'on '+cls:''}" ${dis?'disabled style="opacity:.4"':''} onclick="S.cap.pay='${k}';renderAmount()">${t(k)}</button>`; }).join('');
+  const dl = [t('today'),t('yesterday'),t('dayBefore')][c.dateOpt];
+  $('date-chip').innerHTML = `${icon('calendar')}${t('date')}: ${dl}, ${dnum(TODAY.d-c.dateOpt)} ${MONTH[S.lang]}${icon('chevron')}`;
+  $('numpad').innerHTML = ['1','2','3','4','5','6','7','8','9','00','0','⌫'].map(k=>`<button onclick="press('${k}')" ${k==='⌫'?'aria-label="Delete"':''}>${k}</button>`).join('');
+  $('save-btn').className = 'btn-primary '+(c.type==='sale'?'sale':'buy');
+  $('date-opts').innerHTML = [0,1,2].map(i=>`<button class="opt" onclick="S.cap.dateOpt=${i};closeSheets();renderAmount()"><span>${[t('today'),t('yesterday'),t('dayBefore')][i]}</span><small>${dateLabel(i,true)}</small></button>`).join('')
+    + `<button class="opt" onclick="toast(t('pickDateSub'))"><span>${t('pickDate')}</span>${icon('calendar')}</button>`;
+}
+function press(k){ const c=S.cap; if(k==='⌫') c.digits=c.digits.slice(0,-1); else if(c.digits.length<8) c.digits=(c.digits+k).replace(/^0+/,''); c.bigOk=false; renderAmount(); }
+function saveBill(skip){
+  const c=S.cap, amt = skip||!c.digits ? null : Number(c.digits);
+  if(amt!=null && amt>=500000 && !c.bigOk){ c.bigOk=true; toast(t('bigAmt',{a:amt.toLocaleString('en-IN')})); return; }
+  const b={id:'b'+(S.seq++), type:c.type, party:c.party??null, amt, day:c.dateOpt, time:now(), pages:c.pages, pay:amt==null?null:c.pay, pending:true, seed:c.seed};
+  S.bills.unshift(b);
+  $('saved-card').querySelector('svg')?.remove(); $('saved-card').insertAdjacentHTML('afterbegin', billSvg(c.type,c.seed));
+  $('saved-sub').textContent = `${party(b.party).name} · ${amt==null?t('noAmount'):npr(amt)}` + (S.online?'':' — '+t('offlineSaved'));
+  $('saved').classList.add('open');
+  setTimeout(()=>{ $('saved').classList.remove('open'); S.newId=b.id; S.cap=null; go('today',{root:true}); scheduleSync();
+    setTimeout(()=>{ S.newId=null; if(S.screen==='today') renderToday(); },2600); },1500);
+}
+function scheduleSync(){ if(!S.online) return; setTimeout(()=>{ S.bills.forEach(b=>b.pending=false); S.parties.forEach(p=>p.pending=false); render(); },1800); }
+
+/* ---------- lists ---------- */
+function renderBills(){
+  const F=[['all','all'],['sale','sold'],['purchase','bought'],['missing','noAmount']];
+  $('bill-filters').innerHTML = F.map(([k,l])=>`<button class="chip ${S.billFilter===k?'on':''}" onclick="S.billFilter='${k}';renderBills()">${t(l)}</button>`).join('');
+  const f=S.billFilter, keep = b => f==='all' || (f==='missing' ? b.amt==null : b.type===f);
+  let html='';
+  for(const day of [0,1,2]){ const items=S.bills.filter(b=>b.day===day && keep(b)).sort((a,b)=>b.time.localeCompare(a.time));
+    if(items.length) html += `<div class="group-h">${dateLabel(day)}</div>` + items.map(b=>billRow(b)).join(''); }
+  $('bills-list').innerHTML = html || `<p class="empty">${t('emptyBills')}</p>`;
+}
+function renderAccounts(){
+  $('acct-tabs').innerHTML = [['c','customers'],['s','suppliers']].map(([k,l])=>`<button class="${S.acctTab===k?'on':''}" onclick="S.acctTab='${k}';renderAccounts()">${t(l)}</button>`).join('');
+  const q=$('acct-q').value.trim();
+  let list=S.parties.filter(p=>p.kind===S.acctTab && (!q || matchScore(q,p) || p.name.includes(q)));
+  list.sort((a,b)=>monthTotal(b.id)-monthTotal(a.id));
+  $('acct-list').innerHTML = '<div class="reg">' + list.map(p=>prow(p,`openAccount('${p.id}')`,
+    `<span class="bal"><div class="amt" style="font-size:20px">${npr(monthTotal(p.id))}</div><div class="meta">${t('thisMonth')}</div>${p.bal?`<div class="pay-tag udh v11">${t(p.bal>0?'balance':'weOwe')} ${npr(Math.abs(p.bal))}</div>`:''}</span>`)).join('') + '</div>';
+}
+function openAccount(id){ S.acctId=id; go('account'); }
+function renderAccount(){
+  const p=party(S.acctId), bills=S.bills.filter(b=>b.party===p.id);
+  $('acct-call').style.visibility = p.phone ? 'visible' : 'hidden';
+  $('acct-head').innerHTML = `<div class="nm">${p.name}</div><div class="tg">${[p.tag, t(p.kind==='c'?'customers':'suppliers')].filter(Boolean).join(' · ')}</div>`;
+  const cust=p.kind==='c';
+  $('acct-balance').innerHTML = `<div><div class="k">${t(cust?'balance':'weOwe')}</div><div class="amt">${npr(Math.abs(p.bal||0))}</div></div><button onclick="toast('Mockup: amount + Cash/QR, recorded as ${cust?'payment_in':'payment_out'}')">${t(cust?'received':'paidOut')}</button>`;
+  $('acct-ledger').innerHTML = `<div class="lrow"><span class="lhead">${MONTH[S.lang]} ${dnum(2083)}</span></div>
+    <div class="lrow"><span class="lab">${t('thisMonth')}</span><span class="val"><span class="amt">${npr(monthTotal(p.id))}</span><span class="cnt">${t('cnt',{n:bills.length+Math.round((p.base||0)/2500)})}</span></span></div>
+    <div class="lrow"><span class="lab">${t('allTime')}</span><span class="val"><span class="amt">${npr(monthTotal(p.id)*4+(p.base||0)*3)}</span></span></div>`;
+  $('acct-bills').innerHTML = bills.sort((a,b)=>a.day-b.day||b.time.localeCompare(a.time)).map(b=>billRow(b,true)).join('') || `<p class="empty">${t('emptyBills')}</p>`;
+}
+function openBill(id){ S.billId=id; go('bill'); }
+function renderBill(){
+  const b=S.bills.find(x=>x.id===S.billId); if(!b) return; const p=party(b.party);
+  $('bill-title').textContent = p.name;
+  const ph=$('bill-photo'); ph.classList.remove('zoom'); ph.innerHTML = billSvg(b.type, b.seed ?? seedOf(b.id));
+  const L=(k,v,cls='')=>`<div class="lrow ${cls}"><span class="k">${t(k)}</span><span class="v">${v}</span></div>`;
+  $('bill-fields').innerHTML = L('type',typeBadge(b.type)) + L('nameL',p.name) + L('amountL', b.amt==null?`<span class="tag-missing">${t('noAmount')}</span>`:`<span class="amt">${npr(b.amt)}</span>`)
+    + (b.pay?L('payL', t(b.pay),'v11 flex'):'') + L('dateL', dateLabel(b.day)) + L('pagesL', b.pages) + L('capturedBy', t('buwa')) + L('time', hhmm(b.time));
+}
+function removeBill(){ const i=S.bills.findIndex(b=>b.id===S.billId); S.removed={b:S.bills[i],i}; S.bills.splice(i,1); closeSheets(); back(); toast(t('removed'),true); }
+function undoRemove(){ if(S.removed){ S.bills.splice(S.removed.i,0,S.removed.b); S.removed=null; } $('toast').classList.remove('open'); render(); }
+function renderDayClose(){
+  const n = id => Number(($(id).value||'0').replace(/[^\d]/g,''))||0;
+  const sales=S.bills.filter(b=>b.day===0&&b.type==='sale'), billed=sales.reduce((a,b)=>a+(b.amt||0),0), udh=sales.filter(b=>b.pay==='udharo').reduce((a,b)=>a+b.amt,0), got=5000;
+  const cash = n('dc-total') - n('dc-qr') - udh;
+  $('dc-ledger').innerHTML = `<div class="lrow"><span class="lhead">${dateLabel(0)}</span></div>
+    <div class="lrow"><span class="lab"><i class="dot sale"></i>${t('billedSales')}</span><span class="amt">${npr(billed)}</span></div>
+    <div class="lrow"><span class="lab"><i class="dot udh"></i>${t('udharoGiven')}</span><span class="amt">${npr(udh)}</span></div>
+    <div class="lrow"><span class="lab"><i class="dot buy"></i>${t('moneyIn')}</span><span class="amt">${npr(got)}</span></div>
+    <div class="lrow"><span class="lab" style="font-weight:800">${t('cashCalc')}</span><span class="amt">${npr(cash)}</span></div>`;
+}
+
+/* ---------- sheets, toast, controls ---------- */
+function openSheet(id){ $(id).classList.add('open'); }
+function closeSheets(){ document.querySelectorAll('.sheet-wrap').forEach(s=>s.classList.remove('open')); }
+let toastTimer;
+function toast(msg, undo=false){ $('toast-msg').textContent=msg; $('toast-undo').style.display=undo?'':'none'; $('toast').classList.add('open');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('toast').classList.remove('open'), undo?6000:3200); }
+function setLang(l){ S.lang=l; render(); }
+function toggleLang(){ setLang(S.lang==='ne'?'en':'ne'); }
+function toggleV11(){ S.v11=!S.v11; render(); }
+function toggleNet(){ S.online=!S.online; render(); if(S.online) scheduleSync(); }
+function resetDemo(){ S=fresh(S); closeSheets(); go('today',{root:true}); }
+
+/* ---------- notes panel ---------- */
+const NOTES = {
+ today:{t:'Today',s:['F-02','F-09','F-10'],n:['F-23'],p:[
+  'The two giant buttons are the only way into capture: one decision, shown by colour + icon + words.',
+  'The ledger strip counts <b>billed</b> sales only. Total sales (including unbilled) arrive with Day close in v1.1.',
+  'The sync pill always speaks in words. Try <code>Internet off</code>, save a bill, then switch it back.',
+  'The language button (EN / ने) switches everything; Nepali is the default.']},
+ camera:{t:'Camera (simulated)',s:['F-03'],p:[
+  'In the real app this is the phone\'s <b>own</b> camera, opened through a native file input. Buwa already knows it, and it gives full photo quality.',
+  'Tap the white shutter.']},
+ preview:{t:'Photo preview',s:['F-03'],p:[
+  'One primary action. <b>Add page</b> handles multi-page supplier invoices (up to 5).',
+  'Before queueing, the photo is compressed on the phone (≤1600 px + a 320 px thumbnail) and its location data is stripped.']},
+ party:{t:'Whose bill?',s:['F-04'],n:['F-24'],p:[
+  'Walk-in comes first for sale bills. Recent names are sorted by last use, so regulars are one tap.',
+  'Search works across scripts: try <code>vinayak</code>, <code>बिनायक</code>, <code>eve</code>, <code>ram b</code>, <code>hari</code>.',
+  '<b>Choose name later</b> saves without a name; the bill lands in Binayak\'s review queue.',
+  'Nothing found? The typed or spoken text becomes one big <b>Add “…”</b> button, with near matches below under "Is it one of these?".',
+  '<b>Voice (v1.1, dashed outline):</b> tap the mic and Buwa says a name. The heard text stays on screen. If the name exists, tap it. If it doesn\'t, tap <b>Add</b>, check the name on the "Is the name right?" sheet, and save. That\'s 3 taps from mic to the amount step.',
+  'Pick what Buwa "says" under Controls, or use <b>Jump → Voice: new name</b>.']},
+ amount:{t:'Amount + date',s:['F-03','F-05'],n:['F-20'],p:[
+  'A calculator-style pad with Latin digits and lakh grouping (1,23,456).',
+  'The date chip handles Aama\'s paper bills entered the next day.',
+  '<b>Add amount later</b> never blocks saving. The stamp appears only after the bill is written to the phone.',
+  'Amounts of 5 lakh or more ask for a second tap.',
+  'v1.1: payment chips (cash / QR / udharo); walk-in cannot take udharo.']},
+ bills:{t:'Bills list',s:['F-06'],p:['Grouped by BS date, with filters. The list only ever loads thumbnails.','A clock icon marks bills still waiting to upload.']},
+ accounts:{t:'Accounts (खाता)',s:['F-07'],n:['F-22'],p:['Customers and suppliers, with this month\'s total per account (from <code>partyMonthly</code>).','Search uses the same cross-script matching.','v1.1: balances appear under the totals.']},
+ account:{t:'Account page',s:['F-07'],n:['F-21','F-22'],p:['This month and all-time totals on a ledger strip, followed by every bill.','The call button shows only if a phone number was saved.','v1.1: the balance card with <b>Money received</b>.']},
+ bill:{t:'Bill detail',s:['F-08','F-15'],p:['Tap the photo to zoom.','<b>Remove</b> is a soft delete with a 6-second undo. It\'s audit-logged and Binayak can restore it.','<b>Correct</b> reopens the same name and amount steps.']},
+ dayclose:{t:'Day close (v1.1)',s:[],n:['F-23'],p:['Buwa types two numbers; the rest is calculated.','Replaces his handwritten Fonepay QR log.','Open decision OD-2: total sales vs. cash counted.']}
+};
+function renderNotes(){
+  const n=NOTES[S.screen]||NOTES.today;
+  $('n-title').textContent = n.t;
+  $('n-specs').innerHTML = (n.s||[]).map(x=>`<span>${x}</span>`).join('') + (n.n||[]).map(x=>`<span class="n">${x} · v1.1</span>`).join('');
+  $('n-points').innerHTML = n.p.map(x=>`<li>${x}</li>`).join('');
+  const J=[['today','Today'],['camera','Camera'],['preview','Preview'],['party','Whose bill?'],['voice','Voice: new name (v1.1)'],['newname','New name'],['amount','Amount'],['bills','Bills'],['accounts','Accounts'],['account','Account page'],['bill','Bill detail'],['dayclose','Day close (v1.1)']];
+  $('jump').innerHTML = J.map(([k,l])=>`<button class="${S.screen===k?'on':''}" onclick="jump('${k}')">${l}</button>`).join('');
+}
+function jump(k){
+  closeSheets();
+  if(['camera','preview','party','newname','amount','voice'].includes(k)){ if(!S.cap) S.cap={type:'sale',pages:1,party:'p1',digits:'2340',dateOpt:0,pay:null,seed:S.seq++,bigOk:false}; if(!S.cap.pages) S.cap.pages=1; if(S.cap.party===undefined) S.cap.party='p1'; }
+  if(k==='voice'){ S.v11=true; S.say='newName'; go('party',{root:true}); $('party-q').value=''; S.voice=null; renderParty(); setTimeout(listen,250); return; }
+  if(k==='newname'){ go('party',{root:true}); $('party-q').value='राम ब थापा'; S.voice=null; renderParty(); openNewName(false); return; }
+  if(k==='dayclose' && !S.v11){ S.v11=true; }
+  go(k,{root:true});
+}
+render();
+</script>
+</body>
+</html>

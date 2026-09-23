@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mero Pasal — Admin console (concept mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Mukta:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F2F4F1;--card:#fff;--ink:#1B2433;--ink-soft:#566074;--rule:#C7D3E3;--rule-soft:#E1E7EF;
+ --sale:#1E7A4C;--sale-tint:#E3F1E9;--buy:#2C3D9A;--buy-tint:#E4E8F7;--udharo:#D98E0B;--udharo-tint:#FBEFD6;--bahi:#9E2A2B;
+ --f-body:"Mukta","Noto Sans Devanagari",system-ui,sans-serif;--f-display:"Baloo 2","Mukta",system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:var(--f-body);font-size:15px;line-height:1.45;color:var(--ink);background:var(--paper)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+aside{background:var(--card);border-right:1px solid var(--rule);padding:18px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 16px}
+.brand .mark{width:34px;height:40px;border-radius:4px 8px 8px 4px;background:var(--bahi);position:relative;box-shadow:inset 5px 0 0 rgba(0,0,0,.18)}
+.brand .mark::after{content:"";position:absolute;left:10px;right:6px;top:12px;height:2px;background:#e9c46a;box-shadow:0 6px 0 #e9c46a}
+.brand b{font-family:var(--f-display);font-size:24px;line-height:1}
+.brand small{display:block;color:var(--ink-soft);font-size:13px}
+.navi{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px;padding:0 10px;border:0;background:none;border-radius:8px;text-align:left;font-weight:600}
+.navi:hover{background:var(--paper)}
+.navi.on{background:var(--ink);color:#fff}
+.navi .n{font-size:12px;font-weight:700;background:var(--udharo);color:var(--ink);border-radius:999px;padding:0 8px}
+.navi .ver{font-size:12px;font-weight:700;color:var(--ink-soft)}
+.navi.on .ver{color:#c9d2e0}
+.sep{height:1px;background:var(--rule);margin:10px 6px}
+.side-foot{margin-top:auto;font-size:13px;color:var(--ink-soft);padding:8px}
+main{padding:22px 28px 60px;min-width:0}
+.head{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.head h1{font-family:var(--f-display);font-size:28px;line-height:1.1;margin:0;flex:1}
+.month{display:flex;align-items:center;gap:6px}
+.month select,.inp{height:38px;border:1px solid var(--rule);border-radius:8px;background:var(--card);padding:0 10px}
+.inp{min-width:220px}
+.btn{height:38px;padding:0 14px;border-radius:8px;border:1px solid var(--ink);background:var(--card);font-weight:700}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.sale{background:var(--sale);border-color:var(--sale);color:#fff}
+.btn.ghost{border-color:var(--rule)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:22px;align-items:start}
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+.panel>h2{font-family:var(--f-display);font-size:19px;margin:0;padding:12px 16px;border-bottom:2px solid var(--ink);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.panel>h2 small{font-family:var(--f-body);font-size:13px;color:var(--ink-soft);font-weight:600}
+/* bahi ledger table */
+.bahi{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.bahi th{font-size:13px;color:var(--ink-soft);font-weight:700;text-align:left;padding:8px 12px;border-bottom:1px solid var(--rule);background:#FAFBF9}
+.bahi td{padding:0 12px;height:40px;border-bottom:1px solid var(--rule-soft);white-space:nowrap}
+.bahi td.num,.bahi th.num{text-align:right}
+.bahi td:first-child,.bahi th:first-child{border-right:2px solid rgba(158,42,43,.45)}
+.bahi tr.foot td{font-weight:800;border-top:2px solid var(--ink);border-bottom:3px double var(--ink);height:44px}
+.bahi tbody tr.click{cursor:pointer}
+.bahi tbody tr.click:hover,.bahi tbody tr.sel{background:#F5F7FB}
+.amt{font-family:var(--f-display);font-weight:700;font-size:16px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;border-radius:999px;padding:1px 9px}
+.tag.sale{background:var(--sale-tint);color:var(--sale)} .tag.buy{background:var(--buy-tint);color:var(--buy)}
+.tag.warn{background:var(--udharo-tint);color:#6b4500} .tag.del{background:#F6E3E3;color:var(--bahi)}
+.th{width:34px;height:40px;border:1px solid var(--rule);border-radius:4px;overflow:hidden;display:block;background:#fff}
+.th svg{width:100%;height:100%;display:block}
+/* attention */
+.att{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--rule-soft)}
+.att .th{width:44px;height:54px}
+.att .what{font-weight:700}
+.att .sub{font-size:13px;color:var(--ink-soft)}
+.att .fix{display:flex;gap:8px;align-items:center}
+.att .fix input{width:120px;text-align:right}
+.att .fix select{min-width:190px}
+.att.done{opacity:.45}
+.pair{display:grid;grid-template-columns:1fr auto 1fr auto;gap:12px;align-items:center}
+.pname{padding:8px 10px;border:1px solid var(--rule);border-radius:8px}
+.pname b{display:block}
+.pname span{font-size:13px;color:var(--ink-soft)}
+.bars{display:flex;align-items:flex-end;gap:4px;height:120px;padding:14px 16px 6px}
+.bars i{flex:1;background:var(--sale);border-radius:3px 3px 0 0;min-height:3px}
+.bars i.b{background:var(--buy)}
+.bars-x{display:flex;justify-content:space-between;padding:0 16px 12px;font-size:12px;color:var(--ink-soft)}
+.member{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--rule-soft)}
+.member b{display:block}
+.member span{font-size:13px;color:var(--ink-soft)}
+.ok{color:var(--sale);font-weight:700;font-size:13px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--rule);background:var(--card);font-weight:600;font-size:14px}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.hint{font-size:13px;color:var(--ink-soft);margin:8px 2px}
+kbd{font-family:var(--f-body);font-size:12px;border:1px solid var(--rule);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:#fff}
+/* drawer */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:480px;max-width:100%;background:var(--card);border-left:1px solid var(--rule);box-shadow:-20px 0 40px -20px rgba(27,36,51,.35);transform:translateX(105%);transition:transform .18s ease;display:flex;flex-direction:column;z-index:10}
+.drawer.open{transform:none}
+@media (prefers-reduced-motion:reduce){.drawer{transition:none}}
+.drawer header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:2px solid var(--ink)}
+.drawer header h3{font-family:var(--f-display);font-size:21px;margin:0;flex:1}
+.x{width:36px;height:36px;border:1px solid var(--rule);border-radius:8px;background:none;font-size:18px}
+.drawer .body{overflow:auto;padding:16px;flex:1}
+.photo{background:var(--ink);border-radius:10px;padding:12px;display:grid;place-items:center;cursor:zoom-in;overflow:auto;max-height:420px}
+.photo svg{height:360px;width:auto;display:block}
+.photo.zoom{place-items:start;cursor:zoom-out}
+.photo.zoom svg{height:760px}
+.form{display:grid;grid-template-columns:130px 1fr;gap:10px 12px;align-items:center;margin-top:16px}
+.form label{font-weight:600;color:var(--ink-soft);font-size:14px}
+.form input,.form select{height:38px;border:1px solid var(--rule);border-radius:8px;padding:0 10px;background:#fff;width:100%}
+.audit{margin-top:18px;border-top:1px solid var(--rule);padding-top:10px}
+.audit h4{margin:0 0 6px;font-size:14px}
+.audit li{font-size:13px;color:var(--ink-soft);margin:3px 0}
+.drawer footer{display:flex;gap:8px;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--rule)}
+.danger{color:var(--bahi);border-color:var(--bahi)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:10px;padding:10px 16px;font-weight:600;display:none;z-index:20}
+.toast.open{display:block}
+.note{background:var(--udharo-tint);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:14px}
+.view{display:none}.view.on{display:block}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside>
+  <div class="brand"><span class="mark" aria-hidden="true"></span><div><b>मेरो पसल</b><small>Admin · Laxmi Kirana</small></div></div>
+  <div id="nav"></div>
+  <div class="side-foot">Concept mockup · placeholder data<br>Keys: <kbd>j</kbd>/<kbd>k</kbd> rows · <kbd>Enter</kbd> open · <kbd>Esc</kbd> close · <kbd>/</kbd> search</div>
+</aside>
+<main>
+  <div class="head"><h1 id="page-title"></h1>
+    <div class="month"><select aria-label="Month"><option>Asoj 2083</option><option>Bhadra 2083</option><option>Shrawan 2083</option></select></div>
+    <input class="inp" id="search" placeholder="Search bills or accounts (any script)" oninput="render()">
+  </div>
+
+  <section class="view" id="v-overview">
+    <div class="grid2">
+      <div style="display:grid;gap:22px">
+        <div class="panel"><h2>Needs attention <small id="att-count"></small></h2><div id="att"></div></div>
+        <div class="panel"><h2>Bills by day <small>sold (green) · bought (blue) · Asoj 1–7</small></h2><div class="bars" id="bars"></div><div class="bars-x"><span>1 Asoj</span><span>7 Asoj</span></div></div>
+      </div>
+      <div style="display:grid;gap:22px">
+        <div class="panel"><h2>Asoj 2083 so far <small>billed only</small></h2><table class="bahi" id="month"></table></div>
+        <div class="panel"><h2>Members <small>sync health</small></h2><div id="members-mini"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-bills">
+    <div class="filters" id="bill-filters"></div>
+    <div class="panel"><table class="bahi" id="bills"></table></div>
+    <p class="hint">Click a row (or <kbd>j</kbd>/<kbd>k</kbd> + <kbd>Enter</kbd>) to open the bill drawer. Removed bills stay here and can be restored.</p>
+  </section>
+
+  <section class="view" id="v-accounts">
+    <div class="panel" style="margin-bottom:22px"><h2>Possible duplicates <small>same phonetic key or phone</small></h2><div id="dups"></div></div>
+    <div class="panel"><table class="bahi" id="accounts"></table></div>
+  </section>
+
+  <section class="view" id="v-ledger">
+    <div class="note"><b>v1.2 preview (F-30).</b> This is the collective ledger: every transaction in one bahi-style book, with period totals (running balances per account come with v1.1 payments). Payments and opening balances come from v1.1.</div>
+    <div class="filters"><button class="btn ghost" disabled>Export Excel</button><button class="btn ghost" disabled>Print / Save PDF</button></div>
+    <div class="panel"><table class="bahi" id="ledger"></table></div>
+  </section>
+
+  <section class="view" id="v-reports">
+    <div class="note"><b>v1.2 (F-31).</b> Monthly and fiscal-year reports are built from <code>dailySummaries</code> and <code>partyMonthly</code>: totals by day, top customers and suppliers, udharo given vs collected, and QR vs cash from day close.</div>
+    <div class="panel"><h2>Top customers · Asoj 2083 <small>from partyMonthly</small></h2><table class="bahi" id="top"></table></div>
+  </section>
+
+  <section class="view" id="v-members">
+    <div class="panel"><table class="bahi" id="members"></table></div>
+    <p class="hint">Invite adds the email to the Clerk allowlist and creates a member row. Access is decided by the member row, not by Clerk.</p>
+  </section>
+
+  <section class="view" id="v-export">
+    <div class="panel" style="max-width:640px"><h2>Export bills (CSV) <small>F-14</small></h2>
+      <div style="padding:16px" class="form">
+        <label for="ex-from">From (BS)</label><input id="ex-from" value="2083-06-01">
+        <label for="ex-to">To (BS)</label><input id="ex-to" value="2083-06-07">
+        <label>Columns</label><span style="font-size:13px;color:var(--ink-soft)">date BS · date AD · type · account · amount · bill no. · pages · captured by · status</span>
+        <span></span><div><button class="btn primary" onclick="toast('Mockup: CSV for 2083-06-01 → 2083-06-07 downloaded')">Download CSV</button></div>
+      </div>
+      <p class="hint" style="padding:0 16px 14px">Monthly routine (1st of each BS month): this CSV + a Convex snapshot export, stored off-platform.</p>
+    </div>
+  </section>
+</main>
+</div>
+
+<div class="drawer" id="drawer" role="dialog" aria-label="Bill">
+  <header><h3 id="d-title"></h3><span id="d-tag"></span><button class="x" onclick="closeDrawer()" aria-label="Close">×</button></header>
+  <div class="body">
+    <div class="photo" id="d-photo" onclick="this.classList.toggle('zoom')" title="Click to zoom"></div>
+    <div class="form" id="d-form"></div>
+    <div class="audit"><h4>History</h4><ul id="d-audit" style="margin:0;padding-left:18px"></ul></div>
+  </div>
+  <footer><button class="btn danger" id="d-remove" onclick="toggleRemove()"></button><div style="display:flex;gap:8px"><button class="btn ghost" onclick="closeDrawer()">Cancel</button><button class="btn primary" onclick="saveDrawer()">Save changes</button></div></footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const P = {
+ p1:{name:'राम बहादुर थापा',alt:'Ram Bahadur Thapa',tag:'चोक',kind:'Customer',phone:'98•• ••• 412'},
+ p1b:{name:'Ram Bdr Thapa',alt:'',tag:'',kind:'Customer',phone:'98•• ••• 412'},
+ p2:{name:'सीता श्रेष्ठ',alt:'Sita Shrestha',tag:'स्कुल अगाडि',kind:'Customer'},
+ p3:{name:'Hari Prasad Adhikari',alt:'हरि प्रसाद अधिकारी',tag:'Driver',kind:'Customer'},
+ p4:{name:'Binayak Hotel',alt:'विनायक होटल',tag:'',kind:'Customer'},
+ p5:{name:'गोपाल महर्जन',alt:'Gopal Maharjan',tag:'मन्दिर छेउ',kind:'Customer'},
+ p6:{name:'कमला तामाङ',alt:'Kamala Tamang',tag:'',kind:'Customer'},
+ p8:{name:'Kamala Tamang',alt:'',tag:'',kind:'Customer'},
+ w:{name:'नगद ग्राहक (walk-in)',alt:'',tag:'',kind:'System'},
+ s1:{name:'Everest Traders',alt:'एभरेस्ट ट्रेडर्स',tag:'',kind:'Supplier'},
+ s2:{name:'हिमालयन डिस्ट्रिब्युटर्स',alt:'Himalayan Distributors',tag:'',kind:'Supplier'},
+ s3:{name:'Bhaktapur Dairy',alt:'भक्तपुर डेरी',tag:'दूध, दही',kind:'Supplier'}
+};
+const cust=['p1','p2','p3','p4','p5','p6','w','w','p1','p4','p8','p1b'], sup=['s1','s2','s3'];
+function rng(seed){ let s=(seed*9301+49297)%233280; return ()=> (s=(s*9301+49297)%233280)/233280; }
+const R=rng(42);
+let B=[]; let id=1;
+for(let d=7; d>=1; d--){ const n=5+Math.floor(R()*4);
+  for(let i=0;i<n;i++){ const sale=R()>.17, party= sale? cust[Math.floor(R()*cust.length)] : sup[Math.floor(R()*sup.length)];
+    const amt = sale ? Math.round((800+R()*5200)/10)*10 : Math.round((6000+R()*40000)/50)*50;
+    B.push({id:'b'+(id++), day:d, time:`${String(7+Math.floor(R()*12)).padStart(2,'0')}:${String(Math.floor(R()*60)).padStart(2,'0')}`, type:sale?'sale':'purchase', party, amt, pages: sale?1:(R()>.6?2:1), by:R()>.12?'Buwa':'Binayak', status:'active', billNo: sale?'':'INV-'+(4100+id), audit:[`Created by Buwa · ${d} Asoj`] }); } }
+B[2].amt=null; B[7].amt=null; B[15].amt=null; B[11].party=null; B[4].amt=null;
+B.sort((a,b)=>b.day-a.day||b.time.localeCompare(a.time));
+const DUPS=[{a:'p1',b:'p1b',why:'Same phone number · phonetic key "rm bhdr tp"'},{a:'p6',b:'p8',why:'Same phonetic key "kml tmng" (different scripts)'}];
+const S={view:'overview', filter:'all', sel:-1, open:null, merged:new Set(), fixed:new Set()};
+const npr=n=>'Rs '+Number(n).toLocaleString('en-IN');
+const $=id=>document.getElementById(id);
+const pn=id=>id? (P[id]?.name||'?') : '— no name —';
+
+function billSvg(type, seed){
+  const r=rng(seed); let g='';
+  if(type==='sale'){ for(let i=0;i<15;i++){ const y=46+i*17; g+=`<line x1="0" y1="${y}" x2="220" y2="${y}" stroke="#b9cbe6" stroke-width=".8"/>`; }
+    g+=`<line x1="30" y1="0" x2="30" y2="300" stroke="#d58b8b"/><line x1="160" y1="30" x2="160" y2="300" stroke="#d58b8b" stroke-width=".8"/>`;
+    const st=(x0,y,len,w=1.5)=>{ let x=x0,d=`M${x} ${y}`; while(x<x0+len){ const nx=x+5+r()*8; d+=` Q${(x+nx)/2} ${y-4-r()*5} ${nx} ${y+(r()*3-1.5)}`; x=nx; } return `<path d="${d}" fill="none" stroke="#2b3f93" stroke-width="${w}" stroke-linecap="round"/>`; };
+    g+=st(70,22,70,2.2); const rows=5+Math.floor(r()*4); for(let i=0;i<rows;i++){ const y=58+i*17; g+=st(36,y,50+r()*70)+st(166,y,22+r()*18); }
+    const ty=58+rows*17+14; g+=st(40,ty,34,1.8)+st(166,ty,34,2.2)+`<ellipse cx="184" cy="${ty-2}" rx="28" ry="11" fill="none" stroke="#2b3f93" stroke-width="1.1"/>`;
+    return `<svg viewBox="0 0 220 300" xmlns="http://www.w3.org/2000/svg"><rect width="220" height="300" fill="#FBF9F4"/>${g}</svg>`; }
+  g=`<rect width="220" height="300" fill="#fff"/><rect x="14" y="14" width="110" height="12" fill="#27304a"/><rect x="14" y="31" width="80" height="5" fill="#8b93a6"/><rect x="150" y="14" width="56" height="30" fill="none" stroke="#27304a"/><rect x="14" y="60" width="192" height="12" fill="#e3e6ee"/>`;
+  const rows=7+Math.floor(r()*5); for(let i=0;i<rows;i++){ const y=80+i*13; g+=`<rect x="18" y="${y}" width="${40+r()*70}" height="5" fill="#5b6479"/><rect x="178" y="${y}" width="${18+r()*6}" height="5" fill="#27304a"/>`; }
+  const ty=80+rows*13+8; g+=`<rect x="120" y="${ty}" width="86" height="34" fill="none" stroke="#27304a" stroke-width="1.4"/><rect x="164" y="${ty+7}" width="36" height="9" fill="#27304a"/>`;
+  return `<svg viewBox="0 0 220 300" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
+}
+const seed=id=>Number(id.slice(1))*37+11;
+
+const NAV=[['overview','Overview'],['bills','Bills'],['accounts','Accounts'],['members','Members'],['export','Export'],null,['ledger','Ledger','v1.2'],['reports','Reports','v1.2']];
+function attentionItems(){ return B.filter(b=>b.status==='active' && (b.amt==null || !b.party) && !S.fixed.has(b.id)); }
+function renderNav(){
+  const n=attentionItems().length + DUPS.filter(d=>!S.merged.has(d.b)).length;
+  $('nav').innerHTML = NAV.map(x=> x? `<button class="navi ${S.view===x[0]?'on':''}" onclick="show('${x[0]}')"><span>${x[1]}</span>${x[0]==='overview'&&n?`<span class="n">${n}</span>`:''}${x[2]?`<span class="ver">${x[2]}</span>`:''}</button>` : '<div class="sep"></div>').join('');
+}
+function show(v){ S.view=v; S.sel=-1; closeDrawer(); render(); }
+function matches(b,q){ if(!q) return true; q=q.toLowerCase(); const p=P[b.party]||{}; return (p.name||'').toLowerCase().includes(q)||(p.alt||'').toLowerCase().includes(q)||String(b.amt||'').includes(q); }
+function render(){
+  renderNav();
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+S.view));
+  $('page-title').textContent = {overview:'Overview',bills:'Bills',accounts:'Accounts',members:'Members',export:'Export',ledger:'Ledger',reports:'Reports'}[S.view];
+  ({overview:renderOverview,bills:renderBills,accounts:renderAccounts,members:renderMembers,ledger:renderLedger,reports:renderReports}[S.view]||(()=>{}))();
+}
+function renderOverview(){
+  const att=attentionItems(), dups=DUPS.filter(d=>!S.merged.has(d.b));
+  $('att-count').textContent = `${att.length+dups.length} open`;
+  const opts=Object.entries(P).filter(([k,p])=>p.kind!=='System').map(([k,p])=>`<option value="${k}">${p.name}</option>`).join('');
+  $('att').innerHTML = att.map(b=>`<div class="att"><span class="th">${billSvg(b.type,seed(b.id))}</span>
+     <div><div class="what">${b.amt==null?'No amount':'No name'} · <span class="tag ${b.type==='sale'?'sale':'buy'}">${b.type==='sale'?'Sold':'Bought'}</span></div><div class="sub">${pn(b.party)} · ${b.day} Asoj, ${b.time} · <a href="#" onclick="openBill('${b.id}');return false">open photo</a></div></div>
+     <div class="fix">${b.amt==null?`<input class="inp" style="min-width:0" placeholder="Rs" id="fx-${b.id}" inputmode="numeric">`:`<select class="inp" style="min-width:190px" id="fx-${b.id}"><option value="">Choose account…</option>${opts}</select>`}<button class="btn sale" onclick="fix('${b.id}')">Save</button></div></div>`).join('')
+   + dups.map(d=>`<div class="att" style="grid-template-columns:1fr"><div class="pair">
+      <div class="pname"><b>${P[d.a].name}</b><span>${P[d.a].tag||'—'} · ${B.filter(x=>x.party===d.a).length+14} bills · keep</span></div><span style="font-weight:800">←</span>
+      <div class="pname"><b>${P[d.b].name}</b><span>${B.filter(x=>x.party===d.b).length+3} bills · merge</span></div>
+      <button class="btn primary" onclick="merge('${d.b}')">Merge</button></div><div class="sub" style="margin-top:6px">${d.why}. Nothing is deleted; bills move and the merged account keeps a pointer.</div></div>`).join('')
+   || '<p class="hint" style="padding:12px 16px">All clear. Nothing needs attention.</p>';
+  const act=B.filter(b=>b.status==='active'), s=act.filter(b=>b.type==='sale'), p=act.filter(b=>b.type==='purchase'), sum=a=>a.reduce((x,b)=>x+(b.amt||0),0);
+  $('month').innerHTML = `<thead><tr><th>Line</th><th class="num">Bills</th><th class="num">Amount</th></tr></thead><tbody>
+    <tr><td>Sold (billed)</td><td class="num">${s.length}</td><td class="num amt">${npr(sum(s))}</td></tr>
+    <tr><td>Bought</td><td class="num">${p.length}</td><td class="num amt">${npr(sum(p))}</td></tr>
+    <tr><td>Without amount</td><td class="num">${act.filter(b=>b.amt==null).length}</td><td class="num">—</td></tr>
+    <tr><td>Without name</td><td class="num">${act.filter(b=>!b.party).length}</td><td class="num">—</td></tr>
+    <tr class="foot"><td>Sold − bought <small style="font-weight:600;color:var(--ink-soft)">(cash view, not profit)</small></td><td></td><td class="num amt">${npr(sum(s)-sum(p))}</td></tr></tbody>`;
+  const days=[1,2,3,4,5,6,7], max=Math.max(...days.map(d=>Math.max(sum(s.filter(b=>b.day===d)),sum(p.filter(b=>b.day===d))/3)));
+  $('bars').innerHTML = days.map(d=>`<i style="height:${sum(s.filter(b=>b.day===d))/max*100}%" title="Sold ${d} Asoj"></i><i class="b" style="height:${sum(p.filter(b=>b.day===d))/3/max*100}%" title="Bought ÷3, ${d} Asoj"></i><span style="width:8px"></span>`).join('');
+  $('members-mini').innerHTML = `<div class="member"><div><b>Buwa</b><span>owner · Redmi 15C</span></div><span class="ok">✓ synced 2 min ago · 0 pending</span></div>
+    <div class="member"><div><b>Binayak</b><span>admin</span></div><span class="ok">✓ online</span></div>
+    <div class="member"><div><b>Aama</b><span>staff · not invited (OD-3)</span></div><button class="btn ghost" onclick="show('members')">Invite…</button></div>`;
+}
+function fix(id){ const b=B.find(x=>x.id===id), el=$('fx-'+id);
+  if(b.amt==null){ const v=Number(el.value.replace(/\D/g,'')); if(!v){ el.focus(); return; } b.amt=v; b.audit.push('Amount set to '+npr(v)+' by Binayak'); }
+  else { if(!el.value){ el.focus(); return; } b.party=el.value; b.audit.push('Account set to '+P[el.value].name+' by Binayak'); }
+  S.fixed.add(id); toast('Saved · totals updated'); render(); }
+function merge(bid){ S.merged.add(bid); const d=DUPS.find(x=>x.b===bid); B.forEach(b=>{ if(b.party===bid){ b.party=d.a; b.audit.push('Account merged into '+P[d.a].name); } }); toast(`Merged “${P[bid].name}” into “${P[d.a].name}”`); render(); }
+function renderBills(){
+  const F=[['all','All'],['sale','Sold'],['purchase','Bought'],['attention','Needs attention'],['deleted','Removed']];
+  $('bill-filters').innerHTML=F.map(([k,l])=>`<button class="chip ${S.filter===k?'on':''}" onclick="S.filter='${k}';S.sel=-1;render()">${l}</button>`).join('');
+  const q=$('search').value.trim(), f=S.filter;
+  const rows=B.filter(b=> (f==='deleted'? b.status==='deleted' : b.status==='active') && (f==='all'||f==='deleted'||(f==='attention'?(b.amt==null||!b.party):b.type===f)) && matches(b,q));
+  S.rows=rows;
+  $('bills').innerHTML=`<thead><tr><th>Date (BS)</th><th></th><th>Type</th><th>Account</th><th class="num">Amount</th><th class="num">Pages</th><th>By</th><th>Flags</th></tr></thead><tbody>`+
+   rows.map((b,i)=>`<tr class="click ${i===S.sel?'sel':''}" onclick="openBill('${b.id}')"><td>2083-06-0${b.day} · ${b.time}</td><td><span class="th">${billSvg(b.type,seed(b.id))}</span></td>
+    <td><span class="tag ${b.type==='sale'?'sale':'buy'}">${b.type==='sale'?'Sold':'Bought'}</span></td><td>${pn(b.party)}</td>
+    <td class="num amt">${b.amt==null?'—':npr(b.amt)}</td><td class="num">${b.pages}</td><td>${b.by}</td>
+    <td>${b.amt==null?'<span class="tag warn">no amount</span> ':''}${!b.party?'<span class="tag warn">no name</span>':''}${b.status==='deleted'?'<span class="tag del">removed</span>':''}</td></tr>`).join('')+'</tbody>';
+}
+function openBill(id){ const b=B.find(x=>x.id===id); S.open=b; if(S.view!=='bills'){ /* stay */ }
+  $('d-title').textContent=pn(b.party); $('d-tag').innerHTML=`<span class="tag ${b.type==='sale'?'sale':'buy'}">${b.type==='sale'?'Sold':'Bought'}</span>`;
+  const ph=$('d-photo'); ph.classList.remove('zoom'); ph.innerHTML=billSvg(b.type,seed(b.id));
+  const opts=Object.entries(P).map(([k,p])=>`<option value="${k}" ${k===b.party?'selected':''}>${p.name}</option>`).join('');
+  $('d-form').innerHTML=`<label>Account</label><select id="e-party"><option value="">— no name —</option>${opts}</select>
+    <label>Amount (Rs)</label><input id="e-amt" value="${b.amt??''}" inputmode="numeric" placeholder="read it off the photo">
+    <label>Date (BS)</label><input value="2083-06-0${b.day}">
+    <label>Type</label><select><option ${b.type==='sale'?'selected':''}>Sold</option><option ${b.type!=='sale'?'selected':''}>Bought</option></select>
+    <label>Bill number</label><input value="${b.billNo}" placeholder="optional">
+    <label>Note</label><input placeholder="optional">`;
+  $('d-audit').innerHTML=b.audit.map(a=>`<li>${a}</li>`).join('');
+  $('d-remove').textContent = b.status==='deleted' ? 'Restore bill' : 'Remove bill';
+  $('drawer').classList.add('open'); }
+function closeDrawer(){ $('drawer').classList.remove('open'); S.open=null; }
+function saveDrawer(){ const b=S.open; if(!b) return; const a=$('e-amt').value.replace(/\D/g,''), pty=$('e-party').value;
+  if(String(b.amt??'')!==a){ b.audit.push(`Amount ${b.amt==null?'—':npr(b.amt)} → ${a?npr(a):'—'} by Binayak`); b.amt=a?Number(a):null; }
+  if((b.party||'')!==pty){ b.audit.push(`Account ${pn(b.party)} → ${pn(pty)} by Binayak`); b.party=pty||null; }
+  closeDrawer(); toast('Saved · summaries and account totals updated'); render(); }
+function toggleRemove(){ const b=S.open; b.status = b.status==='deleted'?'active':'deleted'; b.audit.push((b.status==='deleted'?'Removed':'Restored')+' by Binayak'); closeDrawer(); toast(b.status==='deleted'?'Removed (soft delete)':'Restored'); render(); }
+function renderAccounts(){
+  const dups=DUPS.filter(d=>!S.merged.has(d.b));
+  $('dups').innerHTML = dups.map(d=>`<div class="att" style="grid-template-columns:1fr"><div class="pair"><div class="pname"><b>${P[d.a].name}</b><span>keep</span></div><span style="font-weight:800">←</span><div class="pname"><b>${P[d.b].name}</b><span>merge</span></div><button class="btn primary" onclick="merge('${d.b}')">Merge</button></div><div class="sub" style="margin-top:6px">${d.why}</div></div>`).join('') || '<p class="hint" style="padding:12px 16px">No suggestions.</p>';
+  const q=$('search').value.trim().toLowerCase();
+  const list=Object.entries(P).filter(([k,p])=>!S.merged.has(k) && (!q||p.name.toLowerCase().includes(q)||p.alt.toLowerCase().includes(q)));
+  $('accounts').innerHTML=`<thead><tr><th>Name (as typed)</th><th>Other script</th><th>Tag</th><th>Kind</th><th class="num">Bills (Asoj)</th><th class="num">This month</th><th></th></tr></thead><tbody>`+
+   list.map(([k,p])=>{ const bs=B.filter(b=>b.party===k&&b.status==='active'); return `<tr><td><b>${p.name}</b></td><td>${p.alt||(p.kind==='System'?'—':'<span class="tag warn">add</span>')}</td><td>${p.tag||'—'}</td><td>${p.kind}</td><td class="num">${bs.length}</td><td class="num amt">${npr(bs.reduce((a,b)=>a+(b.amt||0),0))}</td><td><button class="btn ghost" style="height:30px" onclick="toast('Mockup: edit name forms, tag, phone, PAN, kind; archive')">Edit</button></td></tr>`; }).join('')+'</tbody>';
+}
+function renderMembers(){
+  $('members').innerHTML=`<thead><tr><th>Member</th><th>Role</th><th>Sign-in</th><th>Last seen</th><th>Last sync</th><th></th></tr></thead><tbody>
+   <tr><td><b>Buwa</b></td><td>owner</td><td>Google · buwa@…</td><td>2 min ago</td><td class="ok">✓ 2 min ago</td><td><button class="btn ghost" style="height:30px">Change role</button></td></tr>
+   <tr><td><b>Binayak</b></td><td>admin</td><td>Google · binayak@…</td><td>now</td><td class="ok">✓ now</td><td></td></tr>
+   <tr><td><b>Aama</b></td><td>staff</td><td>—</td><td>—</td><td>—</td><td><button class="btn primary" style="height:30px" onclick="toast('Mockup: add email to Clerk allowlist + create member row')">Invite</button></td></tr></tbody>`;
+}
+function renderLedger(){
+  const act=B.filter(b=>b.status==='active').slice().sort((a,b)=>a.day-b.day||a.time.localeCompare(b.time));
+  const extra=[{day:3,time:'17:10',kind:'in',party:'p1',amt:5000,d:'Udharo received (QR)'},{day:5,time:'15:00',kind:'out',party:'s1',amt:30000,d:'Paid supplier (bank)'}];
+  const rows=[...act.map(b=>({day:b.day,time:b.time,kind:b.type,party:b.party,amt:b.amt,d:b.type==='sale'?'Sale bill':'Purchase bill'})),...extra].sort((a,b)=>a.day-b.day||a.time.localeCompare(b.time));
+  let s=0,p=0,i=0,o=0;
+  $('ledger').innerHTML=`<thead><tr><th>मिति</th><th>Details</th><th>Account</th><th class="num">Sold</th><th class="num">Bought</th><th class="num">Received</th><th class="num">Paid</th></tr></thead><tbody>`+
+   rows.map(r=>{ const a=r.amt||0; if(r.kind==='sale')s+=a; if(r.kind==='purchase')p+=a; if(r.kind==='in')i+=a; if(r.kind==='out')o+=a;
+    const c=k=>r.kind===k?(r.amt==null?'—':npr(r.amt)):'';
+    return `<tr><td>2083-06-0${r.day}</td><td>${r.d}</td><td>${pn(r.party)}</td><td class="num">${c('sale')}</td><td class="num">${c('purchase')}</td><td class="num">${c('in')}</td><td class="num">${c('out')}</td></tr>`; }).join('')+
+   `<tr class="foot"><td>Asoj 1–7</td><td>Totals</td><td></td><td class="num">${npr(s)}</td><td class="num">${npr(p)}</td><td class="num">${npr(i)}</td><td class="num">${npr(o)}</td></tr></tbody>`;
+}
+function renderReports(){
+  const t={}; B.filter(b=>b.status==='active'&&b.type==='sale'&&b.party&&b.party!=='w').forEach(b=>t[b.party]=(t[b.party]||0)+(b.amt||0));
+  const top=Object.entries(t).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  $('top').innerHTML=`<thead><tr><th>#</th><th>Customer</th><th class="num">Bills</th><th class="num">Sold</th></tr></thead><tbody>`+top.map(([k,v],n)=>`<tr><td>${n+1}</td><td>${pn(k)}</td><td class="num">${B.filter(b=>b.party===k).length}</td><td class="num amt">${npr(v)}</td></tr>`).join('')+'</tbody>';
+}
+let tt; function toast(m){ const el=$('toast'); el.textContent=m; el.classList.add('open'); clearTimeout(tt); tt=setTimeout(()=>el.classList.remove('open'),2600); }
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,select')) { if(e.key==='Escape') e.target.blur(); return; }
+  if(e.key==='/'){ e.preventDefault(); $('search').focus(); }
+  else if(e.key==='Escape') closeDrawer();
+  else if(S.view==='bills' && (e.key==='j'||e.key==='k')){ const n=(S.rows||[]).length; if(!n) return; S.sel=Math.max(0,Math.min(n-1,S.sel+(e.key==='j'?1:-1))); renderBills(); }
+  else if(S.view==='bills' && e.key==='Enter' && S.sel>=0) openBill(S.rows[S.sel].id);
+});
+render();
+</script>
+</body>
+</html>

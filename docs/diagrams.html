@@ -1,0 +1,190 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mero Pasal — System diagrams</title>
+<style>
+body{margin:0;font-family:system-ui,sans-serif;background:#F2F4F1;color:#1B2433}
+header{padding:28px 32px 8px;max-width:1100px;margin:auto} header h1{margin:0;font-size:28px} header p{color:#566074;margin:6px 0 0}
+main{max-width:1100px;margin:auto;padding:16px 32px 60px;display:grid;gap:22px}
+.card{background:#fff;border:1px solid #C7D3E3;border-radius:12px;padding:16px 20px;overflow-x:auto}
+.card h2{margin:0;font-size:19px} .src{margin:2px 0 10px;color:#566074;font-size:13px}
+pre.mermaid{margin:0;background:none;text-align:center}
+</style></head><body>
+<header><h1>Mero Pasal — System diagrams</h1><p>Rendered from the Mermaid blocks in <code>architecture-context.md</code> and <code>use-cases.md</code>. The Markdown files are the source of truth; regenerate this page when they change.</p></header>
+<main><section class="card"><h2>3. System context</h2><p class="src">from <code>architecture-context.md</code></p><pre class="mermaid">flowchart LR
+    subgraph Phone[&quot;Buwa&#x27;s phone: Redmi 15C, Chrome PWA&quot;]
+        UI[Mero Pasal app UI]
+        OB[(IndexedDB&lt;br/&gt;outbox + caches)]
+        SW[Service worker&lt;br/&gt;app-shell cache]
+        CAM[Native camera]
+        UI &lt;--&gt; OB
+        UI --- SW
+        CAM --&gt; UI
+    end
+    subgraph Laptop[&quot;Binayak&#x27;s laptop&quot;]
+        ADM[Admin console /admin]
+    end
+    subgraph Vercel
+        NEXT[Next.js 16&lt;br/&gt;static assets + proxy.ts]
+    end
+    subgraph Convex[&quot;Convex Cloud&quot;]
+        FN[Queries / mutations / actions]
+        DB[(Database)]
+        FS[(File storage&lt;br/&gt;bill photos)]
+        CRON[Crons / scheduler]
+        FN &lt;--&gt; DB
+        FN &lt;--&gt; FS
+        CRON --&gt; FN
+    end
+    CLERK[Clerk&lt;br/&gt;Google sign-in]
+    AI[Vision model API&lt;br/&gt;v2 only]
+
+    UI -- HTTPS --&gt; NEXT
+    ADM -- HTTPS --&gt; NEXT
+    UI &lt;-- WebSocket: reactive queries + mutations --&gt; FN
+    ADM &lt;-- WebSocket --&gt; FN
+    UI -- photo upload via signed URL --&gt; FS
+    UI -- sign-in --&gt; CLERK
+    ADM -- sign-in --&gt; CLERK
+    CLERK -. JWT verified by .-&gt; FN
+    FN -. v2 .-&gt; AI
+</pre></section><section class="card"><h2>4. Monorepo layout</h2><p class="src">from <code>architecture-context.md</code></p><pre class="mermaid">flowchart TD
+    web[apps/web] --&gt; ui[packages/ui]
+    web --&gt; shared[packages/shared]
+    web --&gt; backend[packages/backend&lt;br/&gt;generated API types only]
+    ui --&gt; shared
+    backend --&gt; shared
+    shared --&gt; nothing[(no internal deps)]
+</pre></section><section class="card"><h2>5.1 Entity relationships</h2><p class="src">from <code>architecture-context.md</code></p><pre class="mermaid">erDiagram
+    SHOPS ||--o{ MEMBERS : &quot;has&quot;
+    SHOPS ||--o{ PARTIES : &quot;has&quot;
+    SHOPS ||--o{ TRANSACTIONS : &quot;has&quot;
+    SHOPS ||--o{ DAILY_SUMMARIES : &quot;has&quot;
+    PARTIES ||--o{ TRANSACTIONS : &quot;is party to&quot;
+    PARTIES ||--o{ PARTY_MONTHLY : &quot;rolls up to&quot;
+    MEMBERS ||--o{ TRANSACTIONS : &quot;created&quot;
+    MEMBERS ||--o{ AUDIT_LOG : &quot;acted&quot;
+    SHOPS ||--o{ DAY_CLOSES : &quot;v1.1&quot;
+    TRANSACTIONS ||--o{ EXTRACTIONS : &quot;v2&quot;
+
+    TRANSACTIONS {
+        string clientId &quot;idempotency key from device&quot;
+        string kind &quot;sale | purchase | payment_in | payment_out | opening_balance | adjustment&quot;
+        string dateBs &quot;2083-06-07&quot;
+        number dateAd &quot;ms at NPT midnight&quot;
+        number amountPaisa &quot;optional&quot;
+        string paymentMode &quot;v1.1&quot;
+        number creditPaisa &quot;v1.1&quot;
+        array photos &quot;storageId + thumbId per page&quot;
+        string status &quot;active | deleted&quot;
+        boolean needsAttention &quot;no amount or no party&quot;
+    }
+    PARTIES {
+        string displayName
+        string nameLatin
+        string nameDevanagari
+        string phoneticKey
+        string kind &quot;customer | supplier | both&quot;
+        boolean isWalkIn
+        number balancePaisa &quot;v1.1; + they owe us&quot;
+        id mergedIntoId
+    }
+</pre></section><section class="card"><h2>7.3 Name matching across scripts</h2><p class="src">from <code>architecture-context.md</code></p><pre class="mermaid">flowchart LR
+    IN[typed or spoken name] --&gt; S{script?}
+    S --&gt;|Devanagari| T[transliterate → Latin&lt;br/&gt;simple table, halant-aware]
+    S --&gt;|Latin| L[lowercase]
+    T --&gt; N[normalise]
+    L --&gt; N
+    N --&gt; K[phoneticKey per token]
+    K --&gt; M[match against party keys&lt;br/&gt;prefix → token overlap → edit distance]
+    M --&gt; R[ranked results]
+</pre></section><section class="card"><h2>8.2 Capture and sync sequence</h2><p class="src">from <code>architecture-context.md</code></p><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor B as Buwa
+    participant UI as Capture UI
+    participant IMG as Image worker
+    participant OB as Outbox (IndexedDB)
+    participant SE as Sync engine
+    participant CX as Convex
+    participant FS as Convex storage
+
+    B-&gt;&gt;UI: Sold bill, take photo
+    UI-&gt;&gt;IMG: compress(original)
+    IMG--&gt;&gt;UI: full ≤1600px JPEG + 320px thumb (EXIF stripped)
+    B-&gt;&gt;UI: pick name, amount, Save
+    UI-&gt;&gt;OB: put {clientId, type: tx.create, payload, blobs}
+    OB--&gt;&gt;UI: committed
+    UI--&gt;&gt;B: &quot;राखियो&quot; stamp, Today updated from outbox
+    Note over SE: triggers: enqueue, app open, online event,&lt;br/&gt;visibility change, every 60s while pending
+    SE-&gt;&gt;OB: next pending item (FIFO)
+    alt references a local-only party
+        SE-&gt;&gt;CX: parties.create({clientId, ...}) (idempotent)
+    end
+    loop each page not yet uploaded
+        SE-&gt;&gt;CX: files.generateUploadUrl()
+        CX--&gt;&gt;SE: signed URL
+        SE-&gt;&gt;FS: POST blob (full, then thumb)
+        FS--&gt;&gt;SE: storageId
+        SE-&gt;&gt;OB: record storageIds on item (no re-upload on retry)
+    end
+    SE-&gt;&gt;CX: transactions.createFromClient({clientId, partyRef, photos, ...})
+    CX-&gt;&gt;CX: requireMember → dedupe by clientId → ledger.apply → audit
+    CX--&gt;&gt;SE: txId
+    SE-&gt;&gt;OB: mark done
+    CX--&gt;&gt;UI: reactive queries push new totals
+</pre></section><section class="card"><h2>8.3 Outbox item lifecycle</h2><p class="src">from <code>architecture-context.md</code></p><pre class="mermaid">stateDiagram-v2
+    [*] --&gt; pending: saved on device
+    pending --&gt; uploading: sync engine picks item
+    uploading --&gt; pending: network error (backoff 5s, 30s, 2m, 10m…)
+    uploading --&gt; done: server confirmed (or clientId already existed)
+    uploading --&gt; failed: 5 non-network errors
+    failed --&gt; pending: &quot;Try now&quot; or admin fix
+    done --&gt; purged: blobs after 7 days
+    purged --&gt; [*]
+</pre></section><section class="card"><h2>15. Future architecture</h2><p class="src">from <code>architecture-context.md</code></p><pre class="mermaid">sequenceDiagram
+    participant CX as transactions.createFromClient
+    participant SCH as Scheduler
+    participant ACT as extraction.run (Node action)
+    participant AI as Vision model API
+    participant DB as Convex DB
+    participant ADM as Admin review queue
+    CX-&gt;&gt;SCH: runAfter(0, extraction.run, {txId})
+    SCH-&gt;&gt;ACT: run
+    ACT-&gt;&gt;DB: load photo URLs (internal query)
+    ACT-&gt;&gt;AI: images + JSON schema (total, date, billNo, partyName, PAN, confidence)
+    AI--&gt;&gt;ACT: fields + confidences
+    ACT-&gt;&gt;DB: internal mutation: save extractions row
+    alt field empty on tx and confidence ≥ threshold
+        DB--&gt;&gt;ADM: suggestion (one-click accept)
+    else conflicts with human value
+        DB--&gt;&gt;ADM: mismatch flag
+    end
+</pre></section><section class="card"><h2>Capture flow at a glance</h2><p class="src">from <code>use-cases.md</code></p><pre class="mermaid">flowchart TD
+    A[Today screen] --&gt;|Sold bill| B[Camera opens]
+    A --&gt;|Bought bill| B
+    B --&gt; C{Photo OK?}
+    C --&gt;|Retake| B
+    C --&gt;|Add page| B
+    C --&gt;|Use photo| D[Whose bill?]
+    D --&gt;|Walk-in, sale only| F
+    D --&gt;|Tap recent name| F
+    D --&gt;|Search| E[Filtered names]
+    E --&gt;|Tap| F
+    E --&gt;|No match: Add new name| N[New name sheet]
+    N --&gt;|Similar name exists| S{Same person?}
+    S --&gt;|Yes| F
+    S --&gt;|No, create| F
+    N --&gt;|Save| F
+    D --&gt;|Mic, v1.1| V[Heard name shown]
+    V --&gt;|Found| F
+    V --&gt;|Not found: Add exactly this name| VC[Is the name right? sheet]
+    VC --&gt;|Save name| F
+    E --&gt;|No match: Add this exact name| N
+    D --&gt;|Later| F
+    F[Amount pad + date chip] --&gt;|Save bill| G[(Outbox on phone)]
+    F --&gt;|Add amount later| G
+    G --&gt; H[Stamp: Saved]
+    H --&gt; A
+    G -.-&gt;|when online| I[(Convex)]
+</pre></section></main>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:"base",securityLevel:"loose",themeVariables:{primaryColor:"#E4E8F7",primaryBorderColor:"#2C3D9A",primaryTextColor:"#1B2433",lineColor:"#566074",secondaryColor:"#E3F1E9",tertiaryColor:"#FBEFD6",fontFamily:"system-ui, sans-serif"}});</script>
+</body></html>
