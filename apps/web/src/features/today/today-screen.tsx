@@ -1,21 +1,24 @@
 "use client";
 
 import type { BillKind } from "@mero-pasal/shared/domain";
+import { AmountText } from "@mero-pasal/ui/components/amount-text";
 import { BigButton } from "@mero-pasal/ui/components/big-button";
 import { BsDateText } from "@mero-pasal/ui/components/bs-date-text";
+import { type LedgerRow, LedgerStrip } from "@mero-pasal/ui/components/ledger-strip";
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 import { useCapture } from "@/features/capture/capture-provider";
 import { useCamera } from "@/features/capture/use-camera";
 import { useLocale } from "@/features/session/locale";
 import { useMember } from "@/features/session/member-gate";
+import { BillRow } from "./bill-row";
+import { useTodayBills } from "./use-today-bills";
 import { useTodayBs } from "./use-today-bs";
 
 /**
- * F-02 Today, M0 version (ui-ux §5.1): header, sync pill, the two big buttons and the empty
- * state. The buttons open the phone camera in one tap (F-03); the ledger strip and recent bills
- * arrive with saving (M1 PR 12).
+ * F-02 Today (ui-ux §5.1): header, sync pill, the two big buttons (one tap to the camera, F-03),
+ * the "आजका बिल" ledger strip, and the 5 newest bills with the one just saved highlighted.
  */
 export function TodayScreen() {
   const { locale, setLocale, t } = useLocale();
@@ -23,7 +26,15 @@ export function TodayScreen() {
   const today = useTodayBs();
   const shopName = locale === "ne" ? (shop.nameNe ?? shop.name) : shop.name;
   const router = useRouter();
-  const { start } = useCapture();
+  const { start, lastSaved } = useCapture();
+  const { totals, recent } = useTodayBills(today);
+  // F-02: the bill just saved glows briefly, then settles.
+  const [glow, setGlow] = useState<string | null>(lastSaved);
+  useEffect(() => {
+    setGlow(lastSaved);
+    const timer = setTimeout(() => setGlow(null), 3000);
+    return () => clearTimeout(timer);
+  }, [lastSaved]);
   const kind = useRef<BillKind>("sale");
   const camera = useCamera((file) => {
     start(kind.current, file);
@@ -79,7 +90,56 @@ export function TodayScreen() {
         />
       </div>
 
-      <p className="px-5 py-7 text-center text-ink-soft">{t("today.empty")}</p>
+      {totals ? (
+        <div className="mx-4 mt-3.5">
+          <LedgerStrip
+            heading={t("today.billed")}
+            rows={[
+              {
+                label: t("kind.sale"),
+                tone: "sale",
+                value: <AmountText paisa={totals.salePaisa} locale={locale} />,
+                count: t("today.billCount", { n: totals.saleCount }),
+              } satisfies LedgerRow,
+              {
+                label: t("kind.purchase"),
+                tone: "purchase",
+                value: <AmountText paisa={totals.purchasePaisa} locale={locale} />,
+                count: t("today.billCount", { n: totals.purchaseCount }),
+              },
+              ...(totals.missingAmountCount > 0
+                ? [
+                    {
+                      label: t("today.noAmount"),
+                      tone: "udharo" as const,
+                      value: null,
+                      count: t("today.billCount", { n: totals.missingAmountCount }),
+                      warn: true,
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        </div>
+      ) : (
+        <div
+          aria-busy="true"
+          className="mx-4 mt-3.5 h-[146px] animate-pulse bg-card motion-reduce:animate-none"
+        />
+      )}
+
+      {recent === undefined ? null : recent.length === 0 ? (
+        <p className="px-5 py-7 text-center text-ink-soft">{t("today.empty")}</p>
+      ) : (
+        <section className="mt-4.5">
+          <h2 className="mx-4 mb-1 text-base font-bold text-ink-soft">{t("today.recent")}</h2>
+          <ul>
+            {recent.map((bill) => (
+              <BillRow key={bill._id} bill={bill} highlight={bill.clientId === glow} />
+            ))}
+          </ul>
+        </section>
+      )}
       {camera.input}
     </main>
   );

@@ -1,9 +1,11 @@
 "use client";
 
 import { SignOutButton } from "@clerk/nextjs";
+import { api } from "@mero-pasal/backend/convex/_generated/api";
 import { t } from "@mero-pasal/shared/i18n";
+import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
-import { createContext, type ReactNode, useContext, useEffect } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect } from "react";
 import { LocaleProvider } from "./locale";
 import { type MeState, useMe } from "./use-me";
 
@@ -25,6 +27,11 @@ export function useMember(): Me {
 export function MemberGate({ children }: { children: ReactNode }) {
   const state = useMe();
   const router = useRouter();
+  const setLocale = useMutation(api.members.setLocale);
+  const persistLocale = useCallback(
+    (locale: "ne" | "en") => void setLocale({ locale }).catch(() => undefined), // best effort
+    [setLocale],
+  );
 
   useEffect(() => {
     if (state.status === "notInvited") router.replace("/not-invited");
@@ -33,7 +40,9 @@ export function MemberGate({ children }: { children: ReactNode }) {
   if (state.status === "member") {
     return (
       <MeContext.Provider value={state.me}>
-        <LocaleProvider initial={state.me.member.locale}>{children}</LocaleProvider>
+        <LocaleProvider initial={state.me.member.locale} onChange={persistLocale}>
+          {children}
+        </LocaleProvider>
       </MeContext.Provider>
     );
   }

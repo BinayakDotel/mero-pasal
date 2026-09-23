@@ -13,19 +13,35 @@ type LocaleValue = {
 const LocaleContext = createContext<LocaleValue | null>(null);
 
 /**
- * F-10: the active UI language, starting from the member's saved locale. Switching is in-memory
- * for now; persisting it to `members.locale` is an M1 task (progress tracker).
+ * F-10: the active UI language, starting from the member's saved locale; switching saves it
+ * back to the member (members.setLocale) so it survives reloads and other devices.
  */
-export function LocaleProvider({ initial, children }: { initial: Locale; children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>(initial);
+export function LocaleProvider({
+  initial,
+  onChange,
+  children,
+}: {
+  initial: Locale;
+  /** Persists a change (members.setLocale). */
+  onChange?: (locale: Locale) => void;
+  children: ReactNode;
+}) {
+  const [locale, setLocaleState] = useState<Locale>(initial);
 
   useEffect(() => {
     document.documentElement.lang = locale; // ui-ux §9
   }, [locale]);
 
   const value = useMemo<LocaleValue>(
-    () => ({ locale, setLocale, t: (key, ...params) => translate(locale, key, ...params) }),
-    [locale],
+    () => ({
+      locale,
+      setLocale: (next) => {
+        setLocaleState(next);
+        onChange?.(next);
+      },
+      t: (key, ...params) => translate(locale, key, ...params),
+    }),
+    [locale, onChange],
   );
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }

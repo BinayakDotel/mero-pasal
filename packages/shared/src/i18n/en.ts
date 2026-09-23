@@ -19,6 +19,8 @@ export const en: { readonly [K in keyof typeof ne]: string } = {
 
   "today.billed": "Today's bills",
   "today.noAmount": "Without amount",
+  "today.billCount": "{n} bill(s)",
+  "today.recent": "Recently saved",
   "today.empty": "No bills today. Press a button above to save the first bill.",
   "today.seeAll": "See all",
 
@@ -27,6 +29,7 @@ export const en: { readonly [K in keyof typeof ne]: string } = {
   "capture.photoAlt": "Bill photo, page {n}",
   "capture.hint": "Fit the whole bill in the frame",
   "capture.maxPages": "Up to {n} pages",
+  "capture.unreadable": "This photo couldn't be opened. Please take it again.",
   "capture.leave": "Leave without saving?",
   "capture.leaveSub": "The photo you took will be discarded.",
   "capture.leaveYes": "Yes, leave",
@@ -69,7 +72,13 @@ export const en: { readonly [K in keyof typeof ne]: string } = {
   "amount.later": "Add amount later",
 
   "amount.delete": "Delete",
-  "amount.saveSoon": "Saving arrives in the next update.",
+  "amount.confirmLarge": "{amount} — is this right?",
+  "amount.confirmYes": "Yes, it's right",
+  "amount.confirmNo": "Let me fix it",
+  "capture.saving": "Saving…",
+  "capture.saveOffline":
+    "No internet. The bill is still here — save again when you're back online.",
+  "capture.saveFailed": "Couldn't save the bill. Please try again.",
   "date.label": "Date",
   "date.prevMonth": "Previous month",
   "date.nextMonth": "Next month",

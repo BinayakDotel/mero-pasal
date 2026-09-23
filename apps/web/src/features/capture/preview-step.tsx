@@ -14,7 +14,7 @@ import { useCamera } from "./use-camera";
  * फेरि खिच्नुहोस् and अर्को पाना (secondary, side by side). Up to 5 pages.
  */
 export function PreviewStep({ onBack }: { onBack: () => void }) {
-  const { state, dispatch, toPage } = useCapture();
+  const { state, dispatch, toPage, pageStatus } = useCapture();
   const { locale, t } = useLocale();
   const retakeCam = useCamera((file) => dispatch({ type: "retake", page: toPage(file) }));
   const addCam = useCamera((file) => dispatch({ type: "addPage", page: toPage(file) }));
@@ -24,6 +24,8 @@ export function PreviewStep({ onBack }: { onBack: () => void }) {
   const n = (value: number) =>
     locale === "ne" ? toDevanagariDigits(String(value)) : String(value);
   const tone = state.kind === "sale" ? "bg-sale" : "bg-buy";
+  const unreadable = state.pages.some((page) => pageStatus(page.id) === "unreadable");
+  const currentUnreadable = current ? pageStatus(current.id) === "unreadable" : false;
 
   return (
     <main className="flex min-h-dvh flex-col bg-ink">
@@ -35,7 +37,14 @@ export function PreviewStep({ onBack }: { onBack: () => void }) {
       />
 
       <div className="grid min-h-0 flex-1 place-items-center p-3.5">
-        {current ? (
+        {currentUnreadable ? (
+          <p
+            role="alert"
+            className="max-w-xs rounded-2xl bg-card p-5 text-center text-lg font-semibold"
+          >
+            {t("capture.unreadable")}
+          </p>
+        ) : current ? (
           // biome-ignore lint/performance/noImgElement: a local object URL; next/image can't optimise it
           <img
             src={current.url}
@@ -67,7 +76,8 @@ export function PreviewStep({ onBack }: { onBack: () => void }) {
         <button
           type="button"
           onClick={() => dispatch({ type: "usePhotos" })}
-          className={`flex min-h-16 w-full items-center justify-center gap-2.5 rounded-btn font-display text-2xl font-bold text-white ${tone}`}
+          disabled={unreadable}
+          className={`flex min-h-16 w-full items-center justify-center gap-2.5 rounded-btn font-display text-2xl font-bold text-white disabled:opacity-45 ${tone}`}
         >
           <Icon name="check" />
           {t("photo.use")}

@@ -57,6 +57,7 @@
 - **Decision:** Full image ≤1600 px (~300 KB) and a 320 px thumbnail (~25 KB), both in Convex storage, accessed only through `convex/files.ts`.
 - **Why:** This cuts upload time on shop Wi-Fi, keeps lists fast on a budget phone, and keeps storage cost low.
 - **Revisit when:** yearly storage cost matters; move to R2 or S3 behind the same module.
+- **Amended 2026-09-23 (M1):** No `browser-image-compression` dependency. Browser APIs (`createImageBitmap` with decode-time resize + EXIF orientation, `OffscreenCanvas` JPEG encode) do the job with less JS (NFR-03). The full-size target is ≤ ~450 KB (retry at quality 0.6). It runs from the page rather than a Web Worker, because Turbopack emits `new Worker(new URL(...))` targets as raw files.
 
 ### ADR-011 · Offline outbox in IndexedDB (Dexie) with idempotent mutations
 - **Why:** Power cuts drop the Wi-Fi, and losing a bill destroys trust. Idempotency by `clientId` makes retries safe.
@@ -158,6 +159,14 @@
 - **Decision:** Add optional `parties.lastBillDateBs` / `lastBillPaisa`, maintained by `ledger.apply`, instead of reading each account's latest bill inside `listForPicker`.
 - **Why:** The picker line "हिजो · रु 2,340" (F-04) needs it for every visible name. Every save already patches the party row, so storing it costs nothing extra. It also keeps `listForPicker` a single index read and gives M2's offline cache the same data.
 - **Consequences:** Backward-compatible (optional fields, no backfill: no bills existed). `ledger.apply` refreshes the fields for every account a write touches with one read on the index `by_shop_party_status_date` (latest active bill), however many recent bills were removed. The ledger invariant test covers it.
+
+### ADR-031 · NFR-03 is judged on the Redmi, not only by bundle size
+- **Decision:** 250 KB gzipped first-load JS stays the goal for Buwa's routes, but the pass/fail test is NFR-03's user-facing target: **Today interactive in under 2 s on a warm start on the Redmi 15C**, timed during M1's phone test.
+- **Why:** At the end of M1, Today is 262 KB. About 205 KB of that is React/Next (~140 KB) plus the Clerk and Convex clients (~65 KB), which the app can't drop. The installed PWA loads its code from the service-worker cache, so warm starts pay for parsing, not downloading. Binayak agreed (2026-09-23).
+- **Consequences:**
+  - New heavy dependencies still need a line here.
+  - Capture code stays on its own route.
+  - If the Redmi misses 2 s, the first levers are lazy-loading Clerk's UI and trimming Today's imports.
 
 ---
 
