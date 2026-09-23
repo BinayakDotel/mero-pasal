@@ -134,6 +134,15 @@
 - **Decision:** `formatNpr` prints `रु 1,23,456` (ne) and `Rs 1,23,456` (en), Latin digits and lakh grouping in both. Paisa appear only when non-zero; negatives put the minus first (`-रु 1,200`).
 - **Why:** Matches the mockup; Binayak confirmed during M0 (F-10 previously said `रु` for both).
 
+### ADR-027 · Graphite stacked PRs on a private GitHub repo
+- **Decision:**
+  - The repo is `github.com/BinayakDotel/mero-pasal` (private), trunk `main`. The two M0 commits (tooling and docs, money) are the baseline on `main`.
+  - From M0 step 3 on, every change is a Graphite branch and PR, stacked when it depends on unmerged work.
+  - The repo pins its git identity locally (Binayak Dotel, personal gmail, matching the GitHub account).
+  - AI agents never commit, branch, push or submit until Binayak says so (ai-workflow-rules §5 rule 11).
+- **Why:** Binayak wants every change reviewable in small pieces. The plan's gated steps (money, dates, schema, auth) map naturally to one PR each, and stacking lets work continue while earlier PRs wait for review.
+- **Consequences:** `gt sync` after merges; PRs, not local commits, are the unit of review.
+
 ---
 
 ## Open decisions
