@@ -7,7 +7,8 @@
     "./dates": "./src/dates/dates.ts",
     "./domain": "./src/domain/domain.ts",
     "./i18n": "./src/i18n/i18n.ts",
-    "./money": "./src/money/money.ts"
+    "./money": "./src/money/money.ts",
+    "./names": "./src/names/names.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
