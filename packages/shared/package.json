@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./dates": "./src/dates/dates.ts",
     "./domain": "./src/domain/domain.ts",
     "./money": "./src/money/money.ts"
   },
@@ -16,5 +17,8 @@
     "@vitest/coverage-v8": "5.0.1",
     "typescript": "6.0.3",
     "vitest": "5.0.1"
+  },
+  "dependencies": {
+    "nepali-date-converter": "3.4.0"
   }
 }
