@@ -7,8 +7,8 @@
 
 | | |
 |---|---|
-| **Phase** | **M0 Foundations**: code complete (steps 1–9); waiting on Binayak's keys, seed and deploy |
-| **Current focus** | M0 exit: Binayak adds `CLERK_SECRET_KEY`, seeds members, checks locally; then the Vercel + Convex prod deploy and the Redmi smoke test |
+| **Phase** | **M0 Foundations**: code merged (PRs #1–#8) and running locally against Convex dev; production deploy and Redmi test remain |
+| **Current focus** | M0 exit: Vercel project + Convex prod deployment + Clerk production instance (Binayak), then the Redmi smoke test. Then M1 capture core |
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
 | **Risks** | NFR-03: an empty Today already ships 256 KB gzipped JS (budget 250): React/Next ≈ 140 KB, Clerk + Convex ≈ 65 KB. Decide in M1: lazy-load Clerk UI, trim, or revise the budget. |
@@ -26,9 +26,10 @@
 
 - [x] Monorepo built by hand with the template's wiring ported (ADR-001 amended): `config`, `shared`, `backend`, `ui`, `apps/web`.
 - [x] Root tooling: pnpm workspace, turbo tasks (`dev`, `build`, `lint`, `typecheck`, `test`, `e2e`), Biome, tsconfig bases. Pin TS version (architecture §2).
-- [~] Clerk dev instance (`direct-drum-2930`): Google only, Convex integration, `CLERK_JWT_ISSUER_DOMAIN` on Convex dev `fine-marlin-976`, `auth.config.ts`, `ConvexProviderWithClerk`, `proxy.ts` done. **Binayak:** `CLERK_SECRET_KEY` in `apps/web/.env.local`; allowlist if the plan has it.
+- [x] Clerk dev instance (`direct-drum-2930`): Google only, Convex integration, `CLERK_JWT_ISSUER_DOMAIN` on Convex dev `fine-marlin-976`, `auth.config.ts`, `ConvexProviderWithClerk`, `proxy.ts`; `CLERK_SECRET_KEY` set locally. Allowlist not enabled (the `members` check blocks strangers).
 - [x] `convex/schema.ts` v1 (architecture §5.2, + `members.email`); `lib/functions.ts` wrappers; `lib/errors.ts`; `seed:bootstrap`. Second-pass auth review done; findings fixed.
 - [x] `members.me` + "Not invited" screen.
+- [x] Dev deployment seeded (`seed:bootstrap`): shop **Kavre Store / काभ्रे स्टोर**; `gayatri` = owner (ne), `binayak` = admin (en); walk-in नगद ग्राहक.
 - [x] `shared/money` with tests (paisa, lakh formatting; रु / Rs, ADR-026).
 - [x] `shared/dates` with tests: NPT today, BS↔AD, formatBs ne/en, monthOf, fiscalYearOf, and the range alarm test.
 - [x] `shared/i18n`: typed `ne`/`en` dictionaries and `t()`, seeded from the ui-ux §8 copy deck.
@@ -52,7 +53,8 @@
 - [ ] `transactions.createFromClient` (idempotent) + ledger **invariant test**.
 - [ ] Today: header, two big buttons, ledger strip, recent 5; the stamp moment.
 - [ ] Language switch persisted to `members.locale`.
-- [ ] **Voice spike (1 h):** Buwa says 20 real customer names into a bare test page (Web Speech API, `ne-NP`) on the Redmi. Record the hit rate and decide OD-5 (F-24 in v1.0 or v1.1).
+- [~] **Voice spike (1 h):** Buwa says 20 real customer names into a bare test page (Web Speech API, `ne-NP`) on the Redmi. Record the hit rate and decide OD-5 (F-24 in v1.0 or v1.1).
+  - Dry run 2083-06-07 (Binayak, laptop Chrome, quiet room): 14/18 transcripts usable (78%), 2.3–3.7 s each. Through `searchParties` the right account came first in every name tried, including run-together (रामप्रसाद) and misheard (घातीय → गायत्री) names. Brave can't use Web Speech (error `network`), so use Chrome. Several attempts were relations or nicknames (भाइको छोरो, घरपेटी बा, school, काले), so **proposal: make tags searchable** (F-04 change, awaiting Binayak). Real spike: Buwa on the Redmi after the test deploy; score "right person first", not exact text.
 
 ### M2 — Offline and sync (≈ 1 week) · F-09
 
@@ -140,4 +142,5 @@
 |---|---|---|---|---|
 | 2083-06-07 | Claude (planning) | all | Initial documentation set, mockups, architecture | Start M0 |
 | 2083-06-07 | Claude (planning) | F-04, F-24 | Voice now finds *or creates* names (confirm sheet); typed search gets an "Add “X”" card; paper look made explicit (ADR-022/023); mockup updated | Run voice spike in M1 |
-| 2083-06-07 | Claude (M0) | F-01, F-02, F-03, F-05, F-10, F-13 | Root tooling; shared money, domain, dates (UTC-only arithmetic, 33,238-day oracle test), i18n (copy-deck sync test); Convex schema, auth wrappers, `members.me`, seed; Graphite + private GitHub repo (ADR-024…027) | Steps 6–9 too: ui tokens + primitives, web shell (sign-in, Not invited, Today), Serwist PWA, Playwright smoke + vercel.json (ADR-028). NFR-03 at 256 KB. Stacked PRs #3–#7 | Binayak: secret key, seed, local check, prod deploy, Redmi test; review `i18n-review` strings and month names |
+| 2083-06-07 | Claude (M0) | F-01, F-02, F-03, F-05, F-10, F-13 | Steps 1–9: root tooling; shared money, domain, dates (UTC-only arithmetic, 33,238-day oracle test), i18n (copy-deck sync test); Convex schema, auth wrappers, `members.me`, seed; ui tokens + primitives; web shell (sign-in, Not invited, Today); Serwist PWA; Playwright smoke + vercel.json. Graphite + private GitHub repo (ADR-024…028). PRs #1–#8 merged | NFR-03 at 256 KB (budget 250): decide in M1 |
+| 2083-06-07 | Binayak + Claude | F-01 | Local setup: Convex dev `fine-marlin-976`, Clerk dev `direct-drum-2930` (issuer set on Convex), `CLERK_SECRET_KEY` in `apps/web/.env.local`, dev data seeded. On `main`: lint, typecheck, 82 unit tests, 5/5 e2e green | Prod deploy + Redmi test; review `i18n-review` strings and month names |
