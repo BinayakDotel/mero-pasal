@@ -252,6 +252,15 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `action.purchase.sub` | सप्लायरबाट किनेको | Bought from a supplier |
 | `today.billed` | आजका बिल | Today's bills |
 | `today.noAmount` | रकम नहालेका | Without amount |
+| `common.back` | पछाडि | Back |
+| `capture.page` | पाना {n} | Page {n} |
+| `capture.photoAlt` | बिलको फोटो, पाना {n} | Bill photo, page {n} |
+| `capture.hint` | बिल पूरै देखिने गरी खिच्नुहोस् | Fit the whole bill in the frame |
+| `capture.maxPages` | बढीमा {n} पाना | Up to {n} pages |
+| `capture.leave` | बिल नराखी फर्कने? | Leave without saving? |
+| `capture.leaveSub` | खिचेको फोटो हट्छ। | The photo you took will be discarded. |
+| `capture.leaveYes` | हो, फर्कने | Yes, leave |
+| `capture.leaveNo` | होइन, बस्ने | No, stay |
 | `photo.use` | ठीक छ | Use photo |
 | `photo.retake` | फेरि खिच्नुहोस् | Retake |
 | `photo.addPage` | अर्को पाना | Add page |
@@ -269,6 +278,14 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `party.addThis` | “{q}” नाम थप्नुहोस् | Add “{q}” as a new name |
 | `party.notThem` | “{q}” अर्कै मान्छे हो? नयाँ थप्नुहोस् | A different “{q}”? Add as new |
 | `party.isItThis` | यीमध्ये कोही हो? | Is it one of these? |
+| `party.results` | खोजेका | Results |
+| `party.walkInSub` | नाम नचाहिने बिक्री | Sale without a name |
+| `party.newTitle` | नयाँ नाम | New name |
+| `party.fieldName` | नाम | Name |
+| `party.nameHint` | एउटै नाम धेरै भए नाममै एउटा शब्द थप्नुहोस्, जस्तै “राम स्कूल” | Same name as someone else? Add a word to the name, like “Ram school” |
+| `party.fieldPhone` | फोन (नभए खाली) | Phone (optional) |
+| `party.fieldTag` | चिनाउने शब्द (नभए खाली) | Tag to tell apart (optional) |
+| `party.fieldTagHint` | जस्तै: चोक, ड्राइभर, पसल छेउ | e.g. Chowk, driver, next to shop |
 | `party.confirmName` | नाम ठीक छ? | Is the name right? |
 | `party.confirmSub` | सुनेको नाम हो। मिलेन भने सच्याएर राख्नुहोस्। | This is what I heard. Fix it if it's wrong, then save. |
 | `voice.listening` | सुन्दैछ… नाम भन्नुहोस् | Listening… say the name |
@@ -278,6 +295,14 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `common.cancel` | रद्द गर्नुहोस् | Cancel |
 | `amount.title` | जम्मा कति? | Bill total? |
 | `amount.later` | रकम पछि हाल्छु | Add amount later |
+| `amount.delete` | मेटाउनुहोस् | Delete |
+| `amount.saveSoon` | बिल राख्ने काम अर्को अपडेटमा आउँछ। | Saving arrives in the next update. |
+| `date.label` | मिति | Date |
+| `date.prevMonth` | अघिल्लो महिना | Previous month |
+| `date.nextMonth` | अर्को महिना | Next month |
+| `party.noName` | नाम छैन | No name |
+| `photo.enlarge` | फोटो ठूलो गर्नुहोस् | Enlarge photo |
+| `common.close` | बन्द गर्नुहोस् | Close |
 | `date.today` / `date.yesterday` / `date.dayBefore` / `date.pick` | आज / हिजो / अस्ति / अरू मिति | Today / Yesterday / Day before / Pick date |
 | `bill.save` | बिल राख्नुहोस् | Save bill |
 | `bill.saved` | राखियो | Saved |
