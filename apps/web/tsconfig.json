@@ -1,0 +1,15 @@
+{
+  "extends": "@mero-pasal/config/tsconfig.nextjs.json",
+  "compilerOptions": {
+    "types": ["node", "react", "react-dom"],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}
