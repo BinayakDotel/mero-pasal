@@ -14,15 +14,18 @@ import { SavedStep } from "./saved-step";
  * back arrow both step back; on the first step they ask "बिल नराखी फर्कने?" before discarding.
  */
 export function CaptureScreen() {
-  const { state, dispatch } = useCapture();
+  const { state, dispatch, restore, discard } = useCapture();
   const router = useRouter();
   const [leaveOpen, setLeaveOpen] = useState(false);
   const leaving = useRef(false);
 
-  // Nothing to capture (e.g. the page was reloaded): back to Today. Draft restore is M2.
+  // Nothing in memory (e.g. the page was reloaded): continue the draft on the phone, if any.
   useEffect(() => {
-    if (state.step === "idle" && !leaving.current) router.replace("/");
-  }, [state.step, router]);
+    if (state.step !== "idle" || leaving.current) return;
+    void restore().then((restored) => {
+      if (!restored && !leaving.current) router.replace("/");
+    });
+  }, [state.step, restore, router]);
 
   const back = useCallback(() => {
     if (state.step === "saving" || state.step === "saved") return; // mid-save: stay put
@@ -53,7 +56,7 @@ export function CaptureScreen() {
   const leave = () => {
     leaving.current = true;
     setLeaveOpen(false);
-    dispatch({ type: "reset" });
+    void discard(); // F-03: leaving without saving throws the bill away, on the phone too
     router.replace("/");
   };
 

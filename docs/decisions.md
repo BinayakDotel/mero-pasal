@@ -168,6 +168,14 @@
   - Capture code stays on its own route.
   - If the Redmi misses 2 s, the first levers are lazy-loading Clerk's UI and trimming Today's imports.
 
+### ADR-032 · Buwa's app shells are public routes; the member check lives in Convex
+- **Decision:** `proxy.ts` no longer requires a session for `/` and `/capture`. They are client-only shells: all data comes from Convex, which checks the member on every call (§10.4). A visitor who isn't signed in is sent to `/sign-in` by the shell. On this device, the member last confirmed by the server keeps the app usable while the Clerk token can't refresh offline, unless Clerk says signed out or a different account is signed in (`gate-decision.ts`).
+- **Why:** Found in M2 testing (2026-09-23). Offline, the Clerk session token (about 60 s) can't refresh, so the proxy redirected "open the bill screen" to sign-in, and Convex's "not authenticated" showed the sign-in-again screen. Both lock Buwa out during a power cut, exactly when capture matters most (principle 2, NFR-04). Clerk's middleware also answers cold starts with a redirect the service worker would cache.
+- **Consequences:**
+  - Other routes (`/not-invited`, `/spike/*`, and later `/admin`) stay protected.
+  - Bills made offline sync only once the server accepts the session again (the engine pauses on auth errors).
+  - A different Google account never sees the previous member's screens.
+
 ---
 
 ## Open decisions

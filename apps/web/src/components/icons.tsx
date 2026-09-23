@@ -19,6 +19,18 @@ const PATHS = {
   ),
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   back: <path d="M15 5l-7 7 7 7" />,
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4l2.5 1.5" />
+    </>
+  ),
+  cloudOff: (
+    <>
+      <path d="M4 4l16 16" />
+      <path d="M8 8.5A5 5 0 0 0 7 18h10.5M13 7a5 5 0 0 1 4.9 4A3.5 3.5 0 0 1 20 17" />
+    </>
+  ),
   chevron: <path d="M6 9l6 6 6-6" />,
   plus: <path d="M12 5v14M5 12h14" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,

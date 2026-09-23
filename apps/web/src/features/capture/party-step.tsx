@@ -9,7 +9,7 @@ import { useCapture } from "./capture-provider";
 import { NewNameSheet } from "./new-name-sheet";
 import { Avatar, PartyRow } from "./party-row";
 import { StepBar } from "./step-bar";
-import { type PickerParty, usePickerParties } from "./use-picker-parties";
+import { isLocalParty, type PickerParty, usePickerParties } from "./use-picker-parties";
 
 /**
  * F-04 "कसको बिल?" (ui-ux §5.3): walk-in first for sales, recent names with their last bill,
@@ -31,12 +31,14 @@ export function PartyStep({ onBack }: { onBack: () => void }) {
   const pick = (party: PickerParty) =>
     dispatch({
       type: "pickParty",
-      party: {
-        type: "existing",
-        id: party._id,
-        displayName: party.displayName,
-        isWalkIn: party.isWalkIn,
-      },
+      party: isLocalParty(party)
+        ? { type: "local", clientId: party.clientId, displayName: party.displayName }
+        : {
+            type: "existing",
+            id: party._id,
+            displayName: party.displayName,
+            isWalkIn: party.isWalkIn,
+          },
     });
   const thumb = state.pages[0]?.url;
   const tone = kind === "sale" ? "sale" : "buy";

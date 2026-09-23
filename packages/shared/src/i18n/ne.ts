@@ -35,6 +35,12 @@ export const ne = {
   "capture.leaveSub": "खिचेको फोटो हट्छ।", // i18n-review
   "capture.leaveYes": "हो, फर्कने", // i18n-review
   "capture.leaveNo": "होइन, बस्ने", // i18n-review
+  "draft.title": "अधुरो बिल छ",
+  "draft.sub": "जारी राख्ने कि हटाउने?", // i18n-review
+  "draft.continue": "जारी राख्नुहोस्",
+  "draft.discard": "हटाउनुहोस्",
+  "draft.discardConfirm": "यो अधुरो बिल हटाउने? यसको फोटो पनि हट्छ।", // i18n-review
+  "draft.keep": "होइन, राख्ने", // i18n-review
   "photo.use": "ठीक छ",
   "photo.retake": "फेरि खिच्नुहोस्",
   "photo.addPage": "अर्को पाना",
@@ -102,6 +108,14 @@ export const ne = {
   "sync.pending": "{n} पठाउन बाँकी",
   "sync.offline": "इन्टरनेट छैन — बिल फोनमा सुरक्षित छन्",
   "sync.failed": "पठाउन सकिएन",
+  "sync.statusPending": "पठाउन बाँकी",
+  "sync.sheetTitle": "पठाउन बाँकी बिलहरू",
+  "sync.tryNow": "अहिले पठाउनुहोस्", // i18n-review
+  "sync.allSent": "सबै बिल पठाइसकियो।", // i18n-review
+  "sync.offlineHint": "इन्टरनेट आएपछि आफैँ पठाइन्छ। बिलहरू फोनमा सुरक्षित छन्।", // i18n-review
+  "sync.newName": "नयाँ नाम: {name}", // i18n-review
+  "sync.blocked": "यसको नाम पठाउन सकिएन", // i18n-review
+  "sync.storageLow": "फोनमा ठाउँ कम छ। पुराना फोटो वा एप मेटाउनुहोस्।", // i18n-review
   "sync.stale": "(पुरानो)",
 
   "offline.title": "इन्टरनेट छैन",
