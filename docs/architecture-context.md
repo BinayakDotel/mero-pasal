@@ -367,7 +367,8 @@ Importing raw `query` or `mutation` from `_generated/server` in feature modules 
 | | `update`, `archive` | mutation | owner/admin | F-12 |
 | | `merge(keepId, mergeId)` | mutation | admin | Moves transactions in batches (scheduled continuation if large) |
 | | `similar(name)` | query | member | Online double-check for the duplicate-name warning |
-| `transactions` | `createFromClient` | mutation | member | Idempotent create from the outbox; resolves party by id or `clientId` |
+| `transactions` | `createFromClient` | mutation | member | Idempotent create from the outbox (same `clientId` → same bill). Resolves the account by `{id}` or `{clientId}`, follows merges, and returns `CONFLICT` if a phone-made account hasn't synced yet (the outbox retries). Checks the BS date (≤ 1 day ahead), integer paisa ≥ 0 and 1–5 uploaded photos, then `ledger.apply` |
+| | `listRecentForDate(dateBs, limit ≤ 10)` | query | member | Today's recent bills: newest active first, with account name, walk-in flag and thumbnail URL |
 | | `update`, `remove`, `restore` | mutation | member (F-08 permission rules) / admin | All go through `ledger.apply` |
 | | `get`, `listByDate`, `listByParty` | query (paginated) | member | Lists and detail |
 | | `listNeedsAttention`, `listForExport` | query (paginated) | admin | F-11, F-14 |

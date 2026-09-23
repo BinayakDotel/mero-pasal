@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as files from "../files.js";
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_functions from "../lib/functions.js";
@@ -15,6 +16,8 @@ import type * as lib_ledger from "../lib/ledger.js";
 import type * as members from "../members.js";
 import type * as parties from "../parties.js";
 import type * as seed from "../seed.js";
+import type * as summaries from "../summaries.js";
+import type * as transactions from "../transactions.js";
 
 import type {
   ApiFromModules,
@@ -23,6 +26,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  files: typeof files;
   "lib/audit": typeof lib_audit;
   "lib/errors": typeof lib_errors;
   "lib/functions": typeof lib_functions;
@@ -30,6 +34,8 @@ declare const fullApi: ApiFromModules<{
   members: typeof members;
   parties: typeof parties;
   seed: typeof seed;
+  summaries: typeof summaries;
+  transactions: typeof transactions;
 }>;
 
 /**
