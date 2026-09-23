@@ -157,7 +157,7 @@
 ### ADR-030 · The last bill is stored on the account
 - **Decision:** Add optional `parties.lastBillDateBs` / `lastBillPaisa`, maintained by `ledger.apply`, instead of reading each account's latest bill inside `listForPicker`.
 - **Why:** The picker line "हिजो · रु 2,340" (F-04) needs it for every visible name. Every save already patches the party row, so storing it costs nothing extra. It also keeps `listForPicker` a single index read and gives M2's offline cache the same data.
-- **Consequences:** Backward-compatible (optional fields, no backfill: no bills existed). When the latest bill is removed or moved to an earlier date, `ledger.apply` recomputes the fields with a bounded read; the ledger invariant test covers it.
+- **Consequences:** Backward-compatible (optional fields, no backfill: no bills existed). `ledger.apply` refreshes the fields for every account a write touches with one read on the index `by_shop_party_status_date` (latest active bill), however many recent bills were removed. The ledger invariant test covers it.
 
 ---
 

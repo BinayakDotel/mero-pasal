@@ -281,6 +281,7 @@ export default defineSchema({
     .index("by_shop_status_date", ["shopId", "status", "dateBs"])
     .index("by_shop_status_kind_date", ["shopId", "status", "kind", "dateBs"])
     .index("by_shop_party_date", ["shopId", "partyId", "dateBs"])
+    .index("by_shop_party_status_date", ["shopId", "partyId", "status", "dateBs"]) // ADR-030
     .index("by_shop_attention_date", ["shopId", "needsAttention", "dateBs"]),
 
   dailySummaries: defineTable({
@@ -440,7 +441,7 @@ Test fixtures: `shared/src/names/__fixtures__/names.json` holds 50+ realistic Ne
 A pure function describes how one transaction affects every piece of derived data:
 
 ```ts
-// packages/shared/src/ledger/contribution.ts
+// packages/shared/src/ledger/ledger.ts (v1.0 fields; the v1.1 credit and payment fields arrive with v1.1)
 contribution(tx) → {
   daily:   { dateBs, saleCount, salePaisa, purchaseCount, purchasePaisa, missingAmountCount, creditGivenPaisa, paymentInPaisa, paymentOutPaisa },
   monthly: { partyId, monthBs, billCount, salePaisa, purchasePaisa } | null,
@@ -448,7 +449,23 @@ contribution(tx) → {
 }
 ```
 
-`convex/lib/ledger.ts` exposes `apply(ctx, before: Tx | null, after: Tx | null)`. It subtracts `contribution(before)`, adds `contribution(after)`, upserts the affected rows and writes the audit entry, all inside the calling mutation, so the change is atomic. Create is `apply(null, tx)`, remove is `apply(tx, null)`, and update is `apply(old, new)`.
+`convex/lib/ledger.ts` exposes `apply(ctx, before: TxDoc | null, after: TxDraft, audit)`. It is the **only** code that inserts or replaces a `transactions` row. In one mutation it:
+- writes the bill, deriving `needsAttention` and `updatedAt`
+- applies `ledgerChanges(before, after)` from `@mero-pasal/shared/ledger`: `contribution(after) − contribution(before)`, merged per row, no-op rows dropped
+- upserts `dailySummaries` and `partyMonthly` and patches party totals
+- moves `lastUsedAt` forward when an active bill lands on an account
+- refreshes each touched account's `lastBill*` (ADR-030)
+- writes the audit entry
+
+The operations map to it like this:
+- **Create** is `apply(null, tx)`.
+- **Correct** is `apply(old, new)`.
+- **Remove** is `apply(tx, {...tx, status: "deleted"})`, and **restore** is the reverse (soft delete: deleted bills contribute nothing).
+
+`apply` refuses:
+- an account from another shop (`NOT_FOUND`)
+- a merged account (`CONFLICT`)
+- any write that would drive a derived total below zero, which could only happen if data had already drifted
 
 `summaries.rebuild` recomputes derived data from scratch for a date range. The invariant test runs random operations and compares incremental against rebuilt results.
 
