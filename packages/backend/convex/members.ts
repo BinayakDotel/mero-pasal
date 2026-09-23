@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { appError } from "./lib/errors";
 import { memberMutation, optionalMemberQuery } from "./lib/functions";
 import { locale, role } from "./schema";
 
@@ -41,6 +42,46 @@ export const me = optionalMemberQuery({
           ? { _id: shop._id, name: shop.name }
           : { _id: shop._id, name: shop.name, nameNe: shop.nameNe },
     };
+  },
+});
+
+/**
+ * M2 / F-09: the phone reports it's alive and how its outbox is doing. `drained` = everything
+ * was sent just now. Throttled by the client; one small row per member.
+ */
+export const heartbeat = memberMutation({
+  args: {
+    drained: v.boolean(),
+    pending: v.number(),
+    failed: v.number(),
+    oldestPendingAt: v.optional(v.number()),
+    foreignPending: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const n of [args.pending, args.failed, args.foreignPending]) {
+      if (!Number.isSafeInteger(n) || n < 0)
+        throw appError("VALIDATION", "Counts must be whole numbers ≥ 0");
+    }
+    const now = Date.now();
+    const row = {
+      shopId: ctx.shopId,
+      memberId: ctx.member._id,
+      lastSeenAt: now,
+      pending: args.pending,
+      failed: args.failed,
+      foreignPending: args.foreignPending,
+      ...(args.oldestPendingAt === undefined ? {} : { oldestPendingAt: args.oldestPendingAt }),
+    };
+    const existing = await ctx.db
+      .query("memberSync")
+      .withIndex("by_member", (q) => q.eq("memberId", ctx.member._id))
+      .unique();
+    const lastSyncAt = args.drained ? now : existing?.lastSyncAt;
+    const next = { ...row, ...(lastSyncAt === undefined ? {} : { lastSyncAt }) };
+    if (existing) await ctx.db.replace(existing._id, next);
+    else await ctx.db.insert("memberSync", next);
+    return null;
   },
 });
 

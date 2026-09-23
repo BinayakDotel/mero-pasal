@@ -254,6 +254,46 @@ describe("transactions.listRecentForDate (F-02)", () => {
   });
 });
 
+describe("clientCapturedAt (M2)", () => {
+  it("orders recent bills by when they were taken, not when they synced", async () => {
+    const { asOwner, bill, today } = await setup();
+    const now = Date.now();
+    await asOwner.mutation(
+      api.transactions.createFromClient,
+      await bill({ amountPaisa: 1, clientCapturedAt: now - 60_000 }),
+    );
+    await asOwner.mutation(
+      api.transactions.createFromClient,
+      await bill({ amountPaisa: 2, clientCapturedAt: now - 3_600_000 }),
+    );
+    await asOwner.mutation(api.transactions.createFromClient, await bill({ amountPaisa: 3 }));
+    const list = await asOwner.query(api.transactions.listRecentForDate, { dateBs: today });
+    expect(list.map((x) => x.amountPaisa)).toEqual([3, 1, 2]); // synced last, but taken first → last
+  });
+
+  it("drops a phone time that's clearly wrong instead of refusing the bill", async () => {
+    const { t, asOwner, bill } = await setup();
+    const ok = await asOwner.mutation(
+      api.transactions.createFromClient,
+      await bill({ clientCapturedAt: Date.now() - 5_000 }),
+    );
+    const future = await asOwner.mutation(
+      api.transactions.createFromClient,
+      await bill({ clientCapturedAt: Date.now() + 3 * 86_400_000 }),
+    );
+    const ancient = await asOwner.mutation(
+      api.transactions.createFromClient,
+      await bill({ clientCapturedAt: 1 }),
+    );
+    const rows = await t.run(async (ctx) =>
+      Promise.all([ok, future, ancient].map((id) => ctx.db.get(id))),
+    );
+    expect(rows[0]?.clientCapturedAt).toBeTypeOf("number");
+    expect(rows[1]).not.toHaveProperty("clientCapturedAt");
+    expect(rows[2]).not.toHaveProperty("clientCapturedAt");
+  });
+});
+
 describe("files.generateUploadUrl (F-03)", () => {
   it("gives members an upload URL and refuses strangers", async () => {
     const { t, asOwner } = await setup();

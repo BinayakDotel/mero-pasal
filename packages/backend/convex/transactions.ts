@@ -8,6 +8,9 @@ import { memberMutation, memberQuery } from "./lib/functions";
 import { apply } from "./lib/ledger";
 
 const MAX_CLIENT_ID = 64;
+const DAY_MS = 86_400_000;
+/** Offline bills may sync days later; older phone times than this are treated as clock errors. */
+const CLIENT_TIME_WINDOW_MS = 120 * DAY_MS;
 const MAX_MERGE_HOPS = 10;
 
 const photo = v.object({
@@ -61,6 +64,8 @@ export const createFromClient = memberMutation({
     dateBs: v.string(),
     amountPaisa: v.optional(v.number()),
     photos: v.array(photo),
+    /** M2: phone clock when the photo was taken; used for ordering only, never trusted as a record. */
+    clientCapturedAt: v.optional(v.number()),
   },
   returns: v.id("transactions"),
   handler: async (ctx, args) => {
@@ -97,6 +102,14 @@ export const createFromClient = memberMutation({
 
     const party = args.partyRef ? await resolveParty(ctx, args.partyRef) : null;
     const now = Date.now();
+    // A wrong phone clock must never block a bill: out-of-range times are simply dropped.
+    const clientCapturedAt =
+      args.clientCapturedAt !== undefined &&
+      Number.isSafeInteger(args.clientCapturedAt) &&
+      args.clientCapturedAt > now - CLIENT_TIME_WINDOW_MS &&
+      args.clientCapturedAt < now + DAY_MS
+        ? args.clientCapturedAt
+        : undefined;
     return apply(
       ctx,
       null,
@@ -111,6 +124,7 @@ export const createFromClient = memberMutation({
         photos: args.photos,
         status: "active",
         capturedAt: now,
+        ...(clientCapturedAt === undefined ? {} : { clientCapturedAt }),
         createdBy: ctx.member._id,
       },
       {
@@ -123,6 +137,7 @@ export const createFromClient = memberMutation({
 });
 
 const MAX_RECENT = 10;
+const RECENT_WINDOW = 50;
 
 /** F-02 Today "recent bills": the newest active bills of one day, with thumbnail URLs only (F-06). */
 export const listRecentForDate = memberQuery({
@@ -143,13 +158,17 @@ export const listRecentForDate = memberQuery({
     if (!isValidBs(dateBs))
       throw appError("VALIDATION", "dateBs must be a real YYYY-MM-DD BS date");
     const take = Math.min(Math.max(Math.trunc(limit), 1), MAX_RECENT);
-    const rows = await ctx.db
+    // Offline bills sync late, so insertion order isn't capture order: read a bounded window of
+    // the newest rows and order by when each bill was taken.
+    const window = await ctx.db
       .query("transactions")
       .withIndex("by_shop_status_date", (q) =>
         q.eq("shopId", ctx.shopId).eq("status", "active").eq("dateBs", dateBs),
       )
       .order("desc")
-      .take(take);
+      .take(RECENT_WINDOW);
+    const takenAt = (row: (typeof window)[number]) => row.clientCapturedAt ?? row.capturedAt;
+    const rows = window.sort((a, b) => takenAt(b) - takenAt(a)).slice(0, take);
     return Promise.all(
       rows
         .filter(
@@ -166,7 +185,7 @@ export const listRecentForDate = memberQuery({
             ...(party ? { partyName: party.displayName } : {}),
             isWalkIn: party?.isWalkIn ?? false,
             ...(row.amountPaisa === undefined ? {} : { amountPaisa: row.amountPaisa }),
-            capturedAt: row.capturedAt,
+            capturedAt: row.clientCapturedAt ?? row.capturedAt,
             thumbUrl: first ? await ctx.storage.getUrl(first.thumbId) : null,
           };
         }),
