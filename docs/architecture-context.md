@@ -18,24 +18,24 @@ The base template is Convex's official Turborepo template (`get-convex/turbo-exp
 
 ## 2. Stack and versions
 
-npm "latest" as checked on 2026-09-23. Pin exact versions in `package.json` at scaffold time and update this table.
+Pinned exactly in each `package.json` during M0 (2026-09-23). Update this table whenever a version changes (monthly, outside feature work).
 
-| Concern | Choice | Version seen | Notes |
+| Concern | Choice | Pinned | Notes |
 |---|---|---|---|
-| Monorepo | Turborepo + pnpm workspaces | turbo 2.11, pnpm 12.5 | Set `packageManager` in the root `package.json` |
-| Runtime | Node LTS | 24.x | `engines` in the root |
-| Web framework | Next.js App Router | 16.3 | Route protection file is **`proxy.ts`** (renamed from `middleware.ts` in 16) |
-| UI | React | 19.3 | |
-| Styling | Tailwind CSS | 4.3 | CSS-first config (`@theme`); shared tokens in `packages/ui/src/styles/theme.css` |
-| Backend | Convex | 1.46 | Plus `convex-helpers` 0.1.x for custom function wrappers |
-| Auth | Clerk (`@clerk/nextjs`) | 7.9 | `ConvexProviderWithClerk` from `convex/react-clerk` |
-| PWA / service worker | Serwist (`@serwist/next`) | 9.5 | Successor to next-pwa |
-| Offline storage | Dexie (IndexedDB) | 4.4 | Outbox and caches |
-| Image compression | browser-image-compression | 2.0 | Runs in a web worker |
-| BS calendar | nepali-date-converter | 3.4 | **Supports BS 2000–2090 only.** Always wrapped by `@mero-pasal/shared/dates`. |
-| Lint and format | Biome | 2.5 | One tool for the whole repo |
-| Tests | Vitest, convex-test, Playwright | 5.0, 0.0.x, 1.63 | |
-| TypeScript | Whatever the templates install | ⚠ npm `latest` is **7.0** (native compiler) | If any tool breaks on TS 7, pin the newest 5.x/6.x and note it in `decisions.md` |
+| Monorepo | Turborepo + pnpm workspaces | turbo 2.11.3, pnpm 12.5.1 | `packageManager` in the root `package.json`; pnpm switches itself to that version. pnpm 12 blocks very new releases by default, so each fresh one we install is listed under `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` |
+| Runtime | Node LTS | 24.x | `engines` in the root, `.nvmrc` |
+| Web framework | Next.js App Router | 16.3.6 | Turbopack builds. Route protection file is **`proxy.ts`** (renamed from `middleware.ts` in 16) |
+| UI | React | 19.3.0 | |
+| Styling | Tailwind CSS | 4.3.3 | CSS-first config (`@theme`); shared tokens in `packages/ui/src/styles/theme.css`. Biome parses Tailwind directives |
+| Backend | Convex | 1.46.0 | Plus `convex-helpers` 0.1.124 for the custom function wrappers |
+| Auth | Clerk (`@clerk/nextjs`) | 7.9.4 | `ConvexProviderWithClerk` from `convex/react-clerk` |
+| PWA / service worker | Serwist (`@serwist/turbopack`, `serwist`) | 9.5.12 | Turbopack integration (ADR-028); `esbuild` 0.28.2 bundles the worker |
+| Offline storage | Dexie (IndexedDB) | 4.4 (M2) | Outbox and caches; install in M2 |
+| Image compression | browser-image-compression | 2.0 (M1) | Runs in a web worker; install in M1 |
+| BS calendar | nepali-date-converter | 3.4.0 | **Supports BS 2000–2090 only.** Only its month table is used, through `@mero-pasal/shared/dates` (§7.2) |
+| Lint and format | Biome | 2.5.14 | One tool for the whole repo |
+| Tests | Vitest, convex-test, Playwright | 5.0.1, 0.0.59, 1.63.0 | `@edge-runtime/vm` 5.0.0 for convex-test |
+| TypeScript | TypeScript | 6.0.3 | Pinned below npm `latest` 7.0 (ADR-025). TS 6 loads no ambient `@types` by default, so tsconfigs list `types` |
 | Hosting | Vercel (web), Convex Cloud (backend) | | Vercel Hobby is fine while this stays a family, non-commercial project (ADR-019) |
 
 ## 3. System context
@@ -569,7 +569,9 @@ stateDiagram-v2
 
 **Vercel:**
 - Root directory: `apps/web`.
-- The build command runs `convex deploy` from `packages/backend` with `--cmd` building the web app and `--cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL`. Copy the exact command from the Convex monorepo template README.
+- `apps/web/vercel.json` sets the build command: `convex deploy` from `packages/backend`, with `--cmd` building the web app and `--cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL` (ported from the template, adapted to pnpm).
+- `CONVEX_DEPLOY_KEY` decides where that deploy goes. Set a **production** deploy key for Vercel's Production environment only. Set a **preview** deploy key (or none) for Preview, so preview builds never deploy to the production Convex backend.
+- The Clerk production instance (custom domain, own Google OAuth credentials) gets its own Convex integration and its `CLERK_JWT_ISSUER_DOMAIN` on the prod Convex deployment.
 
 **Root scripts:**
 

@@ -7,8 +7,8 @@
 
 | | |
 |---|---|
-| **Phase** | **M0 Foundations** in progress (steps 1–5 of 9 done) |
-| **Current focus** | M0: `packages/ui` tokens and primitives, then `apps/web` (sign-in, Not invited, empty Today), PWA shell |
+| **Phase** | **M0 Foundations**: code complete (steps 1–9); waiting on Binayak's keys, seed and deploy |
+| **Current focus** | M0 exit: Binayak adds `CLERK_SECRET_KEY`, seeds members, checks locally; then the Vercel + Convex prod deploy and the Redmi smoke test |
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
 | **Risks** | NFR-03: an empty Today already ships 256 KB gzipped JS (budget 250): React/Next ≈ 140 KB, Clerk + Convex ≈ 65 KB. Decide in M1: lazy-load Clerk UI, trim, or revise the budget. |
@@ -24,17 +24,17 @@
 
 **Exit:** Buwa's phone shows an installed, signed-in, empty Today screen.
 
-- [~] Monorepo built by hand with the template's wiring ported (ADR-001 amended): `config`, `shared`, `backend` done; `ui` and `apps/web` next.
+- [x] Monorepo built by hand with the template's wiring ported (ADR-001 amended): `config`, `shared`, `backend`, `ui`, `apps/web`.
 - [x] Root tooling: pnpm workspace, turbo tasks (`dev`, `build`, `lint`, `typecheck`, `test`, `e2e`), Biome, tsconfig bases. Pin TS version (architecture §2).
-- [~] Clerk dev instance (`direct-drum-2930`): Google only, Convex integration, `CLERK_JWT_ISSUER_DOMAIN` set on Convex dev `fine-marlin-976`; `convex/auth.config.ts` done. Allowlist (plan-dependent), `ConvexProviderWithClerk` and `src/proxy.ts` pending (step 7).
+- [~] Clerk dev instance (`direct-drum-2930`): Google only, Convex integration, `CLERK_JWT_ISSUER_DOMAIN` on Convex dev `fine-marlin-976`, `auth.config.ts`, `ConvexProviderWithClerk`, `proxy.ts` done. **Binayak:** `CLERK_SECRET_KEY` in `apps/web/.env.local`; allowlist if the plan has it.
 - [x] `convex/schema.ts` v1 (architecture §5.2, + `members.email`); `lib/functions.ts` wrappers; `lib/errors.ts`; `seed:bootstrap`. Second-pass auth review done; findings fixed.
-- [~] `members.me` done; "Not invited" screen in step 7.
+- [x] `members.me` + "Not invited" screen.
 - [x] `shared/money` with tests (paisa, lakh formatting; रु / Rs, ADR-026).
 - [x] `shared/dates` with tests: NPT today, BS↔AD, formatBs ne/en, monthOf, fiscalYearOf, and the range alarm test.
 - [x] `shared/i18n`: typed `ne`/`en` dictionaries and `t()`, seeded from the ui-ux §8 copy deck.
-- [ ] `packages/ui`: `theme.css` tokens, fonts (Baloo 2, Mukta), `BigButton`, `Chip`, `Sheet`, `NumPad`, `AmountText`, `BsDateText`, `LedgerStrip`, `Stamp`.
+- [x] `packages/ui`: `theme.css` tokens, fonts (Baloo 2, Mukta), `BigButton`, `Chip`, `Sheet`, `NumPad`, `AmountText`, `BsDateText`, `LedgerStrip`, `Stamp`.
 - [x] PWA: manifest (name "मेरो पसल", placeholder icons until OD-4, standalone, portrait), Serwist (`@serwist/turbopack`) service worker with app-shell precache and `/~offline` fallback.
-- [ ] Deploy pipeline: Vercel project (root `apps/web`) and Convex prod. **Binayak runs the prod steps.**
+- [~] Deploy pipeline: `apps/web/vercel.json` ready (architecture §11). **Binayak:** create the Vercel project (root `apps/web`), Convex prod deployment + deploy keys, Clerk production instance.
 - [ ] Redmi smoke test: install from Chrome, sign in, reopen from the icon, confirm no login prompt.
 
 ### M1 — Capture core (≈ 1 week) · F-02, F-03, F-04, F-05, F-10
@@ -140,4 +140,4 @@
 |---|---|---|---|---|
 | 2083-06-07 | Claude (planning) | all | Initial documentation set, mockups, architecture | Start M0 |
 | 2083-06-07 | Claude (planning) | F-04, F-24 | Voice now finds *or creates* names (confirm sheet); typed search gets an "Add “X”" card; paper look made explicit (ADR-022/023); mockup updated | Run voice spike in M1 |
-| 2083-06-07 | Claude (M0) | F-01, F-02, F-03, F-05, F-10, F-13 | Root tooling; shared money, domain, dates (UTC-only arithmetic, 33,238-day oracle test), i18n (copy-deck sync test); Convex schema, auth wrappers, `members.me`, seed; Graphite + private GitHub repo (ADR-024…027) | Review month names and `i18n-review` strings; step 6 `packages/ui` |
+| 2083-06-07 | Claude (M0) | F-01, F-02, F-03, F-05, F-10, F-13 | Root tooling; shared money, domain, dates (UTC-only arithmetic, 33,238-day oracle test), i18n (copy-deck sync test); Convex schema, auth wrappers, `members.me`, seed; Graphite + private GitHub repo (ADR-024…027) | Steps 6–9 too: ui tokens + primitives, web shell (sign-in, Not invited, Today), Serwist PWA, Playwright smoke + vercel.json (ADR-028). NFR-03 at 256 KB. Stacked PRs #3–#7 | Binayak: secret key, seed, local check, prod deploy, Redmi test; review `i18n-review` strings and month names |
