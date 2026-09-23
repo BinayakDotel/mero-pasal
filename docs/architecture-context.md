@@ -421,7 +421,13 @@ flowchart LR
 
 **Near-match suggestions** (the "Is it one of these?" list when nothing fully matches) need at least one query token whose key has ≥ 2 letters matching. Otherwise short names like "Rai" (key `r`) would suggest every Ram.
 
-**Ranking:** an exact key-prefix match on any token ranks first; then the number of token overlaps; then Damerau-Levenshtein distance ≤ 2 on the full key; ties are broken by `lastUsedAt`.
+**Ranking** (`searchParties` in `@mero-pasal/shared/names`):
+1. Names where **every** query token is a key-prefix of some name token rank first ("ram bdr" finds "Ram Bahadur Thapa").
+2. Then more prefix hits, then more exact token hits.
+3. Then the smaller Damerau-Levenshtein distance on the joined key (also against the key cut to the query's length, for half-typed names).
+4. Ties go to the most recent `lastUsedAt`.
+
+A typo alone counts as a match only within a distance of 1 for 4–5 key letters and 2 for 6+. Shorter keys need a prefix match, so "rm" can't fuzzily match every short name.
 
 **Where it runs:** matching runs **client-side** on the cached party list (fast, and works offline). The server stores `phoneticKey` for the duplicate warning (`parties.similar`) and admin merge suggestions.
 

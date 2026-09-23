@@ -1,0 +1,465 @@
+{
+  "parties": [
+    {
+      "displayName": "Binayak Dotel",
+      "lastUsedAt": 1790000000000
+    },
+    {
+      "displayName": "राम बहादुर थापा",
+      "lastUsedAt": 1789996400000,
+      "tag": "चोक"
+    },
+    {
+      "displayName": "Ram Bahadur Thapa",
+      "lastUsedAt": 1789992800000,
+      "tag": "पसल छेउ"
+    },
+    {
+      "displayName": "सीता श्रेष्ठ",
+      "lastUsedAt": 1789989200000
+    },
+    {
+      "displayName": "Sita Gurung",
+      "lastUsedAt": 1789985600000
+    },
+    {
+      "displayName": "गोपाल महर्जन",
+      "lastUsedAt": 1789982000000
+    },
+    {
+      "displayName": "Gopal Shrestha",
+      "lastUsedAt": 1789978400000
+    },
+    {
+      "displayName": "Hari Prasad Adhikari",
+      "lastUsedAt": 1789974800000
+    },
+    {
+      "displayName": "हरि प्रसाद पौडेल",
+      "lastUsedAt": 1789971200000
+    },
+    {
+      "displayName": "Krishna Karki",
+      "lastUsedAt": 1789967600000
+    },
+    {
+      "displayName": "कृष्ण बहादुर खड्का",
+      "lastUsedAt": 1789964000000
+    },
+    {
+      "displayName": "Sunita Rai",
+      "lastUsedAt": 1789960400000
+    },
+    {
+      "displayName": "सुनिता तामाङ",
+      "lastUsedAt": 1789956800000
+    },
+    {
+      "displayName": "Everest Traders",
+      "lastUsedAt": 1789953200000,
+      "tag": "supplier"
+    },
+    {
+      "displayName": "हिमालय ट्रेडर्स",
+      "lastUsedAt": 1789949600000,
+      "tag": "supplier"
+    },
+    {
+      "displayName": "Laxmi Suppliers",
+      "lastUsedAt": 1789946000000,
+      "tag": "supplier"
+    },
+    {
+      "displayName": "लक्ष्मी देवी शर्मा",
+      "lastUsedAt": 1789942400000
+    },
+    {
+      "displayName": "Bishnu Maya Lama",
+      "lastUsedAt": 1789938800000
+    },
+    {
+      "displayName": "विष्णु प्रसाद भट्टराई",
+      "lastUsedAt": 1789935200000
+    },
+    {
+      "displayName": "Ganesh KC",
+      "lastUsedAt": 1789931600000
+    },
+    {
+      "displayName": "गणेश बस्नेत",
+      "lastUsedAt": 1789928000000
+    },
+    {
+      "displayName": "Shyam Kumar Yadav",
+      "lastUsedAt": 1789924400000
+    },
+    {
+      "displayName": "श्याम सुन्दर जोशी",
+      "lastUsedAt": 1789920800000
+    },
+    {
+      "displayName": "Anil Magar",
+      "lastUsedAt": 1789917200000
+    },
+    {
+      "displayName": "अनिता घिमिरे",
+      "lastUsedAt": 1789913600000
+    },
+    {
+      "displayName": "Deepak Bhandari",
+      "lastUsedAt": 1789910000000
+    },
+    {
+      "displayName": "दीपा कोइराला",
+      "lastUsedAt": 1789906400000
+    },
+    {
+      "displayName": "Ramesh Pokharel",
+      "lastUsedAt": 1789902800000
+    },
+    {
+      "displayName": "रमेश न्यौपाने",
+      "lastUsedAt": 1789899200000
+    },
+    {
+      "displayName": "Suresh Lamichhane",
+      "lastUsedAt": 1789895600000
+    },
+    {
+      "displayName": "सुरेश ढकाल",
+      "lastUsedAt": 1789892000000
+    },
+    {
+      "displayName": "Mohammad Ansari",
+      "lastUsedAt": 1789888400000
+    },
+    {
+      "displayName": "Pasang Sherpa",
+      "lastUsedAt": 1789884800000
+    },
+    {
+      "displayName": "छिरिङ शेर्पा",
+      "lastUsedAt": 1789881200000
+    },
+    {
+      "displayName": "Kamala Thapa Magar",
+      "lastUsedAt": 1789877600000
+    },
+    {
+      "displayName": "कमल राई",
+      "lastUsedAt": 1789874000000
+    },
+    {
+      "displayName": "Narayan Dahal",
+      "lastUsedAt": 1789870400000
+    },
+    {
+      "displayName": "नारायण गौतम",
+      "lastUsedAt": 1789866800000
+    },
+    {
+      "displayName": "Prakash Chhetri",
+      "lastUsedAt": 1789863200000
+    },
+    {
+      "displayName": "प्रकाश क्षेत्री",
+      "lastUsedAt": 1789859600000
+    },
+    {
+      "displayName": "Bikash Subedi",
+      "lastUsedAt": 1789856000000
+    },
+    {
+      "displayName": "विकास सापकोटा",
+      "lastUsedAt": 1789852400000
+    },
+    {
+      "displayName": "Sarita Khatri",
+      "lastUsedAt": 1789848800000
+    },
+    {
+      "displayName": "सरिता कार्की",
+      "lastUsedAt": 1789845200000
+    },
+    {
+      "displayName": "Rajendra Maharjan",
+      "lastUsedAt": 1789841600000
+    },
+    {
+      "displayName": "राजेन्द्र श्रेष्ठ",
+      "lastUsedAt": 1789838000000
+    },
+    {
+      "displayName": "Nabin Tamang",
+      "lastUsedAt": 1789834400000
+    },
+    {
+      "displayName": "नवीन अर्याल",
+      "lastUsedAt": 1789830800000
+    },
+    {
+      "displayName": "Sagar Distributors",
+      "lastUsedAt": 1789827200000,
+      "tag": "supplier"
+    },
+    {
+      "displayName": "सागर होलसेल",
+      "lastUsedAt": 1789823600000,
+      "tag": "supplier"
+    },
+    {
+      "displayName": "Bhim Bahadur Ale",
+      "lastUsedAt": 1789820000000
+    },
+    {
+      "displayName": "भीम गिरी",
+      "lastUsedAt": 1789816400000
+    },
+    {
+      "displayName": "Dhan Kumari Limbu",
+      "lastUsedAt": 1789812800000
+    },
+    {
+      "displayName": "धन बहादुर राना",
+      "lastUsedAt": 1789809200000
+    },
+    {
+      "displayName": "Chandra Kala Bista",
+      "lastUsedAt": 1789805600000
+    },
+    {
+      "displayName": "ज्ञानु पन्त",
+      "lastUsedAt": 1789802000000
+    },
+    {
+      "displayName": "Gyanendra Oli",
+      "lastUsedAt": 1789798400000
+    }
+  ],
+  "queries": [
+    {
+      "query": "binayak",
+      "expect": "Binayak Dotel"
+    },
+    {
+      "query": "vinayak",
+      "expect": "Binayak Dotel"
+    },
+    {
+      "query": "विनायक",
+      "expect": "Binayak Dotel"
+    },
+    {
+      "query": "बिनायक",
+      "expect": "Binayak Dotel"
+    },
+    {
+      "query": "bin",
+      "expect": "Binayak Dotel"
+    },
+    {
+      "query": "ram bdr",
+      "expect": "Ram Bahadur Thapa"
+    },
+    {
+      "query": "ram bdr",
+      "expect": "राम बहादुर थापा"
+    },
+    {
+      "query": "gop",
+      "expect": "Gopal Shrestha"
+    },
+    {
+      "query": "गोप",
+      "expect": "गोपाल महर्जन"
+    },
+    {
+      "query": "गोपाल श्रेष्ठ",
+      "expect": "Gopal Shrestha"
+    },
+    {
+      "query": "sit",
+      "expect": "Sita Gurung"
+    },
+    {
+      "query": "सीत",
+      "expect": "सीता श्रेष्ठ"
+    },
+    {
+      "query": "hari pd",
+      "expect": "Hari Prasad Adhikari"
+    },
+    {
+      "query": "हरि",
+      "expect": "हरि प्रसाद पौडेल"
+    },
+    {
+      "query": "har",
+      "expect": "Hari Prasad Adhikari"
+    },
+    {
+      "query": "krishna",
+      "expect": "कृष्ण बहादुर खड्का"
+    },
+    {
+      "query": "kri",
+      "expect": "Krishna Karki"
+    },
+    {
+      "query": "sun",
+      "expect": "Sunita Rai"
+    },
+    {
+      "query": "सुनिता राई",
+      "expect": "Sunita Rai"
+    },
+    {
+      "query": "eve",
+      "expect": "Everest Traders"
+    },
+    {
+      "query": "हिम",
+      "expect": "हिमालय ट्रेडर्स"
+    },
+    {
+      "query": "laxmi",
+      "expect": "लक्ष्मी देवी शर्मा"
+    },
+    {
+      "query": "लक्ष्मी",
+      "expect": "Laxmi Suppliers"
+    },
+    {
+      "query": "vishnu",
+      "expect": "विष्णु प्रसाद भट्टराई"
+    },
+    {
+      "query": "bishnu",
+      "expect": "Bishnu Maya Lama"
+    },
+    {
+      "query": "गणेश",
+      "expect": "Ganesh KC"
+    },
+    {
+      "query": "gan",
+      "expect": "गणेश बस्नेत"
+    },
+    {
+      "query": "shyam",
+      "expect": "श्याम सुन्दर जोशी"
+    },
+    {
+      "query": "श्या",
+      "expect": "Shyam Kumar Yadav"
+    },
+    {
+      "query": "दीप",
+      "expect": "Deepak Bhandari"
+    },
+    {
+      "query": "dip",
+      "expect": "दीपा कोइराला"
+    },
+    {
+      "query": "ramesh",
+      "expect": "रमेश न्यौपाने"
+    },
+    {
+      "query": "sur",
+      "expect": "Suresh Lamichhane"
+    },
+    {
+      "query": "md ansari",
+      "expect": "Mohammad Ansari"
+    },
+    {
+      "query": "kamal",
+      "expect": "कमल राई"
+    },
+    {
+      "query": "कमला",
+      "expect": "Kamala Thapa Magar"
+    },
+    {
+      "query": "nar",
+      "expect": "नारायण गौतम"
+    },
+    {
+      "query": "प्रकाश",
+      "expect": "Prakash Chhetri"
+    },
+    {
+      "query": "pra",
+      "expect": "प्रकाश क्षेत्री"
+    },
+    {
+      "query": "bikash",
+      "expect": "विकास सापकोटा"
+    },
+    {
+      "query": "सरि",
+      "expect": "Sarita Khatri"
+    },
+    {
+      "query": "raj",
+      "expect": "राजेन्द्र श्रेष्ठ"
+    },
+    {
+      "query": "nabin",
+      "expect": "नवीन अर्याल"
+    },
+    {
+      "query": "sag",
+      "expect": "Sagar Distributors"
+    },
+    {
+      "query": "सागर",
+      "expect": "सागर होलसेल"
+    },
+    {
+      "query": "bhim",
+      "expect": "भीम गिरी"
+    },
+    {
+      "query": "भीम",
+      "expect": "Bhim Bahadur Ale"
+    },
+    {
+      "query": "dhan",
+      "expect": "Dhan Kumari Limbu"
+    },
+    {
+      "query": "धन",
+      "expect": "धन बहादुर राना"
+    },
+    {
+      "query": "gyanu",
+      "expect": "ज्ञानु पन्त"
+    },
+    {
+      "query": "ज्ञान",
+      "expect": "Gyanendra Oli"
+    },
+    {
+      "query": "chandra",
+      "expect": "Chandra Kala Bista"
+    },
+    {
+      "query": "pasang",
+      "expect": "Pasang Sherpa"
+    },
+    {
+      "query": "छिरिङ",
+      "expect": "छिरिङ शेर्पा"
+    },
+    {
+      "query": "ani",
+      "expect": "Anil Magar"
+    },
+    {
+      "query": "अनि",
+      "expect": "अनिता घिमिरे"
+    }
+  ]
+}
