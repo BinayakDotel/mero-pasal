@@ -5,7 +5,7 @@ packages:
 # From the Convex monorepo template: packages whose install scripts may run.
 allowBuilds:
   "@clerk/shared": true
-  '@swc/core': set this to true or false
+  '@swc/core': true # @serwist/turbopack; postinstall only verifies the native binary (wasm fallback)
   browser-tabs-lock: true
   bufferutil: true
   core-js: true
