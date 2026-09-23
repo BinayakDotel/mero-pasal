@@ -11,6 +11,7 @@
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_functions from "../lib/functions.js";
+import type * as lib_ledger from "../lib/ledger.js";
 import type * as members from "../members.js";
 import type * as parties from "../parties.js";
 import type * as seed from "../seed.js";
@@ -25,6 +26,7 @@ declare const fullApi: ApiFromModules<{
   "lib/audit": typeof lib_audit;
   "lib/errors": typeof lib_errors;
   "lib/functions": typeof lib_functions;
+  "lib/ledger": typeof lib_ledger;
   members: typeof members;
   parties: typeof parties;
   seed: typeof seed;

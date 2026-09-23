@@ -109,6 +109,8 @@ export default defineSchema({
     .index("by_shop_status_date", ["shopId", "status", "dateBs"])
     .index("by_shop_status_kind_date", ["shopId", "status", "kind", "dateBs"])
     .index("by_shop_party_date", ["shopId", "partyId", "dateBs"])
+    // ADR-030: the latest *active* bill of an account in one read, however many were removed.
+    .index("by_shop_party_status_date", ["shopId", "partyId", "status", "dateBs"])
     .index("by_shop_attention_date", ["shopId", "needsAttention", "dateBs"]),
 
   dailySummaries: defineTable({
