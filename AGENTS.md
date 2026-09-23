@@ -39,6 +39,7 @@ just dev          # web + Convex dev watcher in this terminal (Ctrl+C stops)
 just run / stop   # same, in the background; `just status`, `just logs`, `just restart`
 just check        # lint + typecheck + unit tests (what every PR needs)
 just e2e          # Playwright, mobile viewport
+just preview      # production build on the app port: the service worker runs (offline tests)
 just convex-push  # push backend to the Convex *dev* deployment once
 just data members # read a dev table
 just sync         # gt sync after merges

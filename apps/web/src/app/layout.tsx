@@ -37,8 +37,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ne" className={`${mukta.variable} ${baloo.variable}`}>
       <body className="min-h-dvh">
-        {/* Off in dev so stale caches never hide code changes. */}
-        <SerwistProvider swUrl="/serwist/sw.js" disable={process.env.NODE_ENV === "development"}>
+        {/* Off in dev so stale caches never hide code changes. No reload on reconnect: it would
+            drop Buwa out of a bill (architecture §8.4); the sync engine handles reconnects. */}
+        <SerwistProvider
+          swUrl="/serwist/sw.js"
+          disable={process.env.NODE_ENV === "development"}
+          reloadOnOnline={false}
+        >
           <ClerkProvider signInUrl="/sign-in">
             <ConvexClientProvider>{children}</ConvexClientProvider>
           </ClerkProvider>

@@ -111,6 +111,11 @@ status:
 logs:
     tail -n 50 -f "{{log_file}}"
 
+# Production build served locally on the app port: the service worker (offline shell) only runs
+# in production builds. Stop with Ctrl+C.
+preview:
+    cd apps/web && pnpm run build && PORT={{port}} pnpm exec next start
+
 # Open the app in Google Chrome (what the Redmi runs), e.g. `just open /spike/voice`
 open path="/":
     #!/usr/bin/env bash
