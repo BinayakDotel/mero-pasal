@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { writeAudit } from "./lib/audit";
 import { appError } from "./lib/errors";
 import { memberMutation, memberQuery } from "./lib/functions";
+import { assertMonthBs } from "./lib/months";
 import { partyKind } from "./schema";
 
 // F-04 name picker backend. Search itself runs on the phone over `listForPicker` (ADR-012);
@@ -139,5 +140,86 @@ export const similar = memberQuery({
       displayName: p.displayName,
       ...(p.tag === undefined ? {} : { tag: p.tag }),
     }));
+  },
+});
+
+const totals = v.object({
+  billCount: v.number(),
+  salePaisa: v.number(),
+  purchasePaisa: v.number(),
+});
+
+/**
+ * F-07 account page header: the account, its all-time totals and one BS month's totals.
+ * A merged account reports where it went, so the page can follow it.
+ */
+export const get = memberQuery({
+  args: { id: v.id("parties"), monthBs: v.string() },
+  returns: v.object({
+    _id: v.id("parties"),
+    kind: partyKind,
+    displayName: v.string(),
+    tag: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    isWalkIn: v.boolean(),
+    mergedIntoId: v.optional(v.id("parties")),
+    allTime: totals,
+    month: totals,
+  }),
+  handler: async (ctx, { id, monthBs }) => {
+    assertMonthBs(monthBs);
+    const party = await ctx.db.get(id);
+    if (!party || party.shopId !== ctx.shopId) throw appError("NOT_FOUND");
+    const month = await ctx.db
+      .query("partyMonthly")
+      .withIndex("by_party_month", (q) => q.eq("partyId", id).eq("monthBs", monthBs))
+      .unique();
+    return {
+      _id: party._id,
+      kind: party.kind,
+      displayName: party.displayName,
+      ...(party.tag === undefined ? {} : { tag: party.tag }),
+      ...(party.phone === undefined ? {} : { phone: party.phone }),
+      isWalkIn: party.isWalkIn,
+      ...(party.mergedIntoId === undefined ? {} : { mergedIntoId: party.mergedIntoId }),
+      allTime: {
+        billCount: party.billCount,
+        salePaisa: party.salePaisa,
+        purchasePaisa: party.purchasePaisa,
+      },
+      month: {
+        billCount: month?.billCount ?? 0,
+        salePaisa: month?.salePaisa ?? 0,
+        purchasePaisa: month?.purchasePaisa ?? 0,
+      },
+    };
+  },
+});
+
+/** F-07 accounts list: every account's totals for one BS month (accounts without bills omitted). */
+export const monthTotals = memberQuery({
+  args: { monthBs: v.string() },
+  returns: v.array(
+    v.object({
+      partyId: v.id("parties"),
+      billCount: v.number(),
+      salePaisa: v.number(),
+      purchasePaisa: v.number(),
+    }),
+  ),
+  handler: async (ctx, { monthBs }) => {
+    assertMonthBs(monthBs);
+    const rows = await ctx.db
+      .query("partyMonthly")
+      .withIndex("by_shop_month", (q) => q.eq("shopId", ctx.shopId).eq("monthBs", monthBs))
+      .take(MAX_PARTIES);
+    return rows
+      .filter((r) => r.billCount > 0)
+      .map(({ partyId, billCount, salePaisa, purchasePaisa }) => ({
+        partyId,
+        billCount,
+        salePaisa,
+        purchasePaisa,
+      }));
   },
 });
