@@ -4,9 +4,17 @@ import { api } from "@mero-pasal/backend/convex/_generated/api";
 import { useEffect, useMemo, useState } from "react";
 import { useMember } from "@/features/session/member-gate";
 import type { OutboxRow } from "@/features/sync/db";
+import { useSync } from "@/features/sync/sync-provider";
 import { useCachedQuery } from "@/features/sync/use-cached-query";
 import { useOutboxRows } from "@/features/sync/use-outbox-rows";
-import { applyEdits, type BillItem, localBills, type NameBook, nameBook } from "./bill-item";
+import {
+  applyEdits,
+  type BillItem,
+  editsNotIn,
+  localBills,
+  type NameBook,
+  nameBook,
+} from "./bill-item";
 
 export type BillDetail = {
   clientId: string;
@@ -45,9 +53,10 @@ export function withEdits(
   bill: BillDetail,
   rows: readonly OutboxRow[],
   names: NameBook,
+  notIn: (row: OutboxRow) => boolean,
 ): BillDetail {
   const item: BillItem = { ...bill, key: bill.clientId, thumb: null };
-  const [edited] = applyEdits([item], rows, names);
+  const [edited] = applyEdits([item], rows, names, notIn);
   if (!edited) return { ...bill, status: "deleted", pending: true };
   if (edited === item) return bill;
   const { partyId: _id, partyName: _name, amountPaisa: _amount, ...rest } = bill;
@@ -73,6 +82,7 @@ export function useBillDetail(clientId: string): BillDetail | null | undefined {
   const parties = useCachedQuery(api.parties.listForPicker, {}, "parties.listForPicker");
   const rows = useOutboxRows();
   const { member } = useMember();
+  const { engine } = useSync();
   const outbox = useMemo(
     () => rows.find((r) => r.type === "tx.create" && r.clientId === clientId),
     [rows, clientId],
@@ -85,6 +95,11 @@ export function useBillDetail(clientId: string): BillDetail | null | undefined {
 
   return useMemo(() => {
     const names = nameBook(parties.data ?? [], rows);
+    // A bill only on the phone is compared like live data: its changes are all still to come.
+    const notIn = editsNotIn(
+      { live: server.live || !server.data, snapshotAt: server.savedAt },
+      engine.confirmed,
+    );
     const s = server.data;
     if (s) {
       return withEdits(
@@ -106,6 +121,7 @@ export function useBillDetail(clientId: string): BillDetail | null | undefined {
         },
         rows,
         names,
+        notIn,
       );
     }
     if (outbox) {
@@ -129,8 +145,9 @@ export function useBillDetail(clientId: string): BillDetail | null | undefined {
         },
         rows,
         names,
+        notIn,
       );
     }
     return s === null ? null : undefined;
-  }, [server.data, outbox, parties.data, rows, member, localUrls, clientId]);
+  }, [server, outbox, parties.data, rows, member, localUrls, clientId, engine.confirmed]);
 }

@@ -5,11 +5,13 @@ import type { Id } from "@mero-pasal/backend/convex/_generated/dataModel";
 import { useMemo } from "react";
 import {
   applyEdits,
+  editsNotIn,
   fromServer,
   localBills,
   mergeBills,
   nameBook,
 } from "@/features/bills/bill-item";
+import { useSync } from "@/features/sync/sync-provider";
 import { useCachedPaginatedQuery } from "@/features/sync/use-cached-paginated-query";
 import { useCachedQuery } from "@/features/sync/use-cached-query";
 import { useOutboxRows } from "@/features/sync/use-outbox-rows";
@@ -31,26 +33,26 @@ export function useAccount(partyId: Id<"parties">, thisMonth: string, month: str
   );
   const parties = useCachedQuery(api.parties.listForPicker, {}, "parties.listForPicker");
   const rows = useOutboxRows();
+  const { engine } = useSync();
 
   const bills = useMemo(() => {
     const names = nameBook(parties.data ?? [], rows);
     const local = localBills(
       rows,
       names,
-      (r) =>
-        r.status !== "done" &&
-        r.payload.partyRef !== undefined &&
-        "id" in r.payload.partyRef &&
-        r.payload.partyRef.id === partyId &&
-        (month === null || r.payload.dateBs.startsWith(`${month}-`)),
+      // Any account: a correction on its way may move a phone-side bill into this one.
+      (r) => r.status !== "done" && (month === null || r.payload.dateBs.startsWith(`${month}-`)),
     );
-    if (pages.results === undefined && local.length === 0) return undefined;
-    // A correction on its way may move a bill to another account: keep only this account's.
+    const notIn = editsNotIn({ live: pages.live, snapshotAt: pages.savedAt }, engine.confirmed);
+    // A correction on its way may move a bill between accounts: keep only this account's.
+    const mine = (b: { partyId?: string }) => b.partyId === partyId;
+    const localHere = applyEdits(local, rows, names, notIn).filter(mine);
+    if (pages.results === undefined && localHere.length === 0) return undefined;
     return mergeBills(
-      applyEdits((pages.results ?? []).map(fromServer), rows, names),
-      applyEdits(local, rows, names),
-    ).filter((b) => b.partyId === partyId);
-  }, [pages.results, parties.data, rows, partyId, month]);
+      applyEdits((pages.results ?? []).map(fromServer), rows, names, notIn).filter(mine),
+      localHere,
+    );
+  }, [pages.results, pages.live, pages.savedAt, parties.data, rows, partyId, month, engine]);
 
   return {
     account: account.data,

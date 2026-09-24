@@ -1,6 +1,7 @@
 import type { api } from "@mero-pasal/backend/convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import type { OutboxRow } from "@/features/sync/db";
+import { notYetOnServer } from "../today/merge-today";
 
 /** One bill as a list shows it (Today, Bills, an account), from the server or the phone. */
 export type BillItem = {
@@ -102,6 +103,17 @@ export function mergeBills(server: readonly BillItem[], local: readonly BillItem
 const inFlight = (r: OutboxRow) => r.status === "pending" || r.status === "uploading";
 
 /**
+ * The same "not in these numbers yet" rule as Today's totals, for a list shown from `view`:
+ * live → not yet confirmed; a saved copy → also changes finished after it was saved.
+ */
+export function editsNotIn(
+  view: { live: boolean; snapshotAt: number },
+  confirmed: ReadonlySet<string>,
+): (row: OutboxRow) => boolean {
+  return (r) => r.status !== "failed" && notYetOnServer(r, view, confirmed);
+}
+
+/**
  * F-08 on the phone: bills with a removal on its way disappear; bills with a correction on its
  * way show the new values (clock mark). The latest correction wins (rows are in queue order).
  */
@@ -109,11 +121,13 @@ export function applyEdits(
   bills: readonly BillItem[],
   rows: readonly OutboxRow[],
   names: NameBook,
+  /** Which changes the shown data doesn't include yet (default: those still on their way). */
+  notIn: (row: OutboxRow) => boolean = inFlight,
 ): BillItem[] {
   const removed = new Set<string>();
   const corrected = new Map<string, Extract<OutboxRow, { type: "tx.correct" }>>();
   for (const r of rows) {
-    if (!inFlight(r)) continue;
+    if (!notIn(r)) continue;
     if (r.type === "tx.remove") removed.add(r.payload.billClientId);
     if (r.type === "tx.correct") corrected.set(r.payload.billClientId, r);
   }
