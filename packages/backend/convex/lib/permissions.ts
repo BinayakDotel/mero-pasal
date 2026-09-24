@@ -13,6 +13,11 @@ export function assertCanEdit(member: Doc<"members">, tx: Doc<"transactions">, n
     { createdBy: tx.createdBy, capturedAt: tx.capturedAt },
     now,
   );
-  if (!allowed)
-    throw appError("FORBIDDEN", "Staff can change only their own bills within 24 hours");
+  if (!allowed) {
+    throw appError(
+      "FORBIDDEN",
+      "Staff can change only their own bills within 24 hours",
+      "NOT_EDITABLE",
+    );
+  }
 }

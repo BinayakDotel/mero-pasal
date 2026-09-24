@@ -19,7 +19,10 @@ export type ErrorClass = "network" | "auth" | "conflict" | "notFound" | "other";
 /** Map a failure to what the engine should do (§8.3). */
 export function classify(error: unknown): ErrorClass {
   if (error instanceof TypeError) return "network"; // fetch() dropped (upload)
-  const code = (error as { data?: { code?: string } } | null)?.data?.code;
+  const data = (error as { data?: { code?: string; reason?: string } } | null)?.data;
+  const code = data?.code;
+  // A bill this member may never change is a rejection of that item, not a sign-in problem.
+  if (code === "FORBIDDEN" && data?.reason === "NOT_EDITABLE") return "other";
   if (code === "UNAUTHENTICATED" || code === "FORBIDDEN") return "auth";
   if (code === "CONFLICT") return "conflict";
   if (code === "NOT_FOUND") return "notFound";

@@ -1,6 +1,7 @@
 import { addDaysBs, monthOf, todayBs } from "@mero-pasal/shared/dates";
+import { STAFF_EDIT_WINDOW_MS } from "@mero-pasal/shared/domain";
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
@@ -242,5 +243,68 @@ describe("audit.listForEntity (F-15)", () => {
     await expect(
       asOwner.query(api.audit.listForEntity, { entity: "transaction", entityId: id }),
     ).rejects.toThrow(/FORBIDDEN/);
+  });
+});
+
+describe("review fixes: edits refused for good, and retries (F-08)", () => {
+  async function staffSetup() {
+    const s = await setup();
+    await s.t.run((ctx) =>
+      ctx.db.insert("members", {
+        shopId: s.shopId,
+        clerkUserId: "user_staff",
+        displayName: "Aama",
+        role: "staff",
+        locale: "ne",
+        active: true,
+      }),
+    );
+    return { ...s, asStaff: s.t.withIdentity({ subject: "user_staff" }) };
+  }
+  const dataOf = async (p: Promise<unknown>) => {
+    try {
+      await p;
+    } catch (error) {
+      return (error as { data?: unknown }).data;
+    }
+    return undefined;
+  };
+
+  it("past 24 h, a staff edit is refused as NOT_EDITABLE (so the phone doesn't pause for it)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const { asStaff, today, bill } = await staffSetup();
+      const clientId = await bill(asStaff, { amountPaisa: 100 });
+      vi.setSystemTime(Date.now() + STAFF_EDIT_WINDOW_MS + 1);
+      expect(
+        await dataOf(
+          asStaff.mutation(api.transactions.correct, {
+            clientId,
+            kind: "sale",
+            dateBs: today,
+            amountPaisa: 5,
+          }),
+        ),
+      ).toMatchObject({ code: "FORBIDDEN", reason: "NOT_EDITABLE" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a retry of a change the server already made is a no-op, even past 24 h", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const { asStaff, today, bill } = await staffSetup();
+      const fixed = await bill(asStaff, { amountPaisa: 100 });
+      const gone = await bill(asStaff, { amountPaisa: 100 });
+      const args = { clientId: fixed, kind: "sale" as const, dateBs: today, amountPaisa: 5 };
+      await asStaff.mutation(api.transactions.correct, args);
+      await asStaff.mutation(api.transactions.remove, { clientId: gone });
+      vi.setSystemTime(Date.now() + STAFF_EDIT_WINDOW_MS + 1);
+      await asStaff.mutation(api.transactions.correct, args);
+      await asStaff.mutation(api.transactions.remove, { clientId: gone });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

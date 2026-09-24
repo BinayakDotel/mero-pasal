@@ -364,7 +364,6 @@ export const correct = memberMutation({
   handler: async (ctx, args) => {
     const tx = await billByClientId(ctx, args.clientId);
     const now = Date.now();
-    assertCanEdit(ctx.member, tx, now);
     if (tx.status === "deleted") throw appError("CONFLICT", "A removed bill can't be corrected");
 
     const amount = args.amountPaisa;
@@ -388,8 +387,9 @@ export const correct = memberMutation({
       amount === tx.amountPaisa &&
       args.dateBs === tx.dateBs
     ) {
-      return tx._id; // already so (a retry, or nothing changed)
+      return tx._id; // already so (a retry, or nothing changed): no permission needed
     }
+    assertCanEdit(ctx.member, tx, now);
 
     const {
       _id,
@@ -436,8 +436,8 @@ export const remove = memberMutation({
   returns: v.id("transactions"),
   handler: async (ctx, { clientId }) => {
     const tx = await billByClientId(ctx, clientId);
+    if (tx.status === "deleted") return tx._id; // a retry: nothing to do
     assertCanEdit(ctx.member, tx, Date.now());
-    if (tx.status === "deleted") return tx._id;
     const { _id, _creationTime, needsAttention, updatedAt, ...keep } = tx;
     return apply(
       ctx,

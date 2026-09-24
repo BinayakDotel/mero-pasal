@@ -9,9 +9,22 @@ export const ERROR_CODES = [
   "CONFLICT",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
-export type AppErrorData = { code: ErrorCode; message?: string };
+/**
+ * Optional detail for the phone's outbox: NOT_EDITABLE = this bill can never be changed by this
+ * member (not theirs, or past the staff 24 h window), so it's a rejection, not a sign-in pause.
+ */
+export type ErrorReason = "NOT_EDITABLE";
+export type AppErrorData = { code: ErrorCode; message?: string; reason?: ErrorReason };
 
 /** Builds the only kind of error our functions throw: `throw appError("FORBIDDEN")`. */
-export function appError(code: ErrorCode, message?: string): ConvexError<AppErrorData> {
-  return new ConvexError(message === undefined ? { code } : { code, message });
+export function appError(
+  code: ErrorCode,
+  message?: string,
+  reason?: ErrorReason,
+): ConvexError<AppErrorData> {
+  return new ConvexError({
+    code,
+    ...(message === undefined ? {} : { message }),
+    ...(reason === undefined ? {} : { reason }),
+  });
 }
