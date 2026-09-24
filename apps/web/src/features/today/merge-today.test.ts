@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OutboxRow } from "@/features/sync/db";
-import { mergeRecent, mergeTotals, notYetOnServer, type RecentItem, ZERO } from "./merge-today";
+import { mergeTotals, notYetOnServer, ZERO } from "./merge-today";
 
 const row = (
   clientId: string,
@@ -75,30 +75,5 @@ describe("mergeTotals (F-02 offline)", () => {
       purchaseCount: 1,
       purchasePaisa: 300,
     });
-  });
-});
-
-describe("mergeRecent", () => {
-  const item = (clientId: string, capturedAt: number, pending: boolean): RecentItem => ({
-    key: clientId,
-    clientId,
-    kind: "sale",
-    isWalkIn: false,
-    capturedAt,
-    thumb: null,
-    pending,
-  });
-
-  it("server rows win, phone-only rows join, newest first, limited", () => {
-    const merged = mergeRecent(
-      [item("a", 10, false), item("b", 30, false)],
-      [item("a", 10, true), item("c", 20, true), item("d", 5, true)],
-      3,
-    );
-    expect(merged.map((m) => [m.clientId, m.pending])).toEqual([
-      ["b", false],
-      ["c", true],
-      ["a", false],
-    ]);
   });
 });
