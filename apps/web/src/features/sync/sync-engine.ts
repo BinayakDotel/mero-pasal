@@ -191,7 +191,9 @@ export class SyncEngine {
       await processItem(row, deps, async (progress) => {
         if (progress.type !== "tx.create") return;
         await one().modify((stored) => {
-          if (stored.type === "tx.create") stored.pages = progress.pages;
+          if (stored.type !== "tx.create") return;
+          stored.pages = progress.pages;
+          if (progress.submitted) stored.submitted = true;
         });
       });
       this.confirmed.add(row.clientId);
@@ -211,7 +213,17 @@ export class SyncEngine {
     const { db, now } = this.env;
     const seq = row.seq as number;
     const message = error instanceof Error ? error.message : String(error);
-    switch (classify(error)) {
+    const errorClass = classify(error);
+    // The server answered with a refusal, so its mutation rolled back: the bill isn't there.
+    if (row.type === "tx.create" && errorClass !== "network") {
+      await db.outbox
+        .where("seq")
+        .equals(seq)
+        .modify((r) => {
+          if (r.type === "tx.create") r.submitted = false;
+        });
+    }
+    switch (errorClass) {
       case "network":
         this.networkStreak += 1;
         this.pausedUntil = now() + backoff(this.networkStreak);
@@ -271,7 +283,9 @@ export class SyncEngine {
       const due = related.some(
         (r) => r.type === "tx.remove" && r.status === "pending" && r.nextAttemptAt <= now,
       );
-      if (!create || create.status === "done" || !due) return false;
+      // A bill the server may already have (submitted) goes the normal way: sent, then removed.
+      if (create?.type !== "tx.create" || create.status === "done" || create.submitted || !due)
+        return false;
       await db.outbox.bulkDelete(related.map((r) => r.seq as number));
       return true;
     });

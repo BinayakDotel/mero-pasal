@@ -36,6 +36,12 @@ export type TxCreateItem = {
     clientCapturedAt?: number;
   };
   pages: OutboxPage[];
+  /**
+   * Set (and saved) just before the server call: the server may now have this bill even if the
+   * phone never hears back, so it must not be dropped or edited in place (F-08). Cleared when the
+   * server clearly refused it.
+   */
+  submitted?: boolean;
 };
 
 /** What the phone showed for a bill before a correction or removal (display and totals, M3). */
@@ -145,6 +151,8 @@ export async function processItem(
       await onProgress?.(item);
     }
   }
+  item.submitted = true;
+  await onProgress?.(item);
   await deps.createTx({
     clientId: item.clientId,
     ...item.payload,

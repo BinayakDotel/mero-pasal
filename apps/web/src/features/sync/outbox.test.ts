@@ -64,16 +64,18 @@ describe("outbox (architecture §8, F-03)", () => {
     expect(item.attempts).toBe(2);
   });
 
-  it("reports progress after each upload (M2 persists it)", async () => {
+  it("reports progress after each upload, then the mark before the server call (M2, M3)", async () => {
     const { deps } = fakeDeps();
-    const seen: (string | undefined)[][] = [];
+    const seen: unknown[][] = [];
     const item = bill([page()]);
     await processItem(item, deps, async (it) => {
-      if (it.type === "tx.create") seen.push(it.pages.flatMap((p) => [p.storageId, p.thumbId]));
+      if (it.type === "tx.create")
+        seen.push([...it.pages.flatMap((p) => [p.storageId, p.thumbId]), it.submitted ?? false]);
     });
     expect(seen).toEqual([
-      ["storage-url1", undefined],
-      ["storage-url1", "storage-url2"],
+      ["storage-url1", undefined, false],
+      ["storage-url1", "storage-url2", false],
+      ["storage-url1", "storage-url2", true],
     ]);
   });
 
