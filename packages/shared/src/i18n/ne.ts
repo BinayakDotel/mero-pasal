@@ -104,6 +104,28 @@ export const ne = {
   "bill.removed": "हटाइयो",
   "bill.noAmount": "रकम छैन",
 
+  // M3 browse and fix (F-06, F-07, F-08).
+  "bills.empty": "यहाँ कुनै बिल छैन।",
+  "bills.searchEmpty": "“{q}” नामको बिल भेटिएन", // i18n-review
+  "accounts.customers": "ग्राहक",
+  "accounts.suppliers": "सप्लायर",
+  "accounts.empty": "अहिलेसम्म कुनै खाता छैन।", // i18n-review
+  "account.thisMonth": "यो महिना",
+  "account.allTime": "जम्मा",
+  "account.call": "फोन गर्नुहोस्", // i18n-review
+  "account.allMonths": "सबै महिना", // i18n-review
+  "field.type": "प्रकार",
+  "field.name": "नाम",
+  "field.amount": "रकम",
+  "field.capturedBy": "राख्ने",
+  "field.time": "समय",
+  "field.pages": "पाना",
+  "field.billNumber": "बिल नम्बर", // i18n-review
+  "bill.removeSub": "हटाएको बिल हिसाबमा गनिँदैन। बिनायकले फर्काउन सक्छन्।",
+  "bill.correctTitle": "बिल सच्याउनुहोस्", // i18n-review
+  "bill.corrected": "सच्याइयो", // i18n-review
+  "bill.editWindow": "२४ घण्टापछि यो बिल सच्याउन वा हटाउन मिल्दैन।", // i18n-review
+
   "sync.ok": "सबै सुरक्षित",
   "sync.pending": "{n} पठाउन बाँकी",
   "sync.offline": "इन्टरनेट छैन — बिल फोनमा सुरक्षित छन्",

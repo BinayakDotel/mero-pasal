@@ -328,6 +328,26 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `bill.removed` | हटाइयो | Removed |
 | `common.undo` | फर्काउनुहोस् | Undo |
 | `bill.noAmount` | रकम छैन | No amount |
+| `bills.empty` | यहाँ कुनै बिल छैन। | No bills here. |
+| `bills.searchEmpty` | “{q}” नामको बिल भेटिएन | No bills for “{q}” |
+| `accounts.customers` | ग्राहक | Customers |
+| `accounts.suppliers` | सप्लायर | Suppliers |
+| `accounts.empty` | अहिलेसम्म कुनै खाता छैन। | No accounts yet. |
+| `account.thisMonth` | यो महिना | This month |
+| `account.allTime` | जम्मा | All time |
+| `account.call` | फोन गर्नुहोस् | Call |
+| `account.allMonths` | सबै महिना | All months |
+| `field.type` | प्रकार | Type |
+| `field.name` | नाम | Name |
+| `field.amount` | रकम | Amount |
+| `field.capturedBy` | राख्ने | Saved by |
+| `field.time` | समय | Time |
+| `field.pages` | पाना | Pages |
+| `field.billNumber` | बिल नम्बर | Bill number |
+| `bill.removeSub` | हटाएको बिल हिसाबमा गनिँदैन। बिनायकले फर्काउन सक्छन्। | A removed bill isn't counted. Binayak can restore it. |
+| `bill.correctTitle` | बिल सच्याउनुहोस् | Correct bill |
+| `bill.corrected` | सच्याइयो | Corrected |
+| `bill.editWindow` | २४ घण्टापछि यो बिल सच्याउन वा हटाउन मिल्दैन। | This bill can't be changed after 24 hours. |
 | `sync.ok` | सबै सुरक्षित | All saved |
 | `sync.pending` | {n} पठाउन बाँकी | {n} waiting to upload |
 | `sync.offline` | इन्टरनेट छैन — बिल फोनमा सुरक्षित छन् | No internet — bills are safe on this phone |
