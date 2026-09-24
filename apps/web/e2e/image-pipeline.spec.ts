@@ -26,13 +26,18 @@ async function run(page: import("@playwright/test").Page, name: string) {
     const { processImage } = (window as any).photoPipeline;
     const out = await processImage(new Blob([bytes], { type: "image/jpeg" }));
     const fullBytes = new Uint8Array(await out.full.arrayBuffer());
-    const hasApp1 = (() => {
+    // Chrome writes no EXIF block; Safari writes its own tiny one (image size only). Either way,
+    // nothing from the original photo may survive: no GPS IFD pointer (tag 0x8825, either byte
+    // order) in the header before the image data.
+    const header = (() => {
       for (let i = 2; i + 1 < fullBytes.length; i++) {
-        if (fullBytes[i] === 0xff && fullBytes[i + 1] === 0xe1) return true;
-        if (fullBytes[i] === 0xff && fullBytes[i + 1] === 0xda) return false; // scan data starts
+        if (fullBytes[i] === 0xff && fullBytes[i + 1] === 0xda) return fullBytes.slice(0, i);
       }
-      return false;
+      return fullBytes;
     })();
+    const hasGpsTag = header.some(
+      (b, i) => (b === 0x88 && header[i + 1] === 0x25) || (b === 0x25 && header[i + 1] === 0x88),
+    );
     const text = new TextDecoder("latin1").decode(fullBytes.slice(0, 4096));
     const decoded = await createImageBitmap(out.full);
     const canvas = new OffscreenCanvas(decoded.width, decoded.height);
@@ -46,7 +51,7 @@ async function run(page: import("@playwright/test").Page, name: string) {
       bytes: out.bytes,
       decoded: [decoded.width, decoded.height],
       thumb: [thumb.width, thumb.height],
-      hasApp1,
+      hasGpsTag,
       mentionsMake: text.includes("Xiaomi") || text.includes("Redmi"),
       topPixel: Array.from(top.slice(0, 3)),
     };
@@ -62,7 +67,7 @@ test("ADR-010: a sideways phone photo comes out upright, ≤ 1600 px, with no EX
   const [red, green] = r.topPixel;
   expect(red).toBeGreaterThan(150); // the red band is now at the top
   expect(green).toBeLessThan(90);
-  expect(r.hasApp1).toBe(false); // no EXIF block at all: GPS, make and model are gone
+  expect(r.hasGpsTag).toBe(false); // the photo's GPS is gone (on every engine)
   expect(r.mentionsMake).toBe(false);
   expect(Math.max(...r.thumb)).toBe(320);
   expect(r.bytes).toBeLessThanOrEqual(450_000);
