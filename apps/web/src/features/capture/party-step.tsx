@@ -6,10 +6,11 @@ import { Icon } from "@/components/icons";
 import { useLocale } from "@/features/session/locale";
 import { STEP_NUMBER } from "./capture-machine";
 import { useCapture } from "./capture-provider";
+import { isLocalParty } from "./local-party";
 import { NewNameSheet } from "./new-name-sheet";
 import { Avatar, PartyRow } from "./party-row";
 import { StepBar } from "./step-bar";
-import { isLocalParty, type PickerParty, usePickerParties } from "./use-picker-parties";
+import { type PickerParty, usePickerParties } from "./use-picker-parties";
 
 /**
  * F-04 "कसको बिल?" (ui-ux §5.3): walk-in first for sales, recent names with their last bill,
