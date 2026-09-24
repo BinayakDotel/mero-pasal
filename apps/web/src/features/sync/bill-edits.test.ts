@@ -167,3 +167,72 @@ describe("enqueueRemove / undoRemove (F-08, UC-07)", () => {
     expect(server.bills.has("t1")).toBe(true);
   });
 });
+
+describe("review fixes: sending exactly what's queued, in order (F-08)", () => {
+  // Runs `between` in the gap after the engine picked its next item and before it sends it.
+  const engineWithGap = (deps: OutboxDeps, between: () => Promise<void>) => {
+    const e = engine(deps);
+    const inner = e as unknown as { droppedOnPhone: (...a: unknown[]) => Promise<boolean> };
+    const original = inner.droppedOnPhone.bind(e);
+    let once = false;
+    inner.droppedOnPhone = async (...a) => {
+      if (!once) {
+        once = true;
+        await between();
+      }
+      return original(...a);
+    };
+    return e;
+  };
+
+  it("Undo in the gap before sending: the removal is not sent", async () => {
+    const server = fakeServer();
+    await enqueueDurable(db, [bill()], ME, clock);
+    await engine(server.deps).kick();
+    const removal = await enqueueRemove(db, "t1", before, ME, clock);
+    clock += UNDO_WINDOW_MS;
+    await engineWithGap(server.deps, async () => {
+      await undoRemove(db, removal);
+    }).kick();
+    expect(server.deps.removeTx).not.toHaveBeenCalled();
+    expect(server.bills.has("t1")).toBe(true);
+  });
+
+  it("a correction made in the gap is what gets sent", async () => {
+    const server = fakeServer();
+    await enqueueDurable(db, [bill()], ME, clock);
+    await engineWithGap(server.deps, async () => {
+      await enqueueCorrect(db, "t1", values(777), before, ME, clock);
+    }).kick();
+    expect(server.bills.get("t1")).toBe(777);
+  });
+
+  it("a later change to a bill waits for an earlier one still on its way", async () => {
+    const server = fakeServer();
+    await enqueueDurable(db, [bill()], ME, clock);
+    await engine(server.deps).kick();
+    await enqueueCorrect(db, "t1", values(200), before, ME, clock);
+    await db.outbox
+      .filter((r) => r.type === "tx.correct")
+      .modify({ status: "pending", nextAttemptAt: clock + 60_000 }); // first one in backoff
+    await enqueueRemove(db, "t1", before, ME, clock - UNDO_WINDOW_MS); // already due
+    await engine(server.deps).kick();
+    expect(server.deps.removeTx).not.toHaveBeenCalled();
+    clock += 60_000;
+    await engine(server.deps).kick();
+    expect(vi.mocked(server.deps.correctTx).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(server.deps.removeTx).mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it("'Try now' never cuts the 6 s undo window short", async () => {
+    const server = fakeServer();
+    await enqueueDurable(db, [bill()], ME, clock);
+    const e = engine(server.deps);
+    await e.kick();
+    const removal = await enqueueRemove(db, "t1", before, ME, clock);
+    await e.retryNow();
+    expect(server.deps.removeTx).not.toHaveBeenCalled();
+    expect(await undoRemove(db, removal)).toBe(true);
+  });
+});

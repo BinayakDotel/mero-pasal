@@ -1,3 +1,4 @@
+import { UNDO_WINDOW_MS } from "@mero-pasal/shared/domain";
 import type { MeroPasalDb, OutboxRow } from "./db";
 import { billOf, type OutboxDeps, processItem } from "./outbox";
 
@@ -115,7 +116,8 @@ export class SyncEngine {
       .anyOf("failed", "pending")
       .modify((row) => {
         row.status = "pending";
-        row.nextAttemptAt = 0;
+        // A removal still inside its 6 s undo window keeps it (F-08).
+        row.nextAttemptAt = row.type === "tx.remove" ? row.createdAt + UNDO_WINDOW_MS : 0;
         row.failures = 0;
         delete row.lastError;
       });
@@ -149,17 +151,40 @@ export class SyncEngine {
     return true;
   }
 
+  /**
+   * Oldest due item of this member, except that changes to one bill go strictly in order: a row
+   * waits while an earlier row for the same bill is still on its way (M3 corrections/removals).
+   */
   private async nextRow(clerkId: string, now: number): Promise<OutboxRow | undefined> {
-    return this.env.db.outbox
-      .orderBy("seq")
-      .filter((r) => r.status === "pending" && r.ownerClerkId === clerkId && r.nextAttemptAt <= now)
-      .first();
+    const busy = new Set<string>();
+    for (const r of await this.env.db.outbox.orderBy("seq").toArray()) {
+      const bill = billOf(r);
+      const due = r.status === "pending" && r.ownerClerkId === clerkId && r.nextAttemptAt <= now;
+      if (due && !(bill && busy.has(bill))) return r;
+      if (bill && (r.status === "pending" || r.status === "uploading")) busy.add(bill);
+    }
+    return undefined;
   }
 
-  private async send(row: OutboxRow): Promise<void> {
+  /**
+   * Take the item for sending: re-read it and mark it uploading in one transaction, so what goes
+   * out is exactly what's queued now (never a copy changed or undone since it was picked).
+   */
+  private async claim(seq: number, now: number): Promise<OutboxRow | undefined> {
+    const { db } = this.env;
+    return db.transaction("rw", db.outbox, async () => {
+      const fresh = await db.outbox.get(seq);
+      if (fresh?.status !== "pending" || fresh.nextAttemptAt > now) return undefined;
+      await db.outbox.update(seq, { status: "uploading", attempts: fresh.attempts + 1 });
+      return fresh;
+    });
+  }
+
+  private async send(picked: OutboxRow): Promise<void> {
     const { db, deps, now } = this.env;
-    const seq = row.seq as number;
-    await db.outbox.update(seq, { status: "uploading", attempts: row.attempts + 1 });
+    const seq = picked.seq as number;
+    const row = await this.claim(seq, now());
+    if (!row) return; // changed, undone or dropped since it was picked
     const epoch = this.authEpoch;
     try {
       const one = () => db.outbox.where("seq").equals(seq);
