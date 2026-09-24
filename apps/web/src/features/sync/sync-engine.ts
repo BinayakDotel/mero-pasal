@@ -129,6 +129,7 @@ export class SyncEngine {
       if (!identity) break;
       const row = await this.nextRow(identity.clerkId, now());
       if (!row) break;
+      if (await this.droppedOnPhone(row, now())) continue;
       await this.send(row);
     }
     await this.purge(now());
@@ -226,6 +227,26 @@ export class SyncEngine {
             lastError: message,
           },
     );
+  }
+
+  /**
+   * M3 / UC-07: a bill removed before it ever left the phone (its undo window over) never goes to
+   * the server: the bill, its corrections and the removal are deleted here, photos never uploaded.
+   */
+  private async droppedOnPhone(row: OutboxRow, now: number): Promise<boolean> {
+    const bill = billOf(row);
+    if (!bill) return false;
+    const { db } = this.env;
+    return db.transaction("rw", db.outbox, async () => {
+      const related = (await db.outbox.toArray()).filter((r) => billOf(r) === bill);
+      const create = related.find((r) => r.type === "tx.create");
+      const due = related.some(
+        (r) => r.type === "tx.remove" && r.status === "pending" && r.nextAttemptAt <= now,
+      );
+      if (!create || create.status === "done" || !due) return false;
+      await db.outbox.bulkDelete(related.map((r) => r.seq as number));
+      return true;
+    });
   }
 
   /**

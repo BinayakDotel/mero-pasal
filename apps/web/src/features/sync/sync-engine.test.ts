@@ -422,6 +422,7 @@ describe("M3 corrections and removals (F-08)", () => {
   it("a correction goes after its bill, with the full new values; a removal after that", async () => {
     const server = fakeServer();
     await enqueueDurable(db, [bill("t1")], ME, clock);
+    await engine(server.deps).kick(); // the bill is on the server before it's changed
     await enqueueDurable(db, [correct("t1", 250), remove("t1")], ME, clock);
     await engine(server.deps).kick();
     expect(server.bills.get("t1")).toBe(1);
