@@ -1,15 +1,19 @@
 "use client";
 
 import { formatBs, toDevanagariDigits } from "@mero-pasal/shared/dates";
+import { canEditBill } from "@mero-pasal/shared/domain";
 import { AmountText } from "@mero-pasal/ui/components/amount-text";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
 import { NotFoundScreen } from "@/features/nav/not-found-screen";
 import { useLocale } from "@/features/session/locale";
+import { useMember } from "@/features/session/member-gate";
+import { CorrectFlow } from "./correct-flow";
 import { PhotoViewer } from "./photo-viewer";
 import { useBillDetail } from "./use-bill-detail";
+import { type CorrectResult, useCorrectBill } from "./use-correct-bill";
 
 const nptTime = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Kathmandu",
@@ -22,9 +26,52 @@ export function BillScreen({ clientId }: { clientId: string }) {
   const { locale, t } = useLocale();
   const router = useRouter();
   const bill = useBillDetail(clientId);
+  const { member } = useMember();
   const digits = (text: string) => (locale === "ne" ? toDevanagariDigits(text) : text);
+  const [correcting, setCorrecting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [problem, setProblem] = useState<Exclude<CorrectResult, "saved"> | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const correct = useCorrectBill(bill);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   if (bill === null) return <NotFoundScreen backHref="/bills" />;
+  // F-08 matrix, same rule as the server (a bill still on the phone is always this member's).
+  const editable =
+    bill?.status === "active" &&
+    canEditBill(
+      { memberId: member._id, role: member.role },
+      { createdBy: bill.capturedBy ?? member._id, capturedAt: bill.capturedAt },
+      Date.now(),
+    );
+  if (bill && correcting) {
+    return (
+      <CorrectFlow
+        bill={bill}
+        photo={bill.photos[0] ?? null}
+        saving={saving}
+        problem={
+          problem === null
+            ? null
+            : t(problem === "full" ? "capture.storageFull" : "capture.saveFailed")
+        }
+        onCancel={() => setCorrecting(false)}
+        onSave={async (c) => {
+          setSaving(true);
+          setProblem(null);
+          const result = await correct(c);
+          setSaving(false);
+          if (result !== "saved") return setProblem(result);
+          setCorrecting(false);
+          setNotice(t("bill.corrected"));
+        }}
+      />
+    );
+  }
   const name = bill?.isWalkIn ? t("party.walkIn") : (bill?.partyName ?? t("party.noName"));
 
   return (
@@ -94,6 +141,29 @@ export function BillScreen({ clientId }: { clientId: string }) {
               </span>
             </Field>
           </dl>
+          {notice ? (
+            <p
+              role="status"
+              className="mx-4 mt-3 rounded-xl bg-sale-tint px-3 py-2 font-bold text-sale"
+            >
+              {notice}
+            </p>
+          ) : null}
+          {bill.status === "active" ? (
+            <div className="mx-4 mt-4 grid gap-2.5">
+              {editable ? (
+                <button
+                  type="button"
+                  onClick={() => setCorrecting(true)}
+                  className="min-h-14 rounded-[14px] border-2 border-ink bg-card text-lg font-bold"
+                >
+                  {t("bill.correct")}
+                </button>
+              ) : (
+                <p className="text-center text-ink-soft">{t("bill.editWindow")}</p>
+              )}
+            </div>
+          ) : null}
         </>
       )}
     </main>

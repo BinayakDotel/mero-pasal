@@ -20,19 +20,7 @@ export async function takeBill(page: Page, rupees: string, name?: string) {
   if (name === undefined) {
     await page.getByRole("button", { name: /नगद ग्राहक/ }).click();
   } else {
-    await page.getByRole("searchbox", { name: "नाम खोज्नुहोस् (नेपाली वा English)" }).fill(name);
-    const addThis = page.getByRole("button", { name: `“${name}” नाम थप्नुहोस्` });
-    const existing = page
-      .getByRole("button")
-      .filter({ hasText: name })
-      .filter({ hasNotText: "थप्नुहोस्" });
-    await expect(addThis.or(existing).first()).toBeVisible();
-    if (await addThis.isVisible()) {
-      await addThis.click();
-      await page.getByRole("button", { name: "नाम राख्नुहोस्" }).click();
-    } else {
-      await existing.first().click();
-    }
+    await pickOrAddName(page, name);
   }
   for (const digit of rupees) {
     await page.getByRole("button", { name: digit, exact: true }).click();
@@ -40,4 +28,30 @@ export async function takeBill(page: Page, rupees: string, name?: string) {
   await page.getByRole("button", { name: "बिल राख्नुहोस्" }).click();
   await expect(page.getByText("राखियो")).toBeVisible();
   await expect(saleButton(page)).toBeVisible({ timeout: 10_000 });
+}
+
+/**
+ * F-04 picker: the account with exactly this name, or add it — via "add this name" or, when a
+ * similar name exists, "a different person? add new" and then "no, create new".
+ */
+export async function pickOrAddName(page: Page, name: string) {
+  await page.getByRole("searchbox", { name: "नाम खोज्नुहोस् (नेपाली वा English)" }).fill(name);
+  // A picker row reads "name" then its last bill ("आज · रु 40"), so match the name as a prefix.
+  const exact = page.getByRole("button", { name: new RegExp(`^${escapeRegExp(name)}(\\s|$)`) });
+  const add = page.getByRole("button", { name: new RegExp(`^“${escapeRegExp(name)}”`) });
+  await expect(exact.or(add).first()).toBeVisible();
+  if (await exact.isVisible()) {
+    await exact.click();
+    return;
+  }
+  await add.first().click();
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("textbox", { name: "नाम" })).toHaveValue(name);
+  const createNew = sheet.getByRole("button", { name: "होइन, नयाँ बनाउनुहोस्" });
+  if (await createNew.isVisible()) await createNew.click();
+  await sheet.getByRole("button", { name: "नाम राख्नुहोस्" }).click();
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
