@@ -128,3 +128,24 @@ describe("applyEdits (F-08 on the phone)", () => {
     });
   });
 });
+
+describe("applyEdits agrees with Today's totals (review fix)", () => {
+  const names = nameBook([], []);
+  const removal = {
+    type: "tx.remove",
+    status: "done",
+    doneAt: 20,
+    clientId: "op",
+    payload: { billClientId: "a" },
+  } as unknown as OutboxRow;
+  const bills = [item("a", "2083-06-07", 1)];
+
+  it("on a saved copy older than the removal, the bill stays hidden (as in the totals)", () => {
+    const olderCopy = (r: OutboxRow) => r.status !== "done" || (r.doneAt ?? 0) > 10;
+    expect(applyEdits(bills, [removal], names, olderCopy)).toEqual([]);
+  });
+
+  it("on a live copy, a finished removal is already reflected by the server", () => {
+    expect(applyEdits(bills, [removal], names)).toHaveLength(1);
+  });
+});

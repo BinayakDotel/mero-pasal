@@ -4,11 +4,13 @@ import { api } from "@mero-pasal/backend/convex/_generated/api";
 import type { Id } from "@mero-pasal/backend/convex/_generated/dataModel";
 import { searchParties } from "@mero-pasal/shared/names";
 import { useMemo } from "react";
+import { useSync } from "@/features/sync/sync-provider";
 import { useCachedQuery } from "@/features/sync/use-cached-query";
 import { useOutboxRows } from "@/features/sync/use-outbox-rows";
 import {
   applyEdits,
   type BillItem,
+  editsNotIn,
   fromServer,
   localBills,
   mergeBills,
@@ -38,6 +40,7 @@ export function useBillSearch(query: string): BillItem[] | undefined {
     `transactions.listForParties:${partyIds.join(",")}`,
   );
   const rows = useOutboxRows();
+  const { engine } = useSync();
 
   return useMemo(() => {
     if (!query.trim() || parties.data === undefined) return undefined;
@@ -54,6 +57,7 @@ export function useBillSearch(query: string): BillItem[] | undefined {
     );
     if (partyIds.length > 0 && server.data === undefined && local.length === 0) return undefined;
     const found = partyIds.length ? (server.data ?? []).map(fromServer) : [];
-    return mergeBills(applyEdits(found, rows, names), applyEdits(local, rows, names));
-  }, [query, partyIds, parties.data, server.data, rows]);
+    const notIn = editsNotIn({ live: server.live, snapshotAt: server.savedAt }, engine.confirmed);
+    return mergeBills(applyEdits(found, rows, names, notIn), applyEdits(local, rows, names, notIn));
+  }, [query, partyIds, parties.data, server, rows, engine.confirmed]);
 }

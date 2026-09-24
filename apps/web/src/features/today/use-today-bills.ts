@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import {
   applyEdits,
   type BillItem,
+  editsNotIn,
   fromServer,
   localBills,
   mergeBills,
@@ -41,6 +42,7 @@ export function useTodayBills(dateBs: string): {
 
     const recentView = { live: recent.live, snapshotAt: recent.savedAt };
     const names = nameBook(parties.data ?? [], rows);
+    const notIn = editsNotIn(recentView, engine.confirmed);
     const local = applyEdits(
       localBills(
         rows,
@@ -49,8 +51,9 @@ export function useTodayBills(dateBs: string): {
       ),
       rows,
       names,
+      notIn,
     );
-    const server = applyEdits((recent.data ?? []).map(fromServer), rows, names);
+    const server = applyEdits((recent.data ?? []).map(fromServer), rows, names, notIn);
     return {
       totals: mergedTotals,
       recent:

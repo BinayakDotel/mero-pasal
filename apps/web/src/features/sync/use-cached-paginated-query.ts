@@ -19,6 +19,8 @@ export type CachedPages<T> = {
   results: T[] | undefined;
   /** Live from the server (false = the saved copy, shown "(पुरानो)"). */
   live: boolean;
+  /** When the saved copy was taken (for counting phone-side changes once). */
+  savedAt: number;
   canLoadMore: boolean;
   loadingMore: boolean;
   loadMore: () => void;
@@ -39,7 +41,9 @@ export function useCachedPaginatedQuery<Q extends PaginatedQueryReference>(
   const live = usePaginatedQuery(query, isAuthenticated ? args : "skip", {
     initialNumItems: pageSize,
   });
-  const [cached, setCached] = useState<PaginatedQueryItem<Q>[] | null>(null);
+  const [cached, setCached] = useState<{ value: PaginatedQueryItem<Q>[]; savedAt: number } | null>(
+    null,
+  );
   const hasLive = connected && live.status !== "LoadingFirstPage" && isAuthenticated;
 
   useEffect(() => {
@@ -48,7 +52,8 @@ export function useCachedPaginatedQuery<Q extends PaginatedQueryReference>(
     void getDb()
       .cache.get(cacheKey)
       .then((row) => {
-        if (!cancelled && row) setCached(row.value as PaginatedQueryItem<Q>[]);
+        if (!cancelled && row)
+          setCached({ value: row.value as PaginatedQueryItem<Q>[], savedAt: row.savedAt });
       })
       .catch(() => undefined);
     return () => {
@@ -68,14 +73,16 @@ export function useCachedPaginatedQuery<Q extends PaginatedQueryReference>(
     return {
       results: live.results,
       live: true,
+      savedAt: Date.now(),
       canLoadMore: live.status === "CanLoadMore",
       loadingMore: live.status === "LoadingMore",
       loadMore: () => live.loadMore(pageSize),
     };
   }
   return {
-    results: cached ?? undefined,
+    results: cached?.value,
     live: false,
+    savedAt: cached?.savedAt ?? 0,
     canLoadMore: false,
     loadingMore: false,
     loadMore: () => undefined,
