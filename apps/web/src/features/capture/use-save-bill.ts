@@ -3,7 +3,7 @@
 import { todayBs } from "@mero-pasal/shared/dates";
 import { useCallback } from "react";
 import { getDb } from "@/features/sync/db";
-import type { OutboxItem, OutboxPage } from "@/features/sync/outbox";
+import type { NewOutboxItem, NewPage } from "@/features/sync/outbox";
 import { enqueueDurable, StorageFullError } from "@/features/sync/outbox-store";
 import { useSync } from "@/features/sync/sync-provider";
 import { digitsToPaisa } from "./amount-entry";
@@ -28,7 +28,7 @@ export function useSaveBill() {
       dispatch({ type: "saveStart" });
       try {
         // Every page's upload-ready version must exist before the transaction opens.
-        const pages: OutboxPage[] = [];
+        const pages: NewPage[] = [];
         for (const page of state.pages) {
           const photo = await processed(page.id);
           pages.push({
@@ -41,7 +41,7 @@ export function useSaveBill() {
         }
 
         const now = Date.now();
-        const items: OutboxItem[] = [];
+        const items: NewOutboxItem[] = [];
         const { party } = state;
         if (party.type === "new") {
           items.push({

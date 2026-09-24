@@ -29,7 +29,6 @@ describe("mergeBills (F-06, F-09)", () => {
 });
 
 describe("localBills (F-09)", () => {
-  const photo = new Blob(["t"]);
   const rows = [
     {
       seq: 1,
@@ -50,7 +49,7 @@ describe("localBills (F-09)", () => {
         partyRef: { clientId: "p-new" },
         amountPaisa: 100,
       },
-      pages: [{ full: photo, thumb: photo }],
+      pages: [{ fullRef: "t1:0:full", thumbRef: "t1:0:thumb" }],
     },
     {
       seq: 3,
@@ -73,7 +72,7 @@ describe("localBills (F-09)", () => {
       ["t1", "Sita", undefined, true],
       ["t2", "Ram", "party_ram", false],
     ]);
-    expect(all[0]?.thumb).toEqual({ blob: photo });
+    expect(all[0]?.thumb).toEqual({ photoRef: "t1:0:thumb" }); // loaded only when shown
   });
 
   it("keeps only the bills the caller asks for", () => {

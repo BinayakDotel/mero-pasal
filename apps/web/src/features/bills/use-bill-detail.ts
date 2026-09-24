@@ -4,9 +4,11 @@ import { api } from "@mero-pasal/backend/convex/_generated/api";
 import { useEffect, useMemo, useState } from "react";
 import { useMember } from "@/features/session/member-gate";
 import type { OutboxRow } from "@/features/sync/db";
+import { isV1Page } from "@/features/sync/outbox";
 import { useSync } from "@/features/sync/sync-provider";
 import { useCachedQuery } from "@/features/sync/use-cached-query";
 import { useOutboxRows } from "@/features/sync/use-outbox-rows";
+import { usePhotos } from "@/features/sync/use-photo";
 import {
   applyEdits,
   type BillItem,
@@ -87,9 +89,18 @@ export function useBillDetail(clientId: string): BillDetail | null | undefined {
     () => rows.find((r) => r.type === "tx.create" && r.clientId === clientId),
     [rows, clientId],
   );
+  // Load the phone's photos only when the server doesn't have the bill (architecture §9).
+  const fullRefs = useMemo(
+    () =>
+      !server.data && outbox?.type === "tx.create" && !outbox.photosGone
+        ? outbox.pages.flatMap((p) => (isV1Page(p) ? [] : [p.fullRef]))
+        : [],
+    [outbox, server.data],
+  );
+  const loaded = usePhotos(fullRefs);
   const localPhotos = useMemo(
-    () => (outbox?.type === "tx.create" ? outbox.pages.map((p) => p.full) : undefined),
-    [outbox],
+    () => (loaded.every((b): b is Blob => b !== null) && loaded.length ? loaded : undefined),
+    [loaded],
   );
   const localUrls = useBlobUrls(server.data ? undefined : localPhotos);
 

@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { type OutboxDeps, type OutboxItem, orderForSending, processItem } from "./outbox";
 
-const page = () => ({
-  full: new Blob(["f"]),
-  thumb: new Blob(["t"]),
-  width: 1200,
-  height: 1600,
-  bytes: 1,
-});
+let pages = 0;
+const page = () => {
+  pages += 1;
+  return { fullRef: `f${pages}`, thumbRef: `t${pages}`, width: 1200, height: 1600, bytes: 1 };
+};
+/** Photos by reference, as the engine loads them from the `photos` table. */
+const load = async (ref: string) => new Blob([ref]);
 const party = (): OutboxItem => ({
   type: "party.create",
   clientId: "p1",
@@ -56,10 +56,10 @@ describe("outbox (architecture §8, F-03)", () => {
       }),
     });
     const item = bill([page(), page()]);
-    await expect(processItem(item, deps)).rejects.toThrow("server hiccup");
+    await expect(processItem(item, deps, undefined, load)).rejects.toThrow("server hiccup");
     expect(deps.upload).toHaveBeenCalledTimes(4);
     fail = false;
-    await processItem(item, deps);
+    await processItem(item, deps, undefined, load);
     expect(deps.upload).toHaveBeenCalledTimes(4); // nothing uploaded again
     expect(item.attempts).toBe(2);
   });
@@ -68,10 +68,15 @@ describe("outbox (architecture §8, F-03)", () => {
     const { deps } = fakeDeps();
     const seen: unknown[][] = [];
     const item = bill([page()]);
-    await processItem(item, deps, async (it) => {
-      if (it.type === "tx.create")
-        seen.push([...it.pages.flatMap((p) => [p.storageId, p.thumbId]), it.submitted ?? false]);
-    });
+    await processItem(
+      item,
+      deps,
+      async (it) => {
+        if (it.type === "tx.create")
+          seen.push([...it.pages.flatMap((p) => [p.storageId, p.thumbId]), it.submitted ?? false]);
+      },
+      load,
+    );
     expect(seen).toEqual([
       ["storage-url1", undefined, false],
       ["storage-url1", "storage-url2", false],
@@ -89,12 +94,12 @@ describe("outbox (architecture §8, F-03)", () => {
       }),
     });
     const item = bill([page(), page()]);
-    await expect(processItem(item, deps)).rejects.toThrow("dropped");
+    await expect(processItem(item, deps, undefined, load)).rejects.toThrow("dropped");
     expect(item.type === "tx.create" && item.pages.map((p) => [p.storageId, p.thumbId])).toEqual([
       ["s-url1", "s-url2"],
       [undefined, undefined],
     ]);
-    await processItem(item, deps);
+    await processItem(item, deps, undefined, load);
     expect(deps.upload).toHaveBeenCalledTimes(5); // 3 before (one failed) + the 2 remaining
   });
 

@@ -1,5 +1,6 @@
 import type { MeroPasalDb, OutboxRow } from "./db";
-import type { OutboxItem } from "./outbox";
+import type { NewOutboxItem, OutboxItem } from "./outbox";
+import { type StoredPhoto, storable } from "./photo-bytes";
 
 /** The phone is out of storage space: the bill was NOT saved (never show the stamp). */
 export class StorageFullError extends Error {
@@ -18,11 +19,31 @@ export const OUTBOX_CHANGED = "mp-outbox-changed";
  */
 export async function enqueueDurable(
   db: MeroPasalDb,
-  items: readonly OutboxItem[],
+  items: readonly NewOutboxItem[],
   owner: { memberId: string; clerkId: string },
   now: number,
 ): Promise<void> {
-  const rows: OutboxRow[] = [...items]
+  // Photos go to the `photos` table as bytes (architecture §9); the bill's pages keep only their
+  // ids. Read them now: awaiting inside the transaction would let IndexedDB close it.
+  const photos: { id: string; photo: StoredPhoto }[] = [];
+  const queued: OutboxItem[] = [];
+  for (const item of items) {
+    if (item.type !== "tx.create") {
+      queued.push(item);
+      continue;
+    }
+    const pages = [];
+    for (const [index, page] of item.pages.entries()) {
+      const { full, thumb, ...rest } = page;
+      const fullRef = `${item.clientId}:${index}:full`;
+      const thumbRef = `${item.clientId}:${index}:thumb`;
+      photos.push({ id: fullRef, photo: await storable(full) });
+      photos.push({ id: thumbRef, photo: await storable(thumb) });
+      pages.push({ ...rest, fullRef, thumbRef });
+    }
+    queued.push({ ...item, pages });
+  }
+  const rows: OutboxRow[] = [...queued]
     .sort((a, b) => Number(a.type === "tx.create") - Number(b.type === "tx.create"))
     .map((item) => ({
       ...item,
@@ -34,11 +55,13 @@ export async function enqueueDurable(
       createdAt: item.createdAt || now,
     }));
   try {
-    await db.transaction("rw", db.outbox, db.drafts, db.draftPages, async () => {
+    await db.transaction("rw", [db.outbox, db.photos, db.drafts, db.draftPages], async () => {
       for (const row of rows) {
         // Re-saving the same bill (e.g. a double tap) must not queue it twice.
         if ((await db.outbox.where("clientId").equals(row.clientId).count()) === 0) {
           await db.outbox.add(row);
+          const mine = photos.filter((p) => p.id.startsWith(`${row.clientId}:`));
+          if (mine.length) await db.photos.bulkPut(mine);
         }
       }
       await db.drafts.clear();

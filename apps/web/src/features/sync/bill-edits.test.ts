@@ -3,7 +3,7 @@ import { UNDO_WINDOW_MS } from "@mero-pasal/shared/domain";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { enqueueCorrect, enqueueRemove, undoRemove } from "./bill-edits";
 import { MeroPasalDb } from "./db";
-import type { OutboxDeps, OutboxItem } from "./outbox";
+import type { NewOutboxItem, OutboxDeps } from "./outbox";
 import { enqueueDurable } from "./outbox-store";
 import { SyncEngine } from "./sync-engine";
 
@@ -32,7 +32,7 @@ function fakeServer() {
   return { deps, bills };
 }
 
-const bill = (clientId = "t1"): OutboxItem => ({
+const bill = (clientId = "t1"): NewOutboxItem => ({
   type: "tx.create",
   clientId,
   createdAt: 1,

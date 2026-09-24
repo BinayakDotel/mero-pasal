@@ -1,6 +1,7 @@
 import type { api } from "@mero-pasal/backend/convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import type { OutboxRow } from "@/features/sync/db";
+import { isV1Page } from "../sync/outbox";
 import { notYetOnServer } from "../today/merge-today";
 
 /** One bill as a list shows it (Today, Bills, an account), from the server or the phone. */
@@ -14,7 +15,8 @@ export type BillItem = {
   isWalkIn: boolean;
   amountPaisa?: number;
   capturedAt: number;
-  thumb: { url: string } | { blob: Blob } | null;
+  /** The server's thumbnail URL, or (for a bill still on the phone) its photo's id there. */
+  thumb: { url: string } | { photoRef: string } | null;
   /** Still waiting on the phone (F-09 clock mark). */
   pending: boolean;
 };
@@ -72,7 +74,9 @@ export function localBills(
         : names.byClientId.get(ref.clientId)
       : undefined;
     const partyId = party?._id || undefined;
-    const thumb = r.pages[0]?.thumb;
+    const first = r.pages[0];
+    // A bill saved before the photo table (v1 page) shows no thumbnail until it's sent.
+    const thumbRef = !r.photosGone && first && !isV1Page(first) ? first.thumbRef : undefined;
     return [
       {
         key: `local:${r.clientId}`,
@@ -84,7 +88,7 @@ export function localBills(
         isWalkIn: party?.isWalkIn ?? false,
         ...(r.payload.amountPaisa === undefined ? {} : { amountPaisa: r.payload.amountPaisa }),
         capturedAt: r.payload.clientCapturedAt ?? r.createdAt,
-        thumb: thumb && thumb.size > 0 ? { blob: thumb } : null,
+        thumb: thumbRef ? { photoRef: thumbRef } : null,
         pending: r.status !== "done",
       },
     ];

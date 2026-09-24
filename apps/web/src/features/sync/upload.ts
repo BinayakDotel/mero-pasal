@@ -1,12 +1,7 @@
 import { UPLOAD_TIMEOUT_MS } from "./outbox";
+import { PhotoUnreadableError } from "./photo-bytes";
 
-/** The photo saved on the phone can't be read back (a local problem, not the network). */
-export class PhotoUnreadableError extends Error {
-  constructor(cause: unknown) {
-    super("The photo on this phone can't be read", { cause });
-    this.name = "PhotoUnreadableError";
-  }
-}
+export { PhotoUnreadableError };
 
 /**
  * POST one image to a Convex upload URL; returns its storageId (ADR-010). The stored blob is read
