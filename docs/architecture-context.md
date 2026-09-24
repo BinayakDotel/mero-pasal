@@ -495,7 +495,8 @@ Opened with `chromeTransactionDurability: "strict"` so a saved bill survives a r
 
 | Table | Holds | Purge |
 |---|---|---|
-| `outbox` | Items to send (`party.create`, `tx.create`, and M3's `tx.correct` / `tx.remove`, each with its own id and the bill's `billClientId` plus what the phone showed `before`), with photo blobs (full + thumb). Each row also records status (`pending` / `uploading` / `failed` / `done`), non-network `failures`, `nextAttemptAt`, `lastError`, the owner (member + Clerk id), and upload progress (`storageId`s) | Blobs 7 days after `done`; rows after 30 days (the Today merge needs them); unsent items never |
+| `outbox` | Items to send (`party.create`, `tx.create`, and M3's `tx.correct` / `tx.remove`, each with its own id and the bill's `billClientId` plus what the phone showed `before`); a bill's pages reference their photos in `photos` (§9). Each row also records status (`pending` / `uploading` / `failed` / `done`), non-network `failures`, `nextAttemptAt`, `lastError`, the owner (member + Clerk id), and upload progress (`storageId`s) | Blobs 7 days after `done`; rows after 30 days (the Today merge needs them); unsent items never |
+| `photos` | A bill page's photos as bytes (full + thumb), keyed by `<clientId>:<page>:full` or `…:thumb` | With the bill if it's removed before sending; 7 days after it's sent |
 | `drafts` / `draftPages` | The unfinished bill: small fields in one row; one row per page (the raw photo until processed, then full + thumb) | On save (same transaction as the enqueue) or discard |
 | `cache` | Last results of queries (`useCachedQuery`), keyed per query + args, with `savedAt` | Replaced on each live result |
 | `meta` | The last signed-in member (for the offline shell) | Cleared on sign-out or when `members.me` says not invited |
@@ -599,10 +600,16 @@ stateDiagram-v2
   - The JPEG header gives the size and EXIF orientation.
   - `createImageBitmap` decodes the photo already reduced to ≤ 1600 px on the long edge and turned upright, so a 50 MP photo never fills memory.
   - It's encoded as JPEG at ~0.72 (0.6 if still over ~450 KB), and a 320 px thumbnail is made from the reduced image.
-  - Re-encoding removes all EXIF, including GPS; the original file is never uploaded.
+  - Re-encoding removes the photo's EXIF, including GPS; the original file is never uploaded. (Safari's encoder adds its own tiny EXIF block with the image size only; the test checks that no GPS tag or camera make survives, in Chromium and WebKit.)
   - Photos the phone can't decode (e.g. HEIF) show "फेरि खिच्नुहोस्".
   - Decoding and encoding are asynchronous browser work, so no Web Worker is used (Turbopack copies worker files as raw assets).
   - Covered by a Playwright test on fixture photos: a sideways photo with GPS, and a 50 MP photo.
+- **On the phone** (iPhone lessons, 2026-09-24):
+  - **Bytes, in their own table.** Photos are stored as `{ bytes, type }` in the `photos` table (schema v2), never as Blobs. Safari saves Blobs in IndexedDB as separate files and sometimes can't read them back; bytes come back reliably. Outbox pages hold only `fullRef` / `thumbRef`, so reading the queue (every screen update, every send) never loads photos. Draft pages keep their bytes inline (read only on restore). The v2 upgrade only adds the table and moves nothing: storing a Blob Safari can't read could fail and stop the database from opening. Bills saved before keep their photos inline until they're sent.
+  - **Saved:** the save reads the photos into bytes before its transaction (an await inside it would let IndexedDB close it), then writes the photo rows with the bill.
+  - **Shown:** screens load only the photos they show (`usePhotos`); list thumbnails use one steady object URL per photo (`blob-urls.ts`).
+  - **Sent:** before a bill goes, the engine prepares its photos (`photosReady`): an older bill's inline photos are read into the table as bytes (the unreadable ones are left out); then it checks only photos not yet uploaded: an unreadable thumbnail is rebuilt from the full photo; an unreadable full photo marks the bill `PHOTO_LOST` (the sheet tells Buwa to remove it and take it again). Uploads send an in-memory copy with a 60 s limit; every server call has a 45 s limit (iOS can freeze a backgrounded request forever).
+  - **Cleared:** a bill removed before it left the phone takes its photos along; 7 days after sending, the photos go and the row is marked `photosGone`; a row that expires takes any photos left with it (§8.1).
 - **Storage:** Convex file storage, two files per page. Lists only ever load thumbnails. The detail view loads the full image.
 - **Expected volume:** ~55 bills a day × ~1.2 pages × ~300 KB ≈ 20 MB a day, which is about 0.6 GB a month or 7 GB a year.
 - **URL security:** `ctx.storage.getUrl()` URLs are unguessable, but anyone holding one can fetch it. This is accepted for v1 (family shop, members only see URLs). If that changes, serve images through an authenticated Convex HTTP action.

@@ -88,6 +88,7 @@
 - [x] Second-pass review of Part B: 6 findings + 1 follow-up, each fixed in its own PR with a failing test; e2e also found and fixed "wake when due" and "reconnect ends backoff".
 - [ ] Manual on the phone (Binayak's **iPhone 17**; no Redmi available): find any bill in ≤ 3 taps; correct an account; remove + undo; both in airplane mode with the bill open.
 - Decided: browsing screens are online-only in M3 (offline shows the offline page); capture stays fully offline.
+- iPhone test fixes (2026-09-24), traced end to end: Safari's IndexedDB Blobs and frozen background requests. Photos as bytes in their own table, rescue of older bills (PHOTO_LOST when a photo is truly gone), request time limits, steady thumbnail URLs, admin diagnostics (architecture §9).
 
 ### M4 — Admin console (≈ 4–5 days) · F-11 to F-14
 
