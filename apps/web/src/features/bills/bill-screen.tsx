@@ -1,8 +1,9 @@
 "use client";
 
 import { formatBs, toDevanagariDigits } from "@mero-pasal/shared/dates";
-import { canEditBill } from "@mero-pasal/shared/domain";
+import { canEditBill, UNDO_WINDOW_MS } from "@mero-pasal/shared/domain";
 import { AmountText } from "@mero-pasal/ui/components/amount-text";
+import { Sheet } from "@mero-pasal/ui/components/sheet";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
@@ -14,6 +15,7 @@ import { CorrectFlow } from "./correct-flow";
 import { PhotoViewer } from "./photo-viewer";
 import { useBillDetail } from "./use-bill-detail";
 import { type CorrectResult, useCorrectBill } from "./use-correct-bill";
+import { useRemoveBill } from "./use-remove-bill";
 
 const nptTime = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Kathmandu",
@@ -33,6 +35,15 @@ export function BillScreen({ clientId }: { clientId: string }) {
   const [problem, setProblem] = useState<Exclude<CorrectResult, "saved"> | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const correct = useCorrectBill(bill);
+  const { remove, undo } = useRemoveBill(bill);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removal, setRemoval] = useState<string | null>(null);
+  // F-08: हटाइयो + फर्काउनुहोस् for 6 s, then back to where he came from.
+  useEffect(() => {
+    if (!removal) return;
+    const timer = setTimeout(() => router.back(), UNDO_WINDOW_MS);
+    return () => clearTimeout(timer);
+  }, [removal, router]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(null), 3000);
@@ -149,21 +160,73 @@ export function BillScreen({ clientId }: { clientId: string }) {
               {notice}
             </p>
           ) : null}
+          {removal ? (
+            <div
+              role="status"
+              className="fixed inset-x-4 bottom-6 z-20 flex items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-2 text-white shadow-sheet"
+            >
+              <span className="font-bold">{t("bill.removed")}</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (await undo(removal)) setRemoval(null);
+                }}
+                className="min-h-12 px-2 font-bold underline underline-offset-4"
+              >
+                {t("common.undo")}
+              </button>
+            </div>
+          ) : null}
           {bill.status === "active" ? (
             <div className="mx-4 mt-4 grid gap-2.5">
               {editable ? (
-                <button
-                  type="button"
-                  onClick={() => setCorrecting(true)}
-                  className="min-h-14 rounded-[14px] border-2 border-ink bg-card text-lg font-bold"
-                >
-                  {t("bill.correct")}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setCorrecting(true)}
+                    className="min-h-14 rounded-[14px] border-2 border-ink bg-card text-lg font-bold"
+                  >
+                    {t("bill.correct")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRemove(true)}
+                    className="min-h-12 font-semibold text-bahi underline underline-offset-4"
+                  >
+                    {t("bill.remove")}
+                  </button>
+                </>
               ) : (
                 <p className="text-center text-ink-soft">{t("bill.editWindow")}</p>
               )}
             </div>
           ) : null}
+          <Sheet
+            open={confirmRemove}
+            onClose={() => setConfirmRemove(false)}
+            title={t("bill.removeConfirm")}
+          >
+            <p className="mb-4 text-ink-soft">{t("bill.removeSub")}</p>
+            <div className="grid gap-2.5">
+              <button
+                type="button"
+                onClick={async () => {
+                  setConfirmRemove(false);
+                  setRemoval(await remove());
+                }}
+                className="min-h-16 rounded-btn bg-bahi font-display text-[22px] font-bold text-white"
+              >
+                {t("bill.remove")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmRemove(false)}
+                className="min-h-14 rounded-[14px] border-2 border-ink bg-card text-lg font-bold"
+              >
+                {t("draft.keep")}
+              </button>
+            </div>
+          </Sheet>
         </>
       )}
     </main>
