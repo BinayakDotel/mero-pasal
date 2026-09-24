@@ -132,7 +132,10 @@ export const update = memberMutation({
   | See the stack | `gt log short` |
   | Move between branches | `gt up` / `gt down` / `gt checkout` |
 
-- Keep PRs small enough to review in one sitting. Schema, auth, ledger and sync changes each get their own PR so they can be reviewed on their own.
+- **Small PRs in one stack** (Binayak's rule, 2026-09-24). Break every feature into small PRs, each one step that reads in one sitting (aim for under ~300 changed lines, excluding lockfiles and generated files), and submit them together as one Graphite stack. Never bundle a whole feature, or a feature plus its fixes, into one big PR.
+  - Typical split: schema → backend functions + tests → shared logic + tests → UI → e2e → docs. Schema, auth, ledger and sync changes each get their own PR so they can be reviewed on their own.
+  - Each PR in the stack passes `just check` on its own and says in its description where it sits in the stack (e.g. "3/5") and what the next PR adds.
+  - A bug found while building goes in its own small PR in the stack (with its failing test), not folded into an unrelated one.
 - PR descriptions list the spec IDs, what to test (on the phone for UI), and any doc or ADR touched.
 - **No AI co-author trailers.** Commit messages never include `Co-Authored-By: Claude …` (or any other AI tool). Binayak is the author of record.
 - Conventional commits with the spec ID:

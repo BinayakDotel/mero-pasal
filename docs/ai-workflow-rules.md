@@ -66,7 +66,7 @@ Asking is cheap; a wrong assumption in the ledger or sync code is expensive.
 8. **Never commit secrets** or print env values into logs.
 9. **Never silence** a type error, lint rule or failing test without an explanatory comment and a tracker note.
 10. **Keep Buwa's app offline-safe:** no capture-path feature may require the network to complete.
-11. **Never commit, create a branch, push or submit a PR until Binayak explicitly says so.** Finish the step, run the checks, show the diff and wait. When told, use Graphite (`gt create`, `gt submit`), never plain `git commit` on `main`, and never add a `Co-Authored-By` trailer for Claude or any AI tool (code-standard §9).
+11. **Never commit, create a branch, push or submit a PR until Binayak explicitly says so.** Finish the step, run the checks, show the diff and wait. When told, use Graphite (`gt create`, `gt submit`) as a stack of **small PRs, one step each** (code-standard §9), never one big PR and never plain `git commit` on `main`, and never add a `Co-Authored-By` trailer for Claude or any AI tool (code-standard §9).
 
 ## 6. Task recipes
 
