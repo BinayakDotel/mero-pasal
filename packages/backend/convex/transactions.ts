@@ -8,6 +8,7 @@ import { billRow, isBill, toBillRow } from "./lib/billRow";
 import { appError } from "./lib/errors";
 import { memberMutation, memberQuery } from "./lib/functions";
 import { apply } from "./lib/ledger";
+import { assertMonthBs } from "./lib/months";
 
 const MAX_CLIENT_ID = 64;
 const DAY_MS = 86_400_000;
@@ -198,6 +199,39 @@ export const listByDate = memberQuery({
               q.eq("shopId", shopId).eq("status", "active").eq("kind", filter),
             );
     const result = await query.order("desc").paginate(paginationOpts);
+    return {
+      ...result,
+      page: await Promise.all(result.page.filter(isBill).map((row) => toBillRow(ctx, row))),
+    };
+  },
+});
+
+/**
+ * F-07 account page: one account's active bills, newest date first, a page at a time;
+ * optionally one BS month only.
+ */
+export const listByParty = memberQuery({
+  args: {
+    partyId: v.id("parties"),
+    monthBs: v.optional(v.string()),
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: paginationResultValidator(billRow),
+  handler: async (ctx, { partyId, monthBs, paginationOpts }) => {
+    if (monthBs !== undefined) assertMonthBs(monthBs);
+    const party = await ctx.db.get(partyId);
+    if (!party || party.shopId !== ctx.shopId) throw appError("NOT_FOUND");
+    const result = await ctx.db
+      .query("transactions")
+      .withIndex("by_shop_party_status_date", (q) => {
+        const account = q.eq("shopId", ctx.shopId).eq("partyId", partyId).eq("status", "active");
+        // BS day numbers run 01–32, so "YYYY-MM-00" < every day of the month < "YYYY-MM-33".
+        return monthBs === undefined
+          ? account
+          : account.gt("dateBs", `${monthBs}-00`).lt("dateBs", `${monthBs}-33`);
+      })
+      .order("desc")
+      .paginate(paginationOpts);
     return {
       ...result,
       page: await Promise.all(result.page.filter(isBill).map((row) => toBillRow(ctx, row))),

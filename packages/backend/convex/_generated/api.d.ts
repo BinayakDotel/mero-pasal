@@ -11,9 +11,11 @@
 import type * as e2eSupport from "../e2eSupport.js";
 import type * as files from "../files.js";
 import type * as lib_audit from "../lib/audit.js";
+import type * as lib_billRow from "../lib/billRow.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_functions from "../lib/functions.js";
 import type * as lib_ledger from "../lib/ledger.js";
+import type * as lib_months from "../lib/months.js";
 import type * as members from "../members.js";
 import type * as parties from "../parties.js";
 import type * as seed from "../seed.js";
@@ -30,9 +32,11 @@ declare const fullApi: ApiFromModules<{
   e2eSupport: typeof e2eSupport;
   files: typeof files;
   "lib/audit": typeof lib_audit;
+  "lib/billRow": typeof lib_billRow;
   "lib/errors": typeof lib_errors;
   "lib/functions": typeof lib_functions;
   "lib/ledger": typeof lib_ledger;
+  "lib/months": typeof lib_months;
   members: typeof members;
   parties: typeof parties;
   seed: typeof seed;
