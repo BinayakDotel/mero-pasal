@@ -54,6 +54,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, [canSend, owner]);
   const [report, setReport] = useState<PassReport | null>(null);
   const lastBeat = useRef<{ at: number; drained: boolean } | null>(null);
+  // Wake the engine when its next item is due (a removal's undo window, a backoff), instead of
+  // waiting for the minute tick.
+  const wake = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const kickRef = useRef<() => void>(() => undefined);
 
   const engine = useMemo(() => {
     const deps: OutboxDeps = {
@@ -96,6 +100,14 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       },
       onPass: (next) => {
         setReport(next);
+        clearTimeout(wake.current);
+        const wakeAt = Math.min(
+          next.nextDueAt ?? Number.POSITIVE_INFINITY,
+          next.pausedUntil > Date.now() ? next.pausedUntil : Number.POSITIVE_INFINITY,
+        );
+        if (wakeAt < Number.POSITIVE_INFINITY) {
+          wake.current = setTimeout(() => kickRef.current(), wakeAt - Date.now() + 50);
+        }
         const beat = lastBeat.current;
         const now = Date.now();
         if (!beat || beat.drained !== next.drained || now - beat.at > HEARTBEAT_MS) {
@@ -115,6 +127,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       },
     });
   }, [convex]);
+  kickRef.current = () => void engine.kick();
+  useEffect(() => () => clearTimeout(wake.current), []);
 
   useEffect(() => {
     void requestPersistence();
