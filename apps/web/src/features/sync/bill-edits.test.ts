@@ -236,3 +236,54 @@ describe("review fixes: sending exactly what's queued, in order (F-08)", () => {
     expect(await undoRemove(db, removal)).toBe(true);
   });
 });
+
+describe("review fixes: a bill the server may already have (F-08)", () => {
+  it("killed right after the server saved it: removing it still reaches the server", async () => {
+    const server = fakeServer();
+    await enqueueDurable(db, [bill()], ME, clock);
+    // The tab died after createTx committed but before "done" was written.
+    server.bills.set("t1", 100);
+    await db.outbox
+      .where("clientId")
+      .equals("t1")
+      .modify((r) => {
+        if (r.type === "tx.create") r.submitted = true;
+      });
+    await enqueueRemove(db, "t1", before, ME, clock);
+    clock += UNDO_WINDOW_MS;
+    await engine(server.deps).kick();
+    expect(server.bills.has("t1")).toBe(false);
+  });
+
+  it("…and correcting it queues a correction instead of changing a create the server ignores", async () => {
+    await enqueueDurable(db, [bill()], ME, clock);
+    await db.outbox
+      .where("clientId")
+      .equals("t1")
+      .modify((r) => {
+        if (r.type === "tx.create") r.submitted = true;
+      });
+    expect(await enqueueCorrect(db, "t1", values(250), before, ME, clock)).toBe("queued");
+  });
+
+  it("the mark is set before sending and cleared when the server clearly refused the bill", async () => {
+    const server = fakeServer();
+    server.deps.createTx = vi.fn(async () => {
+      throw new TypeError("network down");
+    });
+    await enqueueDurable(db, [bill()], ME, clock);
+    await engine(server.deps).kick();
+    const submitted = async () => {
+      const [r] = await rows();
+      return r?.type === "tx.create" ? r.submitted : undefined;
+    };
+    expect(await submitted()).toBe(true);
+
+    server.deps.createTx = vi.fn(async () => {
+      throw convexError("VALIDATION");
+    });
+    clock += 3_600_000;
+    await engine(server.deps).kick();
+    expect(await submitted()).toBe(false);
+  });
+});

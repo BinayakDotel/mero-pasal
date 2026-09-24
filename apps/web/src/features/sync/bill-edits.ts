@@ -31,7 +31,8 @@ export async function enqueueCorrect(
   const where = await db.transaction("rw", db.outbox, async () => {
     const related = (await db.outbox.toArray()).filter((r) => billOf(r) === billClientId);
     const create = related.find((r) => r.type === "tx.create");
-    if (create?.type === "tx.create" && notSentYet(create)) {
+    // In place only if the server can't have it yet (a submitted create would ignore new values).
+    if (create?.type === "tx.create" && notSentYet(create) && !create.submitted) {
       await db.outbox
         .where("seq")
         .equals(create.seq as number)
