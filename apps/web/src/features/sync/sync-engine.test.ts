@@ -395,6 +395,12 @@ describe("sync engine (F-09, architecture §8.3)", () => {
     expect(classify(convexError("FORBIDDEN"))).toBe("auth");
     expect(classify(convexError("CONFLICT"))).toBe("conflict");
     expect(classify(convexError("NOT_FOUND"))).toBe("notFound");
+    // A bill this member may never change (not theirs / past 24 h): a rejection, not a pause.
+    expect(
+      classify(
+        Object.assign(new Error("x"), { data: { code: "FORBIDDEN", reason: "NOT_EDITABLE" } }),
+      ),
+    ).toBe("other");
     expect(classify(convexError("VALIDATION"))).toBe("other");
     expect(classify(null)).toBe("other");
   });
