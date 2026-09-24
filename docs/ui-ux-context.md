@@ -373,6 +373,7 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `sync.newName` | नयाँ नाम: {name} | New name: {name} |
 | `sync.blocked` | यसको नाम पठाउन सकिएन | Its name couldn't be sent |
 | `sync.storageLow` | फोनमा ठाउँ कम छ। पुराना फोटो वा एप मेटाउनुहोस्। | Phone storage is low. Delete old photos or apps. |
+| `sync.photoLost` | यो बिलको फोटो फोनमा पढ्न सकिएन। बिल खोलेर हटाउनुहोस्, अनि फेरि खिच्नुहोस्। | This bill's photo can't be read on this phone. Open the bill, remove it, and take it again. |
 | `sync.stale` | (पुरानो) | (old) |
 | `offline.title` | इन्टरनेट छैन | No internet |
 | `offline.body` | इन्टरनेट आएपछि एप फेरि खोल्नुहोस्। | Open the app again when the internet is back. |

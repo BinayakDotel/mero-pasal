@@ -138,6 +138,8 @@ export const en: { readonly [K in keyof typeof ne]: string } = {
   "sync.newName": "New name: {name}",
   "sync.blocked": "Its name couldn't be sent",
   "sync.storageLow": "Phone storage is low. Delete old photos or apps.",
+  "sync.photoLost":
+    "This bill's photo can't be read on this phone. Open the bill, remove it, and take it again.",
   "sync.stale": "(old)",
 
   "offline.title": "No internet",

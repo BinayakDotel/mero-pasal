@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import { getDb } from "@/features/sync/db";
 import type { NewOutboxItem, NewPage } from "@/features/sync/outbox";
 import { enqueueDurable, StorageFullError } from "@/features/sync/outbox-store";
+import { PhotoUnreadableError } from "@/features/sync/photo-bytes";
 import { useSync } from "@/features/sync/sync-provider";
 import { digitsToPaisa } from "./amount-entry";
 import { useCapture } from "./capture-provider";
@@ -82,7 +83,9 @@ export function useSaveBill() {
       } catch (error) {
         dispatch({ type: "saveFailed" });
         if (error instanceof StorageFullError) return "full";
-        if (error instanceof UnreadablePhotoError) return "unreadable";
+        // Can't be decoded, or (an older draft) can't be read back from the phone: retake it.
+        if (error instanceof UnreadablePhotoError || error instanceof PhotoUnreadableError)
+          return "unreadable";
         return "failed";
       }
     },

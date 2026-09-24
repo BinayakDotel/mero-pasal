@@ -92,3 +92,20 @@ test("an unreadable photo is reported as such (e.g. HEIF)", async ({ page }) => 
   });
   expect(name).toBe("UnreadablePhotoError");
 });
+
+test("sync rescue: a fresh ≤ 320 px JPEG thumbnail from a processed photo", async ({ page }) => {
+  await page.setContent("<html><body></body></html>");
+  await page.addScriptTag({ content: bundle });
+  const thumb = await page.evaluate(async (b64) => {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    // biome-ignore lint/suspicious/noExplicitAny: global from the esbuild IIFE bundle
+    const { processImage, thumbnailOf } = (window as any).photoPipeline;
+    const { full } = await processImage(new Blob([bytes], { type: "image/jpeg" }));
+    const made: Blob = await thumbnailOf(full);
+    const bitmap = await createImageBitmap(made);
+    return { type: made.type, width: bitmap.width, height: bitmap.height };
+  }, fixture("rotated.jpg"));
+  expect(thumb.type).toBe("image/jpeg");
+  expect(Math.max(thumb.width, thumb.height)).toBe(320);
+  expect(thumb.height).toBeGreaterThan(thumb.width); // stays portrait
+});

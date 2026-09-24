@@ -130,6 +130,8 @@ export type OutboxDeps = {
     args: { clientId: string } & Omit<TxCorrectItem["payload"], "billClientId">,
   ) => Promise<unknown>;
   removeTx: (args: { clientId: string }) => Promise<unknown>;
+  /** Rebuild a thumbnail from the full photo (rescuing one the phone can't read back). */
+  makeThumb?: (full: Blob) => Promise<Blob>;
 };
 
 /** Server calls get this long before they count as a network error (every send is idempotent). */
