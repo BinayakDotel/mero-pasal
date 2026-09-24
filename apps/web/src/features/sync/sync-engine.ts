@@ -61,6 +61,8 @@ export type PassReport = {
   foreignPending: number;
   pausedUntil: number;
   pauseReason: "none" | "network" | "auth";
+  /** The earliest time a waiting item of this member becomes due (e.g. a removal's undo window). */
+  nextDueAt?: number;
 };
 
 export class SyncEngine {
@@ -365,6 +367,9 @@ export class SyncEngine {
     const open = await db.outbox.where("status").anyOf("pending", "uploading", "failed").toArray();
     const mine = open.filter((r) => r.ownerClerkId === me);
     const pending = mine.filter((r) => r.status !== "failed");
+    const later = pending
+      .filter((r) => r.status === "pending" && r.nextAttemptAt > this.env.now())
+      .map((r) => r.nextAttemptAt);
     return {
       drained: pending.length === 0,
       pending: pending.length,
@@ -373,6 +378,7 @@ export class SyncEngine {
       foreignPending: open.length - mine.length,
       pausedUntil: this.pausedUntil,
       pauseReason: this.pauseReason,
+      ...(later.length ? { nextDueAt: Math.min(...later) } : {}),
     };
   }
 }

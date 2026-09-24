@@ -334,3 +334,15 @@ describe("a new name while correcting (F-04 in F-08)", () => {
     expect(server.bills.get("t1")).toBe(250);
   });
 });
+
+describe("waking up when the next item is due", () => {
+  it("the report says when a queued removal becomes due (so the app can wake then)", async () => {
+    const server = fakeServer();
+    await enqueueDurable(db, [bill()], ME, clock);
+    const e = engine(server.deps);
+    await e.kick();
+    await enqueueRemove(db, "t1", before, ME, clock);
+    await e.kick();
+    expect((await e.report()).nextDueAt).toBe(clock + UNDO_WINDOW_MS);
+  });
+});
