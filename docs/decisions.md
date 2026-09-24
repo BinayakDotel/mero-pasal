@@ -176,6 +176,14 @@
   - Bills made offline sync only once the server accepts the session again (the engine pauses on auth errors).
   - A different Google account never sees the previous member's screens.
 
+### ADR-033 · Corrections and removals go through the outbox as full values
+- **Decision:** Buwa's corrections and removals are outbox items like bills (ADR-011). A correction sends the bill's full new values, not a diff; the server applies them through `ledger.apply` and does nothing if nothing changed. A removal is queued behind a 6 s undo window, and Undo deletes it on the phone, so the server never sees an undone removal; after that, only admin can restore (M4). A bill removed before it ever left the phone never goes to the server.
+- **Why:** Full values make retries exactly-once without a new table of applied operations (no schema change), and last-write-wins is fine for one family shop. Undo-before-send keeps restore admin-only, as the mockup copy promises ("बिनायकले फर्काउन सक्छन्"). The M3 second-pass review found the ordering and staleness rules now in architecture §8.3.
+- **Consequences:**
+  - Two devices correcting the same bill: the last one sent wins.
+  - Audit history is shown in the admin drawer (M4), not on Buwa's account page (F-15 note).
+  - Browsing screens are online-only in M3; a bill already open can still be changed offline.
+
 ---
 
 ## Open decisions

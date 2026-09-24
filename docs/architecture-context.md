@@ -372,25 +372,28 @@ Importing raw `query` or `mutation` from `_generated/server` in feature modules 
 | | `list`, `invite`, `setRole`, `deactivate` | q/m | admin | F-13 |
 | `parties` | `listForPicker` | query | member | All non-archived, non-merged parties, trimmed fields (for client-side search and cache) |
 | | `create` | mutation | member | Idempotent by `clientId`; computes `nameLatin`, `nameDevanagari`, `phoneticKey` |
-| | `get`, `monthTotals(monthBs)` | query | member | Account page; accounts list via `partyMonthly` |
+| | `get(id, monthBs)`, `monthTotals(monthBs)` | query | member | Account page (all-time totals from the party row, the month from `partyMonthly`; a merged account reports `mergedIntoId`); accounts list |
 | | `update`, `archive` | mutation | owner/admin | F-12 |
 | | `merge(keepId, mergeId)` | mutation | admin | Moves transactions in batches (scheduled continuation if large) |
 | | `similar(name)` | query | member | Online double-check for the duplicate-name warning |
 | `transactions` | `createFromClient` | mutation | member | Idempotent create from the outbox (same `clientId` → same bill). Resolves the account by `{id}` or `{clientId}`, follows merges, and returns `CONFLICT` if a phone-made account hasn't synced yet (the outbox retries). Checks the BS date (≤ 1 day ahead), integer paisa ≥ 0 and 1–5 uploaded photos, then `ledger.apply` |
 | | `listRecentForDate(dateBs, limit ≤ 10)` | query | member | Today's recent bills: newest active first, with account name, walk-in flag and thumbnail URL |
-| | `update`, `remove`, `restore` | mutation | member (F-08 permission rules) / admin | All go through `ledger.apply` |
-| | `get`, `listByDate`, `listByParty` | query (paginated) | member | Lists and detail |
+| | `correct(clientId, kind, partyRef?, dateBs, amountPaisa?)` | mutation | member (F-08 matrix) | The bill's full new values from the outbox; a no-op when nothing changed (so retries are exactly-once); a new date ≤ 90 days back; photos never change; `ledger.apply` with an audit summary like "account: A → B" |
+| | `remove(clientId)` / `restore(clientId)` | mutation | member (F-08 matrix) / admin | Soft delete / bring back through `ledger.apply`; no-op when already so |
+| | `get(clientId)` | query | member | Bill detail by the phone's `clientId` (null while only on the phone); full photo URLs only here |
+| | `listByDate(filter)`, `listByParty(partyId, monthBs?)` | query (paginated) | member | F-06 / F-07 lists, thumbnails only; filter all / sale / purchase / noAmount |
+| | `listForParties(partyIds ≤ 5)` | query | member | F-06 search: bills of the accounts matched on the phone (≤ 50 each) |
 | | `listNeedsAttention`, `listForExport` | query (paginated) | admin | F-11, F-14 |
 | `files` | `generateUploadUrl` | mutation | member | Signed upload URL |
 | | `photoUrls(txId)` | query | member | Resolves `storageId`s to URLs |
 | `summaries` | `forDate(dateBs)`, `forRange(from, to)` | query | member | Today strip, reports (≤ 400 rows read) |
 | | `rebuild(from, to)` | internal mutation | CLI | Repair tool: recompute derived data from transactions |
-| `audit` | `listForEntity` | query | admin | Drawer history |
-| `e2eSupport` | `billsByClientIds` | internal query | CLI (e2e) | Which phone-made bills reached the server; used by Playwright via `convex run` on dev |
+| `audit` | `listForEntity(entity, entityId)` | query | admin | A record's history, newest first, with actor names (the admin bill drawer, M4) |
+| `e2eSupport` | `ensureE2eShop`, `billsByClientIds` | internal | CLI (e2e) | The Clerk dev test user's own shop; which phone-made bills reached it. Playwright runs them via `convex run` on dev only |
 | `seed` | `bootstrap` | internal mutation | CLI | Shop, owner (locale `ne`) and admin (locale `en`) members, walk-in party; refuses if a shop exists (`CONFLICT`) |
 | `crons` | weekly | — | — | v1: nothing critical. Later: orphan-file report and backup reminder. |
 
-**Error contract:** throw `ConvexError({ code, message? })` with `code` one of `UNAUTHENTICATED | FORBIDDEN | NOT_FOUND | VALIDATION | CONFLICT`. The UI maps each code to an i18n message.
+**Error contract:** throw `ConvexError({ code, message?, reason? })` with `code` one of `UNAUTHENTICATED | FORBIDDEN | NOT_FOUND | VALIDATION | CONFLICT`. The UI maps each code to an i18n message. `reason: "NOT_EDITABLE"` (with FORBIDDEN) tells the outbox a bill edit can never succeed for this member, so it's a rejection of that item, not a sign-in pause.
 
 ## 7. Domain logic (`packages/shared`)
 
@@ -492,7 +495,7 @@ Opened with `chromeTransactionDurability: "strict"` so a saved bill survives a r
 
 | Table | Holds | Purge |
 |---|---|---|
-| `outbox` | Items to send (`party.create`, `tx.create`), with photo blobs (full + thumb). Each row also records status (`pending` / `uploading` / `failed` / `done`), non-network `failures`, `nextAttemptAt`, `lastError`, the owner (member + Clerk id), and upload progress (`storageId`s) | Blobs 7 days after `done`; rows after 30 days (the Today merge needs them); unsent items never |
+| `outbox` | Items to send (`party.create`, `tx.create`, and M3's `tx.correct` / `tx.remove`, each with its own id and the bill's `billClientId` plus what the phone showed `before`), with photo blobs (full + thumb). Each row also records status (`pending` / `uploading` / `failed` / `done`), non-network `failures`, `nextAttemptAt`, `lastError`, the owner (member + Clerk id), and upload progress (`storageId`s) | Blobs 7 days after `done`; rows after 30 days (the Today merge needs them); unsent items never |
 | `drafts` / `draftPages` | The unfinished bill: small fields in one row; one row per page (the raw photo until processed, then full + thumb) | On save (same transaction as the enqueue) or discard |
 | `cache` | Last results of queries (`useCachedQuery`), keyed per query + args, with `savedAt` | Replaced on each live result |
 | `meta` | The last signed-in member (for the offline shell) | Cleared on sign-out or when `members.me` says not invited |
@@ -553,6 +556,13 @@ stateDiagram-v2
     purged --> [*]
 ```
 
+**Corrections and removals (M3, ADR-033):**
+- `tx.correct` carries the bill's full new values; `tx.remove` waits out the 6 s undo window (`nextAttemptAt`), and Undo deletes it. "Try now" never shortens that window.
+- A bill still on the phone (not `submitted`) is corrected in place; one removed before it ever left the phone is dropped with its corrections, photos never uploaded. `submitted` is saved just before `createTx` and cleared only by a server refusal, so a bill the server may have is never dropped or edited in place.
+- Changes to one bill go strictly in order (a row waits while an earlier row for that bill is on its way), and the engine claims a row (re-read + `uploading` in one transaction) before sending, so a change or Undo made after it was picked is never overtaken by a stale copy.
+- The engine reports `nextDueAt`; the app wakes it then. A reconnect ends a network backoff, and sign-in coming back ends an auth pause.
+- Lists, the detail and Today show changes still on their way with the same "not in these numbers yet" rule as the totals (`editsNotIn` / `notYetOnServer`).
+
 - **One sender per phone:** `navigator.locks` (`mp-sync`, if available). Holding the lock, the engine resets rows left `uploading` by a killed tab.
 - **One loop at a time**, with a rerun flag. Triggers: save, app open, `online`, visible again, Convex reconnect, and every 60 s.
 - **Progress is persisted after every upload**, so a restart never re-uploads a page. The server de-duplicates by `clientId`.
@@ -577,6 +587,7 @@ stateDiagram-v2
 - **Updates never land mid-bill.** A new service worker waits (`skipWaiting: false`). `AppUpdater` acts only after the app has sat idle and on screen for 3 s, with no camera open. It sends `SKIP_WAITING` only if no tab holds the shared `mp-capture-busy` Web Lock, which every tab holds while a bill is open. Each tab then reloads once it is idle. Serwist's own reload on reconnect is off, since it would drop the bill on screen.
 - **Clerk traffic is network-only** in the service worker: no session tokens in Cache Storage, and offline Clerk fails instead of reading a stale answer.
 - Test the service worker locally with `just preview` (production build; it's off in `just dev`).
+- **Browsing is online-only in M3** (Binayak, 2026-09-24): `/bills`, `/accounts` and a bill or account page aren't precached shells, so opening them offline shows `/~offline`. A bill already open when the connection drops can still be corrected or removed (the outbox sends it later).
 - **Xiaomi HyperOS** can restrict background activity. Sync runs whenever the app is open, and background sync is a bonus. Setup checklist:
   - Chrome battery → "No restrictions"
   - Chrome set as the default browser
