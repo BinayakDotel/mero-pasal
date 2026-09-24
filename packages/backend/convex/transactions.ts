@@ -238,3 +238,64 @@ export const listByParty = memberQuery({
     };
   },
 });
+
+/**
+ * F-08 bill detail: full-size photo URLs (only here, never in lists), who saved it and when.
+ * A removed bill is still returned with its status, so an open detail screen can say so.
+ * Looked up by clientId: the phone knows it before the bill reaches the server (route
+ * `/bills/[clientId]`); null while the bill is only on the phone.
+ */
+export const get = memberQuery({
+  args: { clientId: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("transactions"),
+      clientId: v.string(),
+      kind: v.union(v.literal("sale"), v.literal("purchase")),
+      status: v.union(v.literal("active"), v.literal("deleted")),
+      dateBs: v.string(),
+      partyId: v.optional(v.id("parties")),
+      partyName: v.optional(v.string()),
+      isWalkIn: v.boolean(),
+      amountPaisa: v.optional(v.number()),
+      billNumber: v.optional(v.string()),
+      capturedAt: v.number(),
+      capturedBy: v.id("members"),
+      capturedByName: v.string(),
+      photos: v.array(
+        v.object({
+          url: v.union(v.string(), v.null()),
+          thumbUrl: v.union(v.string(), v.null()),
+          width: v.number(),
+          height: v.number(),
+        }),
+      ),
+    }),
+  ),
+  handler: async (ctx, { clientId }) => {
+    const row = await ctx.db
+      .query("transactions")
+      .withIndex("by_shop_clientId", (q) => q.eq("shopId", ctx.shopId).eq("clientId", clientId))
+      .unique();
+    if (!row || !isBill(row)) return null;
+    const [base, author] = await Promise.all([toBillRow(ctx, row), ctx.db.get(row.createdBy)]);
+    const photos = await Promise.all(
+      row.photos.map(async (p) => ({
+        url: await ctx.storage.getUrl(p.storageId),
+        thumbUrl: await ctx.storage.getUrl(p.thumbId),
+        width: p.width,
+        height: p.height,
+      })),
+    );
+    const { thumbUrl: _thumb, ...fields } = base;
+    return {
+      ...fields,
+      status: row.status,
+      ...(row.billNumber === undefined ? {} : { billNumber: row.billNumber }),
+      capturedBy: row.createdBy,
+      capturedByName: author?.displayName ?? "",
+      photos,
+    };
+  },
+});
