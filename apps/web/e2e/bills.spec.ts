@@ -25,6 +25,16 @@ test.describe("F-06 bills list", () => {
     await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
     await first.click();
     await expect(page).toHaveURL(/\/bills\/[\w-]+$/);
+    // F-08 detail: the full photo and the ledger fields.
+    await expect(page.getByRole("img", { name: "बिलको फोटो, पाना १" })).toBeVisible();
+    await expect(page.getByText("प्रकार")).toBeVisible();
+    await expect(page.getByRole("definition").first()).toHaveText("बेचेको");
+  });
+
+  test("a bill that isn't there says so", async ({ page }) => {
+    await signInE2e(page);
+    await page.goto("/bills/not-a-bill");
+    await expect(page.getByText("यो भेटिएन। हटाइएको हुन सक्छ।")).toBeVisible();
   });
 
   test("search finds bills by name across scripts, and says when nothing matches", async ({
