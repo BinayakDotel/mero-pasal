@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { takeBill } from "./support/capture";
 import { convexRunDev, E2E_USER, signInE2e } from "./support/e2e-user";
 
 // F-06 Bills list against the dev E2E shop (its bills come from the offline-sync spec, all sales).
@@ -24,5 +25,19 @@ test.describe("F-06 bills list", () => {
     await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
     await first.click();
     await expect(page).toHaveURL(/\/bills\/[\w-]+$/);
+  });
+
+  test("search finds bills by name across scripts, and says when nothing matches", async ({
+    page,
+  }) => {
+    await signInE2e(page);
+    await takeBill(page, "25", "E2E Hari Prasad");
+    await page.goto("/bills");
+    await page.getByRole("button", { name: "नाम खोज्नुहोस् (नेपाली वा English)" }).click();
+    const box = page.getByRole("searchbox");
+    await box.fill("हरि"); // Devanagari finds the Latin name
+    await expect(page.getByRole("listitem").first()).toContainText("E2E Hari Prasad");
+    await box.fill("zzqx");
+    await expect(page.getByText("“zzqx” नामको बिल भेटिएन")).toBeVisible();
   });
 });

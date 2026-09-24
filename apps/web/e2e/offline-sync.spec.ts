@@ -1,13 +1,12 @@
-import path from "node:path";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import { saleButton, takeBill } from "./support/capture";
 import { convexRunDev, E2E_USER, signInE2e } from "./support/e2e-user";
 
 // F-09 acceptance (M2 exit, plan PR 9) against the production build and the Convex DEV
 // deployment: bills made offline survive the app being closed and reach the server exactly once,
 // with their photos. The test user has its own shop (e2eSupport.ensureE2eShop).
 const hasClerkSecret = Boolean(process.env.CLERK_SECRET_KEY);
-const photo = path.join(import.meta.dirname, "fixtures", "rotated.jpg");
 const OFFLINE_BILLS = 5;
 
 test.describe("F-09 offline sync", () => {
@@ -64,25 +63,6 @@ test.describe("F-09 offline sync", () => {
     for (const bill of onServer) expect(bill).toMatchObject({ photos: 1, status: "active" });
   });
 });
-
-function saleButton(page: Page) {
-  return page.getByRole("button", { name: /^बेचेको बिल/ });
-}
-
-/** F-03 happy path: photo → use → walk-in → amount → save → stamp → back on Today. */
-async function takeBill(page: Page, rupees: string) {
-  const chooser = page.waitForEvent("filechooser");
-  await saleButton(page).click();
-  await (await chooser).setFiles(photo);
-  await page.getByRole("button", { name: "ठीक छ" }).click();
-  await page.getByRole("button", { name: /नगद ग्राहक/ }).click();
-  for (const digit of rupees) {
-    await page.getByRole("button", { name: digit, exact: true }).click();
-  }
-  await page.getByRole("button", { name: "बिल राख्नुहोस्" }).click();
-  await expect(page.getByText("राखियो")).toBeVisible();
-  await expect(saleButton(page)).toBeVisible({ timeout: 10_000 });
-}
 
 /** clientIds of bills still waiting in the phone's outbox (IndexedDB `mero-pasal`). */
 function pendingBillIds(page: Page): Promise<string[]> {

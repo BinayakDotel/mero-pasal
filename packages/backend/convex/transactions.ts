@@ -299,3 +299,36 @@ export const get = memberQuery({
     };
   },
 });
+
+const MAX_SEARCH_PARTIES = 5;
+const MAX_SEARCH_BILLS = 50;
+
+/**
+ * F-06 search: the newest active bills of the accounts whose names matched on the phone
+ * (ADR-012/029: names only), up to 5 accounts × 50 bills, newest first. No paging while searching.
+ */
+export const listForParties = memberQuery({
+  args: { partyIds: v.array(v.id("parties")) },
+  returns: v.array(billRow),
+  handler: async (ctx, { partyIds }) => {
+    if (partyIds.length > MAX_SEARCH_PARTIES) {
+      throw appError("VALIDATION", `at most ${MAX_SEARCH_PARTIES} accounts`);
+    }
+    const perParty = await Promise.all(
+      partyIds.map((partyId) =>
+        ctx.db
+          .query("transactions")
+          .withIndex("by_shop_party_status_date", (q) =>
+            q.eq("shopId", ctx.shopId).eq("partyId", partyId).eq("status", "active"),
+          )
+          .order("desc")
+          .take(MAX_SEARCH_BILLS),
+      ),
+    );
+    const rows = perParty
+      .flat()
+      .filter(isBill)
+      .sort((a, b) => b.dateBs.localeCompare(a.dateBs) || b._creationTime - a._creationTime);
+    return Promise.all(rows.map((row) => toBillRow(ctx, row)));
+  },
+});
