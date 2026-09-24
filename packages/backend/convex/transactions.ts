@@ -1,5 +1,6 @@
 import { bsToAdMs, diffDaysBs, isValidBs, todayBs } from "@mero-pasal/shared/dates";
-import { MAX_BILL_PAGES, MAX_FUTURE_DAYS } from "@mero-pasal/shared/domain";
+import { MAX_BACKDATE_DAYS, MAX_BILL_PAGES, MAX_FUTURE_DAYS } from "@mero-pasal/shared/domain";
+import { formatNpr } from "@mero-pasal/shared/money";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -9,6 +10,7 @@ import { appError } from "./lib/errors";
 import { memberMutation, memberQuery } from "./lib/functions";
 import { apply } from "./lib/ledger";
 import { assertMonthBs } from "./lib/months";
+import { assertCanEdit } from "./lib/permissions";
 
 const MAX_CLIENT_ID = 64;
 const DAY_MS = 86_400_000;
@@ -330,5 +332,96 @@ export const listForParties = memberQuery({
       .filter(isBill)
       .sort((a, b) => b.dateBs.localeCompare(a.dateBs) || b._creationTime - a._creationTime);
     return Promise.all(rows.map((row) => toBillRow(ctx, row)));
+  },
+});
+
+/** A bill to correct or remove, by the clientId the phone knows (NOT_FOUND while unsent). */
+async function billByClientId(ctx: QueryCtx & { shopId: Id<"shops"> }, clientId: string) {
+  const row = await ctx.db
+    .query("transactions")
+    .withIndex("by_shop_clientId", (q) => q.eq("shopId", ctx.shopId).eq("clientId", clientId))
+    .unique();
+  if (!row || !isBill(row)) throw appError("NOT_FOUND", "Bill not on the server (yet)");
+  return row;
+}
+
+/**
+ * F-08 correct (UC-08): set the bill's type, account, amount and date to these values through
+ * ledger.apply; photos never change. The phone sends the full new values, so a retry is a no-op
+ * ("nothing changed") and applying twice can't double-count. Last write wins between devices.
+ */
+export const correct = memberMutation({
+  args: {
+    clientId: v.string(),
+    kind: v.union(v.literal("sale"), v.literal("purchase")),
+    partyRef: v.optional(
+      v.union(v.object({ id: v.id("parties") }), v.object({ clientId: v.string() })),
+    ),
+    dateBs: v.string(),
+    amountPaisa: v.optional(v.number()),
+  },
+  returns: v.id("transactions"),
+  handler: async (ctx, args) => {
+    const tx = await billByClientId(ctx, args.clientId);
+    const now = Date.now();
+    assertCanEdit(ctx.member, tx, now);
+    if (tx.status === "deleted") throw appError("CONFLICT", "A removed bill can't be corrected");
+
+    const amount = args.amountPaisa;
+    if (amount !== undefined && (!Number.isSafeInteger(amount) || amount < 0)) {
+      throw appError("VALIDATION", "amountPaisa must be a whole, non-negative number of paisa");
+    }
+    if (args.dateBs !== tx.dateBs) {
+      // F-05: a new date is a real BS date, at most 90 days back and not in the future.
+      if (!isValidBs(args.dateBs))
+        throw appError("VALIDATION", "dateBs must be a real YYYY-MM-DD BS date");
+      const ahead = diffDaysBs(todayBs(now), args.dateBs);
+      if (ahead > MAX_FUTURE_DAYS || -ahead > MAX_BACKDATE_DAYS) {
+        throw appError("VALIDATION", "Date must be within the last 90 days");
+      }
+    }
+    const party = args.partyRef ? await resolveParty(ctx, args.partyRef) : null;
+    const partyId = party?._id;
+    if (
+      args.kind === tx.kind &&
+      partyId === tx.partyId &&
+      amount === tx.amountPaisa &&
+      args.dateBs === tx.dateBs
+    ) {
+      return tx._id; // already so (a retry, or nothing changed)
+    }
+
+    const {
+      _id,
+      _creationTime,
+      needsAttention,
+      updatedAt,
+      partyId: _p,
+      amountPaisa: _a,
+      ...keep
+    } = tx;
+    const oldParty = tx.partyId ? await ctx.db.get(tx.partyId) : null;
+    const money = (paisa: number | undefined) =>
+      paisa === undefined ? "—" : formatNpr(paisa, { locale: "en" });
+    const changes = [
+      args.kind !== tx.kind && `type: ${tx.kind} → ${args.kind}`,
+      partyId !== tx.partyId &&
+        `account: ${oldParty?.displayName ?? "—"} → ${party?.displayName ?? "—"}`,
+      amount !== tx.amountPaisa && `amount: ${money(tx.amountPaisa)} → ${money(amount)}`,
+      args.dateBs !== tx.dateBs && `date: ${tx.dateBs} → ${args.dateBs}`,
+    ].filter(Boolean);
+    return apply(
+      ctx,
+      tx,
+      {
+        ...keep,
+        kind: args.kind,
+        ...(partyId === undefined ? {} : { partyId }),
+        ...(amount === undefined ? {} : { amountPaisa: amount }),
+        dateBs: args.dateBs,
+        dateAd: bsToAdMs(args.dateBs),
+      },
+      { actorId: ctx.member._id, action: "tx.correct", summary: changes.join(" · ") },
+    );
   },
 });
