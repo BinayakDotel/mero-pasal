@@ -1,8 +1,10 @@
 import { bsToAdMs, diffDaysBs, isValidBs, todayBs } from "@mero-pasal/shared/dates";
 import { MAX_BILL_PAGES, MAX_FUTURE_DAYS } from "@mero-pasal/shared/domain";
+import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
+import { billRow, isBill, toBillRow } from "./lib/billRow";
 import { appError } from "./lib/errors";
 import { memberMutation, memberQuery } from "./lib/functions";
 import { apply } from "./lib/ledger";
@@ -142,18 +144,7 @@ const RECENT_WINDOW = 50;
 /** F-02 Today "recent bills": the newest active bills of one day, with thumbnail URLs only (F-06). */
 export const listRecentForDate = memberQuery({
   args: { dateBs: v.string(), limit: v.optional(v.number()) },
-  returns: v.array(
-    v.object({
-      _id: v.id("transactions"),
-      clientId: v.string(),
-      kind: v.union(v.literal("sale"), v.literal("purchase")),
-      partyName: v.optional(v.string()),
-      isWalkIn: v.boolean(),
-      amountPaisa: v.optional(v.number()),
-      capturedAt: v.number(),
-      thumbUrl: v.union(v.string(), v.null()),
-    }),
-  ),
+  returns: v.array(billRow),
   handler: async (ctx, { dateBs, limit = 5 }) => {
     if (!isValidBs(dateBs))
       throw appError("VALIDATION", "dateBs must be a real YYYY-MM-DD BS date");
@@ -169,26 +160,47 @@ export const listRecentForDate = memberQuery({
       .take(RECENT_WINDOW);
     const takenAt = (row: (typeof window)[number]) => row.clientCapturedAt ?? row.capturedAt;
     const rows = window.sort((a, b) => takenAt(b) - takenAt(a)).slice(0, take);
-    return Promise.all(
-      rows
-        .filter(
-          (row): row is typeof row & { kind: "sale" | "purchase" } =>
-            row.kind === "sale" || row.kind === "purchase",
-        )
-        .map(async (row) => {
-          const party = row.partyId ? await ctx.db.get(row.partyId) : null;
-          const first = row.photos[0];
-          return {
-            _id: row._id,
-            clientId: row.clientId,
-            kind: row.kind,
-            ...(party ? { partyName: party.displayName } : {}),
-            isWalkIn: party?.isWalkIn ?? false,
-            ...(row.amountPaisa === undefined ? {} : { amountPaisa: row.amountPaisa }),
-            capturedAt: row.clientCapturedAt ?? row.capturedAt,
-            thumbUrl: first ? await ctx.storage.getUrl(first.thumbId) : null,
-          };
-        }),
-    );
+    return Promise.all(rows.filter(isBill).map((row) => toBillRow(ctx, row)));
+  },
+});
+
+/** F-06 filter chips: सबै / बेचेको / किनेको / रकम छैन. */
+const billFilter = v.union(
+  v.literal("all"),
+  v.literal("sale"),
+  v.literal("purchase"),
+  v.literal("noAmount"),
+);
+
+/**
+ * F-06 Bills list: active bills newest date first, a page at a time, thumbnails only.
+ * "रकम छैन" reads the needs-attention index (no amount or no name) and keeps the ones without an
+ * amount; they're few, so short pages are fine.
+ */
+export const listByDate = memberQuery({
+  args: { filter: billFilter, paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(billRow),
+  handler: async (ctx, { filter, paginationOpts }) => {
+    const { shopId } = ctx;
+    const base = ctx.db.query("transactions");
+    const query =
+      filter === "all"
+        ? base.withIndex("by_shop_status_date", (q) =>
+            q.eq("shopId", shopId).eq("status", "active"),
+          )
+        : filter === "noAmount"
+          ? base
+              .withIndex("by_shop_attention_date", (q) =>
+                q.eq("shopId", shopId).eq("needsAttention", true),
+              )
+              .filter((q) => q.eq(q.field("amountPaisa"), undefined))
+          : base.withIndex("by_shop_status_kind_date", (q) =>
+              q.eq("shopId", shopId).eq("status", "active").eq("kind", filter),
+            );
+    const result = await query.order("desc").paginate(paginationOpts);
+    return {
+      ...result,
+      page: await Promise.all(result.page.filter(isBill).map((row) => toBillRow(ctx, row))),
+    };
   },
 });
