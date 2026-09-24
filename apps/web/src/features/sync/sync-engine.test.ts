@@ -214,6 +214,23 @@ describe("sync engine (F-09, architecture §8.3)", () => {
     expect((await e.report()).pauseReason).toBe("network");
   });
 
+  it("the connection coming back ends a network backoff at once", async () => {
+    const server = fakeServer();
+    const upload = server.deps.upload;
+    server.deps.upload = vi.fn(async () => {
+      throw new TypeError("network down"); // failed while the Wi-Fi was coming back
+    });
+    await enqueueDurable(db, [bill("t1")], ME, clock);
+    const e = engine(server.deps);
+    await e.kick();
+    await e.kick(); // second failure: now a 30 s backoff
+    server.deps.upload = upload;
+    await e.kick();
+    expect(server.bills.has("t1")).toBe(false); // still waiting it out
+    await e.resumeAfterReconnect();
+    expect(server.bills.get("t1")).toBe(1);
+  });
+
   it("offline (Convex disconnected) sends nothing and reports it", async () => {
     const server = fakeServer();
     await enqueueDurable(db, [bill("t1")], ME, clock);

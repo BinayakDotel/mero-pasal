@@ -122,13 +122,20 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     const onVisible = () => document.visibilityState === "visible" && kick();
     kick();
     window.addEventListener(OUTBOX_CHANGED, kick);
-    window.addEventListener("online", kick);
+    const reconnected = () => void engine.resumeAfterReconnect();
+    window.addEventListener("online", reconnected);
     document.addEventListener("visibilitychange", onVisible);
-    const unsubscribe = convex.subscribeToConnectionState((s) => s.isWebSocketConnected && kick());
+    // Only a real disconnected → connected change ends a backoff (the state reports often).
+    let wasConnected = convex.connectionState().isWebSocketConnected;
+    const unsubscribe = convex.subscribeToConnectionState((s) => {
+      if (s.isWebSocketConnected && !wasConnected) reconnected();
+      else if (s.isWebSocketConnected) kick();
+      wasConnected = s.isWebSocketConnected;
+    });
     const timer = setInterval(kick, TICK_MS);
     return () => {
       window.removeEventListener(OUTBOX_CHANGED, kick);
-      window.removeEventListener("online", kick);
+      window.removeEventListener("online", reconnected);
       document.removeEventListener("visibilitychange", onVisible);
       unsubscribe();
       clearInterval(timer);
