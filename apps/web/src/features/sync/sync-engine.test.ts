@@ -437,7 +437,7 @@ describe("M3 corrections and removals (F-08)", () => {
     expect((await rows()).every((r) => r.status === "done")).toBe(true);
   });
 
-  it("NOT_FOUND while its bill is still on the way: waits, not counted as a failure", async () => {
+  it("while its bill is still on the way, a correction isn't sent at all (and isn't a failure)", async () => {
     const server = fakeServer();
     await enqueueDurable(db, [bill("t1")], ME, clock);
     await db.outbox
@@ -446,9 +446,11 @@ describe("M3 corrections and removals (F-08)", () => {
       .modify({ nextAttemptAt: clock + 60_000 });
     await enqueueDurable(db, [correct("t1", 250)], ME, clock);
     await engine(server.deps).kick();
-    const op = (await rows()).find((r) => r.clientId === "op1");
-    expect(op).toMatchObject({ status: "pending", failures: 0 });
-    expect(op?.nextAttemptAt).toBeGreaterThan(clock);
+    expect(server.deps.correctTx).not.toHaveBeenCalled();
+    expect((await rows()).find((r) => r.clientId === "op1")).toMatchObject({
+      status: "pending",
+      failures: 0,
+    });
   });
 
   it("its bill failed → the correction is BLOCKED; an unknown bill is a real failure", async () => {
