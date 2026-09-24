@@ -24,5 +24,16 @@ test.describe("F-07 accounts", () => {
     await expect(row).toContainText("यो महिना");
     await row.click();
     await expect(page).toHaveURL(/\/accounts\/[\w]+$/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("E2E Sita Accounts");
+    await expect(page.getByText("यो महिना").first()).toBeVisible();
+    await expect(page.getByRole("listitem").first()).toContainText("E2E Sita Accounts");
+    await page.getByRole("button", { name: "सबै महिना" }).click();
+    await expect(page.getByRole("listitem").first()).toBeVisible();
+  });
+
+  test("an account that isn't there says so instead of crashing", async ({ page }) => {
+    await signInE2e(page);
+    await page.goto("/accounts/not-an-account");
+    await expect(page.getByText("यो भेटिएन। हटाइएको हुन सक्छ।")).toBeVisible();
   });
 });
