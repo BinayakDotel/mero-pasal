@@ -166,6 +166,8 @@
 
 **Acceptance:** Every correction and removal writes an audit entry (F-15), and totals update correctly (tested invariant).
 
+*M3 note (ADR-033):* Undo removes the queued removal before it's sent; afterwards only admin restores. Browsing screens are online-only in M3.
+
 ### F-09 Offline capture and sync status **[v1.0]**
 
 - Every write action goes through the on-device outbox and is sent to the server in order. Retries back off and never duplicate: each item carries a `clientId`.
@@ -215,7 +217,7 @@ For Binayak, at `/admin`, desktop-first.
 ### F-15 Audit trail **[v1.0]**
 
 - Every create, correct, remove, restore, merge and role change writes an entry: who, what, when, and a short before/after summary.
-- The audit trail is visible in the admin bill drawer and account page.
+- The audit trail is visible in the admin bill drawer (M4; `audit.listForEntity`). Showing it on Buwa's account page is deferred (ADR-033): he doesn't need it.
 
 ---
 
