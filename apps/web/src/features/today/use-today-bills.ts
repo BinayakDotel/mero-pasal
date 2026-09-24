@@ -3,6 +3,7 @@
 import { api } from "@mero-pasal/backend/convex/_generated/api";
 import { useMemo } from "react";
 import {
+  applyEdits,
   type BillItem,
   fromServer,
   localBills,
@@ -39,18 +40,25 @@ export function useTodayBills(dateBs: string): {
       totals.data && mergeTotals(totals.data, rows, dateBs, view, engine.confirmed);
 
     const recentView = { live: recent.live, snapshotAt: recent.savedAt };
-    const local = localBills(
+    const names = nameBook(parties.data ?? [], rows);
+    const local = applyEdits(
+      localBills(
+        rows,
+        names,
+        (r) => r.payload.dateBs === dateBs && notYetOnServer(r, recentView, engine.confirmed),
+      ),
       rows,
-      nameBook(parties.data ?? [], rows),
-      (r) => r.payload.dateBs === dateBs && notYetOnServer(r, recentView, engine.confirmed),
+      names,
     );
-    const server = (recent.data ?? []).map(fromServer);
+    const server = applyEdits((recent.data ?? []).map(fromServer), rows, names);
     return {
       totals: mergedTotals,
       recent:
         recent.data === undefined && local.length === 0
           ? undefined
-          : mergeBills(server, local).slice(0, 5),
+          : mergeBills(server, local)
+              .filter((b) => b.dateBs === dateBs)
+              .slice(0, 5),
       live: totals.live && recent.live,
     };
   }, [totals, recent, parties.data, rows, dateBs, engine.confirmed]);

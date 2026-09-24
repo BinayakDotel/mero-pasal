@@ -77,3 +77,57 @@ describe("mergeTotals (F-02 offline)", () => {
     });
   });
 });
+
+describe("mergeTotals with corrections and removals on their way (M3, F-08)", () => {
+  const server = { ...ZERO, saleCount: 2, salePaisa: 300 };
+  const before = { kind: "sale" as const, dateBs: "2083-06-07", amountPaisa: 100 };
+  const op = (
+    type: "tx.correct" | "tx.remove",
+    over: Partial<OutboxRow> = {},
+    payload: Record<string, unknown> = {},
+  ): OutboxRow =>
+    ({
+      type,
+      clientId: `op-${type}`,
+      createdAt: 1,
+      attempts: 0,
+      payload: { billClientId: "t1", ...payload },
+      before,
+      status: "pending",
+      nextAttemptAt: 0,
+      failures: 0,
+      ownerMemberId: "m",
+      ownerClerkId: "c",
+      ...over,
+    }) as OutboxRow;
+  const merge = (rows: OutboxRow[]) => mergeTotals(server, rows, "2083-06-07", live, new Set());
+
+  it("a correction swaps the old values for the new, once", () => {
+    const fix = op("tx.correct", {}, { kind: "sale", dateBs: "2083-06-07", amountPaisa: 250 });
+    expect(merge([fix])).toMatchObject({ saleCount: 2, salePaisa: 450 });
+  });
+
+  it("a correction to another day or type moves the bill out of today's sales", () => {
+    const moved = op("tx.correct", {}, { kind: "sale", dateBs: "2083-06-06", amountPaisa: 100 });
+    const retyped = op(
+      "tx.correct",
+      {},
+      { kind: "purchase", dateBs: "2083-06-07", amountPaisa: 100 },
+    );
+    expect(merge([moved])).toMatchObject({ saleCount: 1, salePaisa: 200 });
+    expect(merge([retyped])).toMatchObject({ saleCount: 1, purchaseCount: 1, purchasePaisa: 100 });
+  });
+
+  it("a removal takes the bill out; a refused or finished change leaves the server numbers", () => {
+    expect(merge([op("tx.remove")])).toMatchObject({ saleCount: 1, salePaisa: 200 });
+    expect(merge([op("tx.remove", { status: "failed" })])).toEqual(server);
+    expect(merge([op("tx.remove", { status: "done", doneAt: 1 })])).toEqual(server);
+  });
+
+  it("a bill still on the phone, then removed: counted by neither", () => {
+    const phone = row("t1", {}, 100);
+    expect(mergeTotals(ZERO, [phone, op("tx.remove")], "2083-06-07", live, new Set())).toEqual(
+      ZERO,
+    );
+  });
+});

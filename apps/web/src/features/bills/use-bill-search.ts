@@ -6,7 +6,14 @@ import { searchParties } from "@mero-pasal/shared/names";
 import { useMemo } from "react";
 import { useCachedQuery } from "@/features/sync/use-cached-query";
 import { useOutboxRows } from "@/features/sync/use-outbox-rows";
-import { type BillItem, fromServer, localBills, mergeBills, nameBook } from "./bill-item";
+import {
+  applyEdits,
+  type BillItem,
+  fromServer,
+  localBills,
+  mergeBills,
+  nameBook,
+} from "./bill-item";
 
 const MAX_ACCOUNTS = 5;
 
@@ -35,9 +42,10 @@ export function useBillSearch(query: string): BillItem[] | undefined {
   return useMemo(() => {
     if (!query.trim() || parties.data === undefined) return undefined;
     const wanted = new Set<string>(partyIds);
+    const names = nameBook(parties.data, rows);
     const local = localBills(
       rows,
-      nameBook(parties.data, rows),
+      names,
       (r) =>
         r.status !== "done" &&
         r.payload.partyRef !== undefined &&
@@ -45,6 +53,7 @@ export function useBillSearch(query: string): BillItem[] | undefined {
         wanted.has(r.payload.partyRef.id),
     );
     if (partyIds.length > 0 && server.data === undefined && local.length === 0) return undefined;
-    return mergeBills(partyIds.length ? (server.data ?? []).map(fromServer) : [], local);
+    const found = partyIds.length ? (server.data ?? []).map(fromServer) : [];
+    return mergeBills(applyEdits(found, rows, names), applyEdits(local, rows, names));
   }, [query, partyIds, parties.data, server.data, rows]);
 }
