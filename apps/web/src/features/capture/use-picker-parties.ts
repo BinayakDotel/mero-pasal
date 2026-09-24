@@ -8,12 +8,9 @@ import type { FunctionReturnType } from "convex/server";
 import { useMemo } from "react";
 import { useCachedQuery } from "@/features/sync/use-cached-query";
 import { useOutboxRows } from "@/features/sync/use-outbox-rows";
+import { LOCAL_PREFIX } from "./local-party";
 
 export type PickerParty = FunctionReturnType<typeof api.parties.listForPicker>[number];
-
-/** Names added on this phone that the server doesn't know yet carry this id prefix. */
-export const LOCAL_PREFIX = "local:";
-export const isLocalParty = (p: PickerParty) => (p._id as string).startsWith(LOCAL_PREFIX);
 
 /**
  * F-04: the accounts the picker offers for a bill type (sale → customers, purchase → suppliers,
