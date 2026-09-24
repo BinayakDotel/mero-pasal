@@ -39,3 +39,17 @@ export const UNDO_WINDOW_MS = 6_000;
 
 /** F-08: staff may correct or remove their own bills only within this window. */
 export const STAFF_EDIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * F-08 permission matrix (architecture §10.3): owner and admin may correct or remove any bill;
+ * staff only their own, and only within STAFF_EDIT_WINDOW_MS of capture. The server enforces
+ * this; the app uses the same rule to hide the buttons.
+ */
+export function canEditBill(
+  editor: { memberId: string; role: Role },
+  bill: { createdBy: string; capturedAt: number },
+  now: number,
+): boolean {
+  if (editor.role === "owner" || editor.role === "admin") return true;
+  return bill.createdBy === editor.memberId && now - bill.capturedAt <= STAFF_EDIT_WINDOW_MS;
+}
