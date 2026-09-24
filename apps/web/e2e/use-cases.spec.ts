@@ -48,6 +48,11 @@ test.describe("M3 use cases", () => {
     const wrong = `E2E Sita Gurung ${run}`;
     const right = `E2E Sita Shrestha ${run}`;
     await signInE2e(page);
+    // The app shell must be on the phone before the internet goes (architecture §8.4).
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await expect
+      .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
+      .toBe(true);
     await takeBill(page, "70", right);
     await takeBill(page, "80", wrong);
     await page.getByRole("listitem").filter({ hasText: wrong }).first().getByRole("link").click();
