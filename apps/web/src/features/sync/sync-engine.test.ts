@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MeroPasalDb } from "./db";
-import type { OutboxDeps, OutboxItem } from "./outbox";
+import { type OutboxDeps, type OutboxItem, withCallTimeouts, withTimeout } from "./outbox";
 import { enqueueDurable, StorageFullError } from "./outbox-store";
 import { classify, DONE_ROW_TTL_MS, type EngineEnv, MAX_FAILURES, SyncEngine } from "./sync-engine";
 
@@ -481,5 +481,30 @@ describe("M3 corrections and removals (F-08)", () => {
     );
     expect(await op1).toMatchObject({ status: "failed", lastError: "BLOCKED: bill t1 failed" });
     expect(await op3).toMatchObject({ status: "pending", failures: 1 });
+  });
+});
+
+describe("a request that never answers (iPhone backgrounding)", () => {
+  it("times out as a network error, so the engine isn't stuck and Try now works", async () => {
+    const server = fakeServer();
+    server.deps.upload = () => withTimeout(new Promise<string>(() => undefined), 20);
+    await enqueueDurable(db, [bill("t1")], ME, clock);
+    const e = engine(server.deps);
+    await e.kick(); // returns instead of hanging forever
+    expect((await rows())[0]).toMatchObject({ status: "pending", failures: 0 });
+    expect((await e.report()).pauseReason).toBe("network");
+  });
+
+  it("every server call gets a time limit (a frozen mutation can't stall the queue)", async () => {
+    const server = fakeServer();
+    server.deps.createTx = () => new Promise(() => undefined);
+    await enqueueDurable(db, [bill("t1")], ME, clock);
+    await engine(withCallTimeouts(server.deps, 20)).kick();
+    expect((await rows())[0]).toMatchObject({ status: "pending", failures: 0 });
+  });
+
+  it("classifies a timeout or abort as a network error", () => {
+    expect(classify(new DOMException("t", "TimeoutError"))).toBe("network");
+    expect(classify(new DOMException("a", "AbortError"))).toBe("network");
   });
 });

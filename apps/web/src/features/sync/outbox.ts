@@ -113,6 +113,39 @@ export type OutboxDeps = {
   removeTx: (args: { clientId: string }) => Promise<unknown>;
 };
 
+/** Server calls get this long before they count as a network error (every send is idempotent). */
+export const CALL_TIMEOUT_MS = 45_000;
+/** One photo upload (≤ ~450 KB) gets this long. */
+export const UPLOAD_TIMEOUT_MS = 60_000;
+
+/**
+ * Rejects with a TimeoutError if `promise` hasn't settled in `ms`. iOS can freeze a backgrounded
+ * page's requests so they never answer; without this one frozen request stalls the whole outbox.
+ */
+export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new DOMException("No answer in time", "TimeoutError")), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/** The same deps with every server call time-limited (uploads limit themselves: `uploadBlob`). */
+export function withCallTimeouts(deps: OutboxDeps, ms = CALL_TIMEOUT_MS): OutboxDeps {
+  const limit =
+    <A extends unknown[], R>(fn: (...args: A) => Promise<R>) =>
+    (...args: A) =>
+      withTimeout(fn(...args), ms);
+  return {
+    ...deps,
+    createParty: limit(deps.createParty),
+    generateUploadUrl: limit(deps.generateUploadUrl),
+    createTx: limit(deps.createTx),
+    correctTx: limit(deps.correctTx),
+    removeTx: limit(deps.removeTx),
+  };
+}
+
 async function uploadOnce(deps: OutboxDeps, blob: Blob): Promise<string> {
   return deps.upload(await deps.generateUploadUrl(), blob);
 }

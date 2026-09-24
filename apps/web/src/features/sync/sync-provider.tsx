@@ -14,7 +14,7 @@ import {
 } from "react";
 import { useMemberIdentity } from "@/features/session/member-gate";
 import { getDb, requestPersistence } from "./db";
-import type { OutboxDeps } from "./outbox";
+import { type OutboxDeps, withCallTimeouts } from "./outbox";
 import { OUTBOX_CHANGED } from "./outbox-store";
 import { type PassReport, SyncEngine } from "./sync-engine";
 import { uploadBlob } from "./upload";
@@ -87,7 +87,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     };
     return new SyncEngine({
       db: getDb(),
-      deps,
+      deps: withCallTimeouts(deps),
       now: () => Date.now(),
       isConnected: () => navigator.onLine && convex.connectionState().isWebSocketConnected,
       identity: () => senderRef.current,
