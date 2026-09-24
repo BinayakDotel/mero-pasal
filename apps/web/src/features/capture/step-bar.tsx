@@ -15,13 +15,14 @@ export function StepBar({
   right,
 }: {
   title: string;
-  step: number;
+  /** Omitted outside capture (e.g. correcting a bill): no "२/३" counter. */
+  step?: number;
   onBack: () => void;
   dark?: boolean;
   right?: ReactNode;
 }) {
   const { locale, t } = useLocale();
-  const counter = `${step}/${STEP_TOTAL}`;
+  const counter = step === undefined ? null : `${step}/${STEP_TOTAL}`;
   return (
     <div
       className={`flex min-h-[60px] items-center gap-1.5 px-2.5 py-1.5 ${dark ? "text-white" : ""}`}
@@ -37,11 +38,13 @@ export function StepBar({
       <h1 className="min-w-0 flex-1 truncate font-display text-[25px] leading-tight font-bold">
         {title}
       </h1>
-      <span
-        className={`px-1.5 text-[15px] font-semibold ${dark ? "text-white/80" : "text-ink-soft"}`}
-      >
-        {locale === "ne" ? toDevanagariDigits(counter) : counter}
-      </span>
+      {counter ? (
+        <span
+          className={`px-1.5 text-[15px] font-semibold ${dark ? "text-white/80" : "text-ink-soft"}`}
+        >
+          {locale === "ne" ? toDevanagariDigits(counter) : counter}
+        </span>
+      ) : null}
       {right}
     </div>
   );
