@@ -31,3 +31,24 @@ export function decideGate(input: GateInput): GateDecision {
   if (input.server === "loading") return "loading";
   return "signedOut";
 }
+
+export type IdentityInput = {
+  decision: GateDecision;
+  /** The member being shown (live or snapshot). */
+  memberId: string | null;
+  /** Clerk's live userId: gone offline as soon as its short session token can't refresh. */
+  clerkUserId: string | null | undefined;
+  snapshot: { memberId: string; clerkUserId: string } | null;
+};
+
+/**
+ * The Clerk user the outbox is saved under (F-09 owner guard). Offline, Clerk drops its userId,
+ * which must never stop a Save: fall back to the Clerk user saved with this same member.
+ */
+export function gateClerkUserId(input: IdentityInput): string | null {
+  const { decision, memberId, clerkUserId, snapshot } = input;
+  if (decision === "snapshot") return snapshot?.clerkUserId ?? null;
+  if (decision !== "live") return null;
+  if (clerkUserId) return clerkUserId;
+  return snapshot && snapshot.memberId === memberId ? snapshot.clerkUserId : null;
+}

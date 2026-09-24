@@ -35,8 +35,13 @@ export type EngineEnv = {
   now: () => number;
   /** Is the Convex connection up? (Convex mutations wait rather than fail while offline.) */
   isConnected: () => boolean;
-  /** The signed-in member on this device, or null (auth not ready / signed out). */
+  /** Who may send now: the member the server confirmed for this session, else null. */
   identity: () => { memberId: string; clerkId: string } | null;
+  /**
+   * Whose items the pill and heartbeat count: the member using the app, even before sending is
+   * allowed (offline, sign-in loading). Defaults to `identity`.
+   */
+  owner?: () => { memberId: string; clerkId: string } | null;
   /** Cross-tab exclusivity: runs `fn` only if no other tab is syncing. */
   withLock: (fn: () => Promise<void>) => Promise<void>;
   /** After each pass: the outbox health for members.heartbeat and the pill. */
@@ -59,6 +64,8 @@ export class SyncEngine {
   private pausedUntil = 0;
   private pauseReason: PassReport["pauseReason"] = "none";
   private networkStreak = 0;
+  /** Bumped when sign-in comes back; an auth failure from a send started before it is stale. */
+  private authEpoch = 0;
   /** clientIds confirmed by the server this session (instant, before the Dexie write lands). */
   readonly confirmed = new Set<string>();
 
@@ -81,6 +88,16 @@ export class SyncEngine {
       }
     })();
     return this.running;
+  }
+
+  /** Sign-in is back (Convex authenticated): end an auth pause now instead of waiting it out. */
+  resumeAfterAuth(): Promise<void> {
+    this.authEpoch += 1;
+    if (this.pauseReason === "auth") {
+      this.pausedUntil = 0;
+      this.pauseReason = "none";
+    }
+    return this.kick();
   }
 
   /** "Try now" (F-09 sheet): clear the pause and give failed items a fresh start. */
@@ -138,6 +155,7 @@ export class SyncEngine {
     const { db, deps, now } = this.env;
     const seq = row.seq as number;
     await db.outbox.update(seq, { status: "uploading", attempts: row.attempts + 1 });
+    const epoch = this.authEpoch;
     try {
       const one = () => db.outbox.where("seq").equals(seq);
       await processItem(row, deps, async (progress) => {
@@ -155,11 +173,11 @@ export class SyncEngine {
       this.networkStreak = 0;
       this.pauseReason = "none";
     } catch (error) {
-      await this.fail(row, error);
+      await this.fail(row, error, epoch);
     }
   }
 
-  private async fail(row: OutboxRow, error: unknown): Promise<void> {
+  private async fail(row: OutboxRow, error: unknown, epoch: number): Promise<void> {
     const { db, now } = this.env;
     const seq = row.seq as number;
     const message = error instanceof Error ? error.message : String(error);
@@ -171,8 +189,11 @@ export class SyncEngine {
         await db.outbox.update(seq, { status: "pending", lastError: message });
         return;
       case "auth":
-        this.pauseReason = "auth";
-        this.pausedUntil = now() + AUTH_RETRY_MS;
+        // Sent before sign-in came back: retry on the rerun instead of pausing again.
+        if (epoch === this.authEpoch) {
+          this.pauseReason = "auth";
+          this.pausedUntil = now() + AUTH_RETRY_MS;
+        }
         await db.outbox.update(seq, { status: "pending", lastError: message });
         return;
       case "conflict": {
@@ -242,8 +263,8 @@ export class SyncEngine {
   }
 
   async report(): Promise<PassReport> {
-    const { db, identity } = this.env;
-    const me = identity()?.clerkId;
+    const { db, identity, owner = identity } = this.env;
+    const me = owner()?.clerkId;
     const open = await db.outbox.where("status").anyOf("pending", "uploading", "failed").toArray();
     const mine = open.filter((r) => r.ownerClerkId === me);
     const pending = mine.filter((r) => r.status !== "failed");

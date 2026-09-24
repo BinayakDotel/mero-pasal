@@ -25,6 +25,7 @@
     "serwist": "9.5.12"
   },
   "devDependencies": {
+    "@clerk/testing": "2.2.36",
     "@mero-pasal/config": "workspace:*",
     "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4.3.3",

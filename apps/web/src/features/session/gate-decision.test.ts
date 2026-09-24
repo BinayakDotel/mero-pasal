@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideGate, type GateInput } from "./gate-decision";
+import { decideGate, type GateInput, gateClerkUserId } from "./gate-decision";
 
 const base: GateInput = {
   server: "loading",
@@ -53,5 +53,30 @@ describe("decideGate (architecture §8.4 offline shell)", () => {
     expect(decideGate({ ...base, server: "unauthenticated", snapshotClerkUserId: null })).toBe(
       "signedOut",
     );
+  });
+});
+
+describe("gateClerkUserId (F-09 owner guard, offline Save)", () => {
+  const snapshot = { memberId: "m_buwa", clerkUserId: "user_buwa" };
+  const live = { decision: "live" as const, memberId: "m_buwa", snapshot };
+
+  it("uses Clerk's userId while it has one", () => {
+    expect(gateClerkUserId({ ...live, clerkUserId: "user_buwa" })).toBe("user_buwa");
+  });
+
+  it("offline, Clerk drops its userId: the same member's saved Clerk user (the e2e bug)", () => {
+    expect(gateClerkUserId({ ...live, clerkUserId: null })).toBe("user_buwa");
+  });
+
+  it("never borrows another member's Clerk user", () => {
+    expect(gateClerkUserId({ ...live, memberId: "m_other", clerkUserId: null })).toBeNull();
+  });
+
+  it("snapshot mode uses the snapshot; loading or signed out has no owner", () => {
+    expect(gateClerkUserId({ ...live, decision: "snapshot", clerkUserId: undefined })).toBe(
+      "user_buwa",
+    );
+    expect(gateClerkUserId({ ...live, decision: "loading", clerkUserId: "user_buwa" })).toBeNull();
+    expect(gateClerkUserId({ ...live, decision: "signedOut", clerkUserId: null })).toBeNull();
   });
 });

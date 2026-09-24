@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import type { FunctionReference, FunctionReturnType } from "convex/server";
 import { useEffect, useState } from "react";
 import { getDb } from "./db";
@@ -17,6 +17,8 @@ export type Cached<T> = {
 /**
  * Architecture §12: live Convex data when connected, else the last result saved on the phone.
  * Every live result is written back, so the app keeps working through a power cut.
+ * The query waits for sign-in: after an offline cold start Convex reconnects before Clerk has a
+ * session, and an unauthenticated query throws (it would take the whole screen down).
  */
 export function useCachedQuery<Q extends FunctionReference<"query">>(
   query: Q,
@@ -24,7 +26,10 @@ export function useCachedQuery<Q extends FunctionReference<"query">>(
   cacheKey: string,
 ): Cached<FunctionReturnType<Q>> {
   const connected = useConnection();
-  const live = useQuery(query, args) as FunctionReturnType<Q> | undefined;
+  const { isAuthenticated } = useConvexAuth();
+  const live = useQuery(query, ...([isAuthenticated ? args : "skip"] as [Q["_args"]])) as
+    | FunctionReturnType<Q>
+    | undefined;
   const [cached, setCached] = useState<{ value: FunctionReturnType<Q>; savedAt: number } | null>(
     null,
   );

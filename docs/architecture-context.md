@@ -558,7 +558,7 @@ stateDiagram-v2
 - **Progress is persisted after every upload**, so a restart never re-uploads a page. The server de-duplicates by `clientId`.
 - **Error classes:**
   - **network:** upload `TypeError`, or the Convex WebSocket is down (checked via `connectionState()`, not `navigator.onLine`). The engine pauses and backs off 5 s → 30 s → 2 m → 10 m → 30 m. Not counted.
-  - **auth:** `UNAUTHENTICATED`/`FORBIDDEN`. Paused 60 s. Not counted.
+  - **auth:** `UNAUTHENTICATED`/`FORBIDDEN`. Paused 60 s, or until Convex reports the session authenticated again (`resumeAfterAuth`), whichever is first. Not counted.
   - **`CONFLICT`** while the bill's name item is still pending: retried in 30 s, not counted. If that name item failed, the bill is marked `failed` as BLOCKED.
   - **anything else:** counted; 5 → `failed`, kept and reported. It never blocks the rest of the queue.
 - **Owner guard:** only the signed-in member's items are sent. Other accounts' items are counted as `foreignPending` in `memberSync`.
@@ -569,6 +569,8 @@ stateDiagram-v2
 - **Warm offline** (app already open when the connection drops): everything in F-09 works.
 - **Cold start offline** (app opened for the first time after losing connection):
   - The service worker serves the cached app shell. `/` and `/capture` are static public shells (ADR-032), precached (`app/serwist/[path]/route.ts`) under a revision hashed from the commit and every precached file, so any code change refetches them. Navigation preload is off (and disabled on activate, since the setting outlives workers), so they open cache-first and a dead Wi-Fi never hangs a cold start. Other pages fall back to `/~offline`, which reloads itself when the connection returns.
+  - **Offline, Clerk drops its `userId`** as soon as its short session token can't refresh, even with the app already open. So the outbox owner comes from `MemberGate` (`gateClerkUserId`): Clerk's id while it has one, else the Clerk user saved with the same member. Save never depends on Clerk being reachable.
+  - Live queries (`useCachedQuery`) wait until Convex is authenticated. After an offline start, Convex reconnects before Clerk has a token, and an unauthenticated query would throw and take the screen down; until then the phone's saved copy shows.
   - Clerk's script can't load offline, and it doesn't retry (its status becomes `error`). When the Convex connection comes back, which also covers "Wi-Fi was on, internet returned", `AppUpdater` reloads once the app is idle, at most once every 5 minutes, so sign-in and sync start again.
   - **Clerk cannot load offline**, so the UI must **not** wrap capture in `<SignedIn>`. The shell checks a local "signed-in member" record in Dexie and renders from the caches. Sync waits until Clerk and Convex connect.
   - Offline this is best effort. Recommend keeping mobile data on as a fallback to shop Wi-Fi.

@@ -105,6 +105,7 @@ export const update = memberMutation({
 | `backend` | Vitest + `convex-test` | `convex/**/*.test.ts` | Each public function: happy path, auth failure, one edge case. Ledger invariant test required. |
 | `web` | Playwright | `apps/web/e2e/` | Capture happy path, offline sync, language switch; mobile viewport 393×851 |
 
+- Signed-in e2e tests (e.g. `offline-sync.spec.ts`, the F-09 exit test) sign in as the Clerk **dev** test user `…+clerk_test@…` via `@clerk/testing` and use the Convex **dev** deployment. They need `CLERK_SECRET_KEY` in `apps/web/.env.local` and the functions pushed (`just convex-push`); without the key they skip. The test user has its own shop (`e2eSupport:ensureE2eShop`), so test bills never touch the real shop.
 - Test names cite spec IDs: `it("F-03: saves to outbox before showing stamp")`.
 - No snapshot tests of whole screens. Assert behaviour.
 - Bugs get a failing test first.

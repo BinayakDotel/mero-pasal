@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { internalMutation, type MutationCtx } from "./_generated/server";
 import { appError } from "./lib/errors";
 
 // F-01 / architecture §11: one-time setup of the shop, its owner and admin, and the built-in
@@ -15,6 +16,33 @@ const person = v.object({
 export const WALK_IN_CLIENT_ID = "walk-in";
 /** Phonetic keys are lowercase letters only, so this can never match a real name lookup. */
 export const WALK_IN_PHONETIC_KEY = "#walk-in";
+
+/** The built-in walk-in account every shop has: pinned in the picker, never name-matched (F-04). */
+export function insertWalkIn(
+  ctx: MutationCtx,
+  shopId: Id<"shops">,
+  createdBy: Id<"members">,
+  now: number,
+): Promise<Id<"parties">> {
+  return ctx.db.insert("parties", {
+    shopId,
+    clientId: WALK_IN_CLIENT_ID,
+    kind: "customer",
+    displayName: "नगद ग्राहक",
+    nameLatin: "nagad grahak",
+    nameDevanagari: "नगद ग्राहक",
+    phoneticKey: WALK_IN_PHONETIC_KEY,
+    isWalkIn: true,
+    archived: false,
+    lastUsedAt: now,
+    billCount: 0,
+    salePaisa: 0,
+    purchasePaisa: 0,
+    balancePaisa: 0,
+    createdBy,
+    createdAt: now,
+  });
+}
 
 function required(label: string, value: string): string {
   const trimmed = value.trim();
@@ -61,25 +89,7 @@ export const bootstrap = internalMutation({
     await addMember(owner, "owner", "ne"); // Buwa: Nepali by default (F-10)
     const adminId = await addMember(admin, "admin", "en"); // admin console is English (ui-ux §6)
 
-    await ctx.db.insert("parties", {
-      shopId,
-      clientId: WALK_IN_CLIENT_ID,
-      kind: "customer",
-      displayName: "नगद ग्राहक",
-      nameLatin: "nagad grahak",
-      nameDevanagari: "नगद ग्राहक",
-      // Pinned in the picker and never name-matched (F-04).
-      phoneticKey: WALK_IN_PHONETIC_KEY,
-      isWalkIn: true,
-      archived: false,
-      lastUsedAt: now,
-      billCount: 0,
-      salePaisa: 0,
-      purchasePaisa: 0,
-      balancePaisa: 0,
-      createdBy: adminId,
-      createdAt: now,
-    });
+    await insertWalkIn(ctx, shopId, adminId, now);
 
     return shopId;
   },
