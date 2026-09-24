@@ -5,9 +5,13 @@ import { Sheet } from "@mero-pasal/ui/components/sheet";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/icons";
 import { useLocale } from "@/features/session/locale";
+import { useMember } from "@/features/session/member-gate";
 import { useSync } from "./sync-provider";
 import { useConnection } from "./use-connection";
 import { useOutboxRows } from "./use-outbox-rows";
+
+/** The deployed build (Vercel exposes the commit to Next.js), for Binayak's diagnostics. */
+const BUILD = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "local";
 
 const STORAGE_WARN_BYTES = 100 * 1024 * 1024;
 const STORAGE_LOW_FREE = 50 * 1024 * 1024;
@@ -19,6 +23,8 @@ const STORAGE_LOW_FREE = 50 * 1024 * 1024;
 export function SyncPill() {
   const { locale, t } = useLocale();
   const { engine, owner } = useSync();
+  // Admin only (Binayak): why an item is waiting, and which build this phone runs.
+  const diagnostics = useMember().member.role === "admin";
   const connected = useConnection();
   const rows = useOutboxRows();
   const [open, setOpen] = useState(false);
@@ -100,6 +106,11 @@ export function SyncPill() {
                           ? t("sync.failed")
                           : t("sync.statusPending")}
                     </span>
+                    {diagnostics && r.lastError ? (
+                      <span lang="en" className="block text-[13px] break-all text-ink-soft">
+                        {r.lastError} · {r.failures}× · {r.attempts} tries
+                      </span>
+                    ) : null}
                   </span>
                   {r.type === "tx.create" && r.payload.amountPaisa !== undefined ? (
                     <span className="font-display font-bold tabular-nums">
@@ -130,6 +141,11 @@ export function SyncPill() {
           >
             {t("sync.tryNow")}
           </button>
+        ) : null}
+        {diagnostics ? (
+          <p lang="en" className="mt-3 text-center text-[13px] text-ink-soft">
+            build {BUILD}
+          </p>
         ) : null}
       </Sheet>
     </>
