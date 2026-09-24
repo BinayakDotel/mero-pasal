@@ -97,3 +97,47 @@ export function mergeBills(server: readonly BillItem[], local: readonly BillItem
     (a, b) => b.dateBs.localeCompare(a.dateBs) || b.capturedAt - a.capturedAt,
   );
 }
+
+/** A correction or removal the server hasn't applied yet (a refused one no longer counts). */
+const inFlight = (r: OutboxRow) => r.status === "pending" || r.status === "uploading";
+
+/**
+ * F-08 on the phone: bills with a removal on its way disappear; bills with a correction on its
+ * way show the new values (clock mark). The latest correction wins (rows are in queue order).
+ */
+export function applyEdits(
+  bills: readonly BillItem[],
+  rows: readonly OutboxRow[],
+  names: NameBook,
+): BillItem[] {
+  const removed = new Set<string>();
+  const corrected = new Map<string, Extract<OutboxRow, { type: "tx.correct" }>>();
+  for (const r of rows) {
+    if (!inFlight(r)) continue;
+    if (r.type === "tx.remove") removed.add(r.payload.billClientId);
+    if (r.type === "tx.correct") corrected.set(r.payload.billClientId, r);
+  }
+  return bills
+    .filter((b) => !removed.has(b.clientId))
+    .map((b) => {
+      const c = corrected.get(b.clientId)?.payload;
+      if (!c) return b;
+      const ref = c.partyRef;
+      const party = ref
+        ? "id" in ref
+          ? { ...names.byId.get(ref.id), _id: ref.id }
+          : names.byClientId.get(ref.clientId)
+        : undefined;
+      const { partyId: _id, partyName: _name, amountPaisa: _amount, ...rest } = b;
+      return {
+        ...rest,
+        kind: c.kind,
+        dateBs: c.dateBs,
+        ...(party?._id ? { partyId: party._id } : {}),
+        ...(party?.displayName === undefined ? {} : { partyName: party.displayName }),
+        isWalkIn: party?.isWalkIn ?? false,
+        ...(c.amountPaisa === undefined ? {} : { amountPaisa: c.amountPaisa }),
+        pending: true,
+      };
+    });
+}

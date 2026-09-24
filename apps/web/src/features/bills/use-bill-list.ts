@@ -5,7 +5,14 @@ import { useMemo } from "react";
 import { useCachedPaginatedQuery } from "@/features/sync/use-cached-paginated-query";
 import { useCachedQuery } from "@/features/sync/use-cached-query";
 import { useOutboxRows } from "@/features/sync/use-outbox-rows";
-import { type BillItem, fromServer, localBills, mergeBills, nameBook } from "./bill-item";
+import {
+  applyEdits,
+  type BillItem,
+  fromServer,
+  localBills,
+  mergeBills,
+  nameBook,
+} from "./bill-item";
 
 export type BillFilter = "all" | "sale" | "purchase" | "noAmount";
 
@@ -23,18 +30,18 @@ export function useBillList(filter: BillFilter) {
   const rows = useOutboxRows();
 
   const bills = useMemo((): BillItem[] | undefined => {
-    const local = localBills(
-      rows,
-      nameBook(parties.data ?? [], rows),
-      (r) =>
-        r.status !== "done" &&
-        (filter === "all" ||
-          (filter === "noAmount"
-            ? r.payload.amountPaisa === undefined
-            : r.payload.kind === filter)),
-    );
+    const names = nameBook(parties.data ?? [], rows);
+    const local = localBills(rows, names, (r) => r.status !== "done");
     if (pages.results === undefined && local.length === 0) return undefined;
-    return mergeBills((pages.results ?? []).map(fromServer), local);
+    // Corrections on their way may change a bill's type or amount: filter after applying them.
+    return mergeBills(
+      applyEdits((pages.results ?? []).map(fromServer), rows, names),
+      applyEdits(local, rows, names),
+    ).filter(
+      (b) =>
+        filter === "all" ||
+        (filter === "noAmount" ? b.amountPaisa === undefined : b.kind === filter),
+    );
   }, [pages.results, parties.data, rows, filter]);
 
   return { bills, live: pages.live, canLoadMore: pages.canLoadMore, loadMore: pages.loadMore };

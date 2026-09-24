@@ -3,7 +3,13 @@
 import { api } from "@mero-pasal/backend/convex/_generated/api";
 import type { Id } from "@mero-pasal/backend/convex/_generated/dataModel";
 import { useMemo } from "react";
-import { fromServer, localBills, mergeBills, nameBook } from "@/features/bills/bill-item";
+import {
+  applyEdits,
+  fromServer,
+  localBills,
+  mergeBills,
+  nameBook,
+} from "@/features/bills/bill-item";
 import { useCachedPaginatedQuery } from "@/features/sync/use-cached-paginated-query";
 import { useCachedQuery } from "@/features/sync/use-cached-query";
 import { useOutboxRows } from "@/features/sync/use-outbox-rows";
@@ -27,9 +33,10 @@ export function useAccount(partyId: Id<"parties">, thisMonth: string, month: str
   const rows = useOutboxRows();
 
   const bills = useMemo(() => {
+    const names = nameBook(parties.data ?? [], rows);
     const local = localBills(
       rows,
-      nameBook(parties.data ?? [], rows),
+      names,
       (r) =>
         r.status !== "done" &&
         r.payload.partyRef !== undefined &&
@@ -38,7 +45,11 @@ export function useAccount(partyId: Id<"parties">, thisMonth: string, month: str
         (month === null || r.payload.dateBs.startsWith(`${month}-`)),
     );
     if (pages.results === undefined && local.length === 0) return undefined;
-    return mergeBills((pages.results ?? []).map(fromServer), local);
+    // A correction on its way may move a bill to another account: keep only this account's.
+    return mergeBills(
+      applyEdits((pages.results ?? []).map(fromServer), rows, names),
+      applyEdits(local, rows, names),
+    ).filter((b) => b.partyId === partyId);
   }, [pages.results, parties.data, rows, partyId, month]);
 
   return {

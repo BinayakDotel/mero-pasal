@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OutboxRow } from "@/features/sync/db";
-import { type BillItem, localBills, mergeBills, nameBook } from "./bill-item";
+import { applyEdits, type BillItem, localBills, mergeBills, nameBook } from "./bill-item";
 
 const item = (clientId: string, dateBs: string, capturedAt: number, pending = false): BillItem => ({
   key: clientId,
@@ -78,5 +78,53 @@ describe("localBills (F-09)", () => {
 
   it("keeps only the bills the caller asks for", () => {
     expect(localBills(rows, names, (r) => r.payload.dateBs === "2083-06-06")).toHaveLength(1);
+  });
+});
+
+describe("applyEdits (F-08 on the phone)", () => {
+  const names = nameBook(
+    [{ _id: "party_sita", clientId: "c-sita", displayName: "Sita Shrestha", isWalkIn: false }],
+    [],
+  );
+  const op = (type: string, status: string, payload: Record<string, unknown>) =>
+    ({
+      type,
+      status,
+      clientId: `op-${type}-${status}`,
+      payload: { billClientId: "a", ...payload },
+    }) as unknown as OutboxRow;
+  const bills = [item("a", "2083-06-07", 1), item("b", "2083-06-07", 2)];
+
+  it("a removal on its way hides the bill; a refused or finished one doesn't", () => {
+    expect(
+      applyEdits(bills, [op("tx.remove", "pending", {})], names).map((b) => b.clientId),
+    ).toEqual(["b"]);
+    expect(applyEdits(bills, [op("tx.remove", "failed", {})], names)).toHaveLength(2);
+    expect(applyEdits(bills, [op("tx.remove", "done", {})], names)).toHaveLength(2);
+  });
+
+  it("a correction on its way shows the new values with the clock; the latest wins", () => {
+    const [edited] = applyEdits(
+      bills,
+      [
+        op("tx.correct", "uploading", { kind: "sale", dateBs: "2083-06-07", amountPaisa: 5 }),
+        op("tx.correct", "pending", {
+          kind: "purchase",
+          dateBs: "2083-06-06",
+          amountPaisa: 900,
+          partyRef: { id: "party_sita" },
+        }),
+      ],
+      names,
+    );
+    expect(edited).toMatchObject({
+      clientId: "a",
+      kind: "purchase",
+      dateBs: "2083-06-06",
+      amountPaisa: 900,
+      partyId: "party_sita",
+      partyName: "Sita Shrestha",
+      pending: true,
+    });
   });
 });

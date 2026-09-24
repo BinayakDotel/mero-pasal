@@ -3,11 +3,13 @@
 import { api } from "@mero-pasal/backend/convex/_generated/api";
 import { useEffect, useMemo, useState } from "react";
 import { useMember } from "@/features/session/member-gate";
+import type { OutboxRow } from "@/features/sync/db";
 import { useCachedQuery } from "@/features/sync/use-cached-query";
 import { useOutboxRows } from "@/features/sync/use-outbox-rows";
-import { localBills, nameBook } from "./bill-item";
+import { applyEdits, type BillItem, localBills, type NameBook, nameBook } from "./bill-item";
 
 export type BillDetail = {
+  clientId: string;
   kind: "sale" | "purchase";
   status: "active" | "deleted";
   dateBs: string;
@@ -17,6 +19,8 @@ export type BillDetail = {
   amountPaisa?: number;
   billNumber?: string;
   capturedAt: number;
+  /** The member who took it (for the F-08 staff rule), when the server knows. */
+  capturedBy?: string;
   capturedByName: string;
   /** Full-size photo per page (a blob URL while the bill is still on the phone). */
   photos: (string | null)[];
@@ -36,9 +40,33 @@ function useBlobUrls(blobs: readonly Blob[] | undefined): string[] {
   return urls;
 }
 
+/** F-08 on the phone: a removal on its way shows as removed; a correction shows its values. */
+export function withEdits(
+  bill: BillDetail,
+  rows: readonly OutboxRow[],
+  names: NameBook,
+): BillDetail {
+  const item: BillItem = { ...bill, key: bill.clientId, thumb: null };
+  const [edited] = applyEdits([item], rows, names);
+  if (!edited) return { ...bill, status: "deleted", pending: true };
+  if (edited === item) return bill;
+  const { partyId: _id, partyName: _name, amountPaisa: _amount, ...rest } = bill;
+  return {
+    ...rest,
+    kind: edited.kind,
+    dateBs: edited.dateBs,
+    ...(edited.partyId === undefined ? {} : { partyId: edited.partyId }),
+    ...(edited.partyName === undefined ? {} : { partyName: edited.partyName }),
+    isWalkIn: edited.isWalkIn,
+    ...(edited.amountPaisa === undefined ? {} : { amountPaisa: edited.amountPaisa }),
+    pending: true,
+  };
+}
+
 /**
  * F-08 bill detail by clientId: the server's copy (live, or saved on the phone offline), else
- * the bill still waiting in the phone's outbox. `null` = not found.
+ * the bill still waiting in the phone's outbox, with corrections and removals on their way
+ * applied. `null` = not found.
  */
 export function useBillDetail(clientId: string): BillDetail | null | undefined {
   const server = useCachedQuery(api.transactions.get, { clientId }, `transactions.get:${clientId}`);
@@ -56,40 +84,53 @@ export function useBillDetail(clientId: string): BillDetail | null | undefined {
   const localUrls = useBlobUrls(server.data ? undefined : localPhotos);
 
   return useMemo(() => {
+    const names = nameBook(parties.data ?? [], rows);
     const s = server.data;
     if (s) {
-      return {
-        kind: s.kind,
-        status: s.status,
-        dateBs: s.dateBs,
-        ...(s.partyId === undefined ? {} : { partyId: s.partyId }),
-        ...(s.partyName === undefined ? {} : { partyName: s.partyName }),
-        isWalkIn: s.isWalkIn,
-        ...(s.amountPaisa === undefined ? {} : { amountPaisa: s.amountPaisa }),
-        ...(s.billNumber === undefined ? {} : { billNumber: s.billNumber }),
-        capturedAt: s.capturedAt,
-        capturedByName: s.capturedByName,
-        photos: s.photos.map((p) => p.url ?? p.thumbUrl),
-        pending: false,
-      };
+      return withEdits(
+        {
+          clientId,
+          kind: s.kind,
+          status: s.status,
+          dateBs: s.dateBs,
+          ...(s.partyId === undefined ? {} : { partyId: s.partyId }),
+          ...(s.partyName === undefined ? {} : { partyName: s.partyName }),
+          isWalkIn: s.isWalkIn,
+          ...(s.amountPaisa === undefined ? {} : { amountPaisa: s.amountPaisa }),
+          ...(s.billNumber === undefined ? {} : { billNumber: s.billNumber }),
+          capturedAt: s.capturedAt,
+          capturedBy: s.capturedBy,
+          capturedByName: s.capturedByName,
+          photos: s.photos.map((p) => p.url ?? p.thumbUrl),
+          pending: false,
+        },
+        rows,
+        names,
+      );
     }
     if (outbox) {
-      const [item] = localBills([outbox], nameBook(parties.data ?? [], rows), () => true);
+      const [item] = localBills([outbox], names, () => true);
       if (!item) return null;
-      return {
-        kind: item.kind,
-        status: "active",
-        dateBs: item.dateBs,
-        ...(item.partyId === undefined ? {} : { partyId: item.partyId }),
-        ...(item.partyName === undefined ? {} : { partyName: item.partyName }),
-        isWalkIn: item.isWalkIn,
-        ...(item.amountPaisa === undefined ? {} : { amountPaisa: item.amountPaisa }),
-        capturedAt: item.capturedAt,
-        capturedByName: member.displayName,
-        photos: localUrls,
-        pending: item.pending,
-      };
+      return withEdits(
+        {
+          clientId,
+          kind: item.kind,
+          status: "active",
+          dateBs: item.dateBs,
+          ...(item.partyId === undefined ? {} : { partyId: item.partyId }),
+          ...(item.partyName === undefined ? {} : { partyName: item.partyName }),
+          isWalkIn: item.isWalkIn,
+          ...(item.amountPaisa === undefined ? {} : { amountPaisa: item.amountPaisa }),
+          capturedAt: item.capturedAt,
+          capturedBy: member._id,
+          capturedByName: member.displayName,
+          photos: localUrls,
+          pending: item.pending,
+        },
+        rows,
+        names,
+      );
     }
     return s === null ? null : undefined;
-  }, [server.data, outbox, parties.data, rows, member.displayName, localUrls]);
+  }, [server.data, outbox, parties.data, rows, member, localUrls, clientId]);
 }
