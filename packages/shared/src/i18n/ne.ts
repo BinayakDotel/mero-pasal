@@ -138,6 +138,7 @@ export const ne = {
   "sync.newName": "नयाँ नाम: {name}", // i18n-review
   "sync.blocked": "यसको नाम पठाउन सकिएन", // i18n-review
   "sync.storageLow": "फोनमा ठाउँ कम छ। पुराना फोटो वा एप मेटाउनुहोस्।", // i18n-review
+  "sync.photoLost": "यो बिलको फोटो फोनमा पढ्न सकिएन। बिल खोलेर हटाउनुहोस्, अनि फेरि खिच्नुहोस्।", // i18n-review
   "sync.stale": "(पुरानो)",
 
   "offline.title": "इन्टरनेट छैन",

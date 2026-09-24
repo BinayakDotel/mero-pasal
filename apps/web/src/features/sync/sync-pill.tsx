@@ -2,6 +2,7 @@
 
 import { formatNpr } from "@mero-pasal/shared/money";
 import { Sheet } from "@mero-pasal/ui/components/sheet";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/icons";
 import { useLocale } from "@/features/session/locale";
@@ -78,6 +79,7 @@ export function SyncPill() {
           <ul className="mb-3">
             {mine.map((r) => {
               const blocked = r.status === "failed" && r.lastError?.startsWith("BLOCKED");
+              const photoLost = r.status === "failed" && r.lastError?.startsWith("PHOTO_LOST");
               const partyRef = r.type === "tx.create" ? r.payload.partyRef : undefined;
               const who =
                 r.type === "party.create"
@@ -100,11 +102,20 @@ export function SyncPill() {
                     <span
                       className={`block text-[15px] ${r.status === "failed" ? "font-semibold text-bahi" : "text-ink-soft"}`}
                     >
-                      {blocked
-                        ? t("sync.blocked")
-                        : r.status === "failed"
-                          ? t("sync.failed")
-                          : t("sync.statusPending")}
+                      {photoLost ? (
+                        <Link
+                          href={`/bills/${encodeURIComponent(r.clientId)}`}
+                          className="underline"
+                        >
+                          {t("sync.photoLost")}
+                        </Link>
+                      ) : blocked ? (
+                        t("sync.blocked")
+                      ) : r.status === "failed" ? (
+                        t("sync.failed")
+                      ) : (
+                        t("sync.statusPending")
+                      )}
                     </span>
                     {diagnostics && r.lastError ? (
                       <span lang="en" className="block text-[13px] break-all text-ink-soft">

@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { thumbnailOf } from "@/features/capture/image/process-image";
 import { useMemberIdentity } from "@/features/session/member-gate";
 import { getDb, requestPersistence } from "./db";
 import { type OutboxDeps, withCallTimeouts } from "./outbox";
@@ -84,6 +85,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
             : { partyRef: "id" in partyRef ? { id: partyRef.id as Id<"parties"> } : partyRef }),
         }),
       removeTx: (args) => convex.mutation(api.transactions.remove, args),
+      makeThumb: thumbnailOf,
     };
     return new SyncEngine({
       db: getDb(),

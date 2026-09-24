@@ -105,3 +105,17 @@ export async function processImage(blob: Blob): Promise<ProcessedPhoto> {
     bitmap.close();
   }
 }
+
+/**
+ * A fresh thumbnail from an already processed photo (the sync engine's rescue when a stored
+ * thumbnail can't be read back on the iPhone). Drawn straight from the decoded photo.
+ */
+export async function thumbnailOf(photo: Blob): Promise<Blob> {
+  const bitmap = await createImageBitmap(photo);
+  try {
+    const t = fitWithin(bitmap.width, bitmap.height, THUMB_MAX_EDGE);
+    return await toJpeg(draw(bitmap, t.width, t.height), JPEG_QUALITY);
+  } finally {
+    bitmap.close();
+  }
+}

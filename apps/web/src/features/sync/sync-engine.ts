@@ -1,7 +1,14 @@
 import { UNDO_WINDOW_MS } from "@mero-pasal/shared/domain";
 import type { MeroPasalDb, OutboxRow } from "./db";
-import { billOf, isV1Page, type OutboxDeps, processItem, type StoredPage } from "./outbox";
-import { asBlob, PhotoUnreadableError } from "./photo-bytes";
+import {
+  billOf,
+  isV1Page,
+  type OutboxDeps,
+  type OutboxPage,
+  processItem,
+  type StoredPage,
+} from "./outbox";
+import { asBlob, PhotoUnreadableError, type StoredPhoto, storable } from "./photo-bytes";
 
 // F-09 sync engine (architecture §8.2–8.3). Sends the phone's outbox to the server, oldest first
 // (names before the bills that use them), exactly once per item (server de-duplicates by
@@ -209,6 +216,7 @@ export class SyncEngine {
     if (!row) return; // changed, undone or dropped since it was picked
     const epoch = this.authEpoch;
     try {
+      if (row.type === "tx.create" && !(await this.photosReady(row))) return;
       const one = () => db.outbox.where("seq").equals(seq);
       await processItem(
         row,
@@ -294,6 +302,97 @@ export class SyncEngine {
             lastError: message,
           },
     );
+  }
+
+  /**
+   * Architecture §9: before a bill goes, the photos it still has to upload must be readable.
+   * Photos an older phone kept as Blobs are converted to bytes; an unreadable thumbnail is
+   * rebuilt from the full photo; an unreadable full photo (or a thumbnail that can't be rebuilt)
+   * marks the bill PHOTO_LOST at once: retrying can't help, the sheet tells Buwa to remove it and
+   * take it again, and the rest of the queue goes on. Uploaded photos aren't checked again.
+   */
+  private async photosReady(row: Extract<OutboxRow, { type: "tx.create" }>): Promise<boolean> {
+    const { db, deps } = this.env;
+    if (row.pages.some(isV1Page)) await this.movePhotosToTable(row);
+    for (const [index, page] of row.pages.entries()) {
+      if (isV1Page(page)) continue; // (moved above)
+      const lost = async () => {
+        await db.outbox.update(row.seq as number, {
+          status: "failed",
+          lastError: `PHOTO_LOST: page ${index + 1} can't be read on this phone`,
+        });
+        return false;
+      };
+      if (page.storageId === undefined && !(await this.readablePhoto(page.fullRef))) return lost();
+      if (page.thumbId === undefined && !(await this.readablePhoto(page.thumbRef))) {
+        const full = await this.readablePhoto(page.fullRef);
+        if (!full || !deps.makeThumb) return lost();
+        try {
+          const thumb = await storable(await deps.makeThumb(asBlob(full)));
+          await db.photos.put({ id: page.thumbRef, photo: thumb });
+        } catch {
+          return lost();
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * A bill saved before the photo table keeps its photos inline (v1 pages). Read what can be
+   * read into the table as bytes and point the pages at it; the row is rewritten without any
+   * Blob. A photo that can't be read is simply not stored, and the check that follows decides
+   * whether the bill can still go (e.g. that photo was already uploaded) or is PHOTO_LOST.
+   */
+  private async movePhotosToTable(row: Extract<OutboxRow, { type: "tx.create" }>): Promise<void> {
+    const { db } = this.env;
+    const pages: OutboxPage[] = [];
+    const photos: { id: string; photo: StoredPhoto }[] = [];
+    for (const [index, page] of row.pages.entries()) {
+      if (!isV1Page(page)) {
+        pages.push(page);
+        continue;
+      }
+      const { full, thumb, ...rest } = page;
+      const fullRef = `${row.clientId}:${index}:full`;
+      const thumbRef = `${row.clientId}:${index}:thumb`;
+      for (const [id, blob] of [
+        [fullRef, full],
+        [thumbRef, thumb],
+      ] as const) {
+        try {
+          photos.push({ id, photo: await storable(blob) });
+        } catch {
+          // unreadable on this phone: left out (see the check in photosReady)
+        }
+      }
+      pages.push({ ...rest, fullRef, thumbRef });
+    }
+    await db.transaction("rw", db.outbox, db.photos, async () => {
+      if (photos.length) await db.photos.bulkPut(photos);
+      await db.outbox
+        .where("seq")
+        .equals(row.seq as number)
+        .modify((stored) => {
+          if (stored.type === "tx.create") stored.pages = pages;
+        });
+    });
+    row.pages = pages;
+  }
+
+  /** The photo as bytes (converting one an older phone kept as a Blob), or null if unreadable. */
+  private async readablePhoto(ref: string): Promise<StoredPhoto | null> {
+    const { db } = this.env;
+    const stored = await db.photos.get(ref);
+    if (!stored) return null;
+    if (!(stored.photo instanceof Blob)) return stored.photo;
+    try {
+      const bytes = await storable(stored.photo);
+      await db.photos.put({ id: ref, photo: bytes });
+      return bytes;
+    } catch {
+      return null;
+    }
   }
 
   /** A page photo from the `photos` table, as a Blob to send (architecture §9). */
