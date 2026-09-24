@@ -1,7 +1,7 @@
 import path from "node:path";
-import { clerk, setupClerkTestingToken } from "@clerk/testing/playwright";
+import { setupClerkTestingToken } from "@clerk/testing/playwright";
 import { expect, type Page, test } from "@playwright/test";
-import { convexRunDev, E2E_USER } from "./support/e2e-user";
+import { convexRunDev, E2E_USER, signInE2e } from "./support/e2e-user";
 
 // F-09 acceptance (M2 exit, plan PR 9) against the production build and the Convex DEV
 // deployment: bills made offline survive the app being closed and reach the server exactly once,
@@ -23,9 +23,7 @@ test.describe("F-09 offline sync", () => {
   }) => {
     test.setTimeout(240_000);
 
-    await page.goto("/sign-in");
-    await clerk.signIn({ page, emailAddress: E2E_USER.email });
-    await page.goto("/");
+    await signInE2e(page);
     await expect(saleButton(page)).toBeVisible({ timeout: 30_000 });
 
     // The service worker must control the page before the connection goes (architecture §8.4).

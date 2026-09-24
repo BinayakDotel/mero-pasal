@@ -6,11 +6,11 @@ import { useLocale } from "@/features/session/locale";
 
 const ITEMS = [
   { key: "nav.today", icon: "sun", href: "/" },
-  { key: "nav.bills", icon: "receipt", href: null }, // M3 (F-06)
+  { key: "nav.bills", icon: "receipt", href: "/bills" }, // F-06
   { key: "nav.accounts", icon: "book", href: null }, // M3 (F-07)
 ] as const satisfies readonly { key: string; icon: IconName; href: string | null }[];
 
-/** ui-ux §4: three items, icon + label. Bills and Accounts light up in M3. */
+/** ui-ux §4: three items, icon + label. Accounts lights up with F-07. */
 export function BottomNav({ active }: { active: "nav.today" | "nav.bills" | "nav.accounts" }) {
   const { t } = useLocale();
   return (

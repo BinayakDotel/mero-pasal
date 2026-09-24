@@ -1,6 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { clerk } from "@clerk/testing/playwright";
+import type { Page } from "@playwright/test";
 
 /**
  * The Clerk DEV test user (plan M2 PR 1). `+clerk_test` addresses never get real email; the
@@ -30,4 +32,11 @@ export function convexRunDev<T>(fn: string, args: Record<string, unknown>): T {
     { cwd: repoRoot, env, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] },
   );
   return JSON.parse(out) as T;
+}
+
+/** Sign in as the E2E test user and land on Today. */
+export async function signInE2e(page: Page): Promise<void> {
+  await page.goto("/sign-in");
+  await clerk.signIn({ page, emailAddress: E2E_USER.email });
+  await page.goto("/");
 }
