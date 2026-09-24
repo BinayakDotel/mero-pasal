@@ -155,3 +155,92 @@ describe("transactions.correct (F-08)", () => {
     await asStaff.mutation(api.transactions.correct, { clientId: own, ...args });
   });
 });
+
+describe("transactions.remove / restore (F-08, UC-07)", () => {
+  it("UC-07: a removed bill leaves lists and totals; a retry is a no-op", async () => {
+    const { asOwner, party, bill, account, day, t } = await setup();
+    const hari = await party("Hari Prasad");
+    const keep = await bill(asOwner, { partyId: hari, amountPaisa: 100 });
+    const dup = await bill(asOwner, { partyId: hari, amountPaisa: 100 });
+
+    await asOwner.mutation(api.transactions.remove, { clientId: dup });
+    await asOwner.mutation(api.transactions.remove, { clientId: dup });
+    expect(await day()).toMatchObject({ saleCount: 1, salePaisa: 100 });
+    expect((await account(hari)).allTime.billCount).toBe(1);
+    const list = await asOwner.query(api.transactions.listByDate, {
+      filter: "all",
+      paginationOpts: { numItems: 10, cursor: null },
+    });
+    expect(list.page.map((b) => b.clientId)).toEqual([keep]);
+    const removals = await t.run((ctx) =>
+      ctx.db
+        .query("auditLog")
+        .collect()
+        .then((rows) => rows.filter((r) => r.action === "tx.remove")),
+    );
+    expect(removals).toHaveLength(1);
+  });
+
+  it("restore is admin only and brings the bill back into the totals", async () => {
+    const { asOwner, asAdmin, bill, day } = await setup();
+    const clientId = await bill(asOwner, { amountPaisa: 700 });
+    await asOwner.mutation(api.transactions.remove, { clientId });
+    await expect(asOwner.mutation(api.transactions.restore, { clientId })).rejects.toThrow(
+      /FORBIDDEN/,
+    );
+    await asAdmin.mutation(api.transactions.restore, { clientId });
+    await asAdmin.mutation(api.transactions.restore, { clientId }); // no-op
+    expect(await day()).toMatchObject({ saleCount: 1, salePaisa: 700 });
+  });
+
+  it("staff can't remove someone else's bill; unknown bills are NOT_FOUND", async () => {
+    const { t, shopId, asOwner, bill } = await setup();
+    await t.run((ctx) =>
+      ctx.db.insert("members", {
+        shopId,
+        clerkUserId: "user_staff",
+        displayName: "Aama",
+        role: "staff",
+        locale: "ne",
+        active: true,
+      }),
+    );
+    const asStaff = t.withIdentity({ subject: "user_staff" });
+    const clientId = await bill(asOwner, { amountPaisa: 100 });
+    await expect(asStaff.mutation(api.transactions.remove, { clientId })).rejects.toThrow(
+      /FORBIDDEN/,
+    );
+    await expect(
+      asOwner.mutation(api.transactions.remove, { clientId: "never-sent" }),
+    ).rejects.toThrow(/NOT_FOUND/);
+  });
+});
+
+describe("audit.listForEntity (F-15)", () => {
+  it("shows a bill's history newest first with who did it; admin only", async () => {
+    const { t, asOwner, asAdmin, today, bill } = await setup();
+    const clientId = await bill(asOwner, { amountPaisa: 100 });
+    await asOwner.mutation(api.transactions.correct, {
+      clientId,
+      kind: "sale",
+      dateBs: today,
+      amountPaisa: 150,
+    });
+    await asOwner.mutation(api.transactions.remove, { clientId });
+    const id = await t.run(async (ctx) => (await ctx.db.query("transactions").first())?._id ?? "");
+
+    const history = await asAdmin.query(api.audit.listForEntity, {
+      entity: "transaction",
+      entityId: id,
+    });
+    expect(history.map((h) => [h.action, h.actorName])).toEqual([
+      ["tx.remove", "Owner"],
+      ["tx.correct", "Owner"],
+      ["tx.create", "Owner"],
+    ]);
+    expect(history[1]?.summary).toBe("amount: Rs 1 → Rs 1.50");
+    await expect(
+      asOwner.query(api.audit.listForEntity, { entity: "transaction", entityId: id }),
+    ).rejects.toThrow(/FORBIDDEN/);
+  });
+});

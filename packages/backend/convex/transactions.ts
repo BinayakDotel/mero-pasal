@@ -7,7 +7,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { billRow, isBill, toBillRow } from "./lib/billRow";
 import { appError } from "./lib/errors";
-import { memberMutation, memberQuery } from "./lib/functions";
+import { adminMutation, memberMutation, memberQuery } from "./lib/functions";
 import { apply } from "./lib/ledger";
 import { assertMonthBs } from "./lib/months";
 import { assertCanEdit } from "./lib/permissions";
@@ -422,6 +422,45 @@ export const correct = memberMutation({
         dateAd: bsToAdMs(args.dateBs),
       },
       { actorId: ctx.member._id, action: "tx.correct", summary: changes.join(" · ") },
+    );
+  },
+});
+
+/**
+ * F-08 remove (UC-07): a soft delete through ledger.apply, so the bill leaves every list and
+ * total (NFR-07: never a hard delete). Already removed → nothing to do (a retry is a no-op).
+ * The app's 6 s Undo happens on the phone before this is sent; afterwards only admin restores.
+ */
+export const remove = memberMutation({
+  args: { clientId: v.string() },
+  returns: v.id("transactions"),
+  handler: async (ctx, { clientId }) => {
+    const tx = await billByClientId(ctx, clientId);
+    assertCanEdit(ctx.member, tx, Date.now());
+    if (tx.status === "deleted") return tx._id;
+    const { _id, _creationTime, needsAttention, updatedAt, ...keep } = tx;
+    return apply(
+      ctx,
+      tx,
+      { ...keep, status: "deleted" },
+      { actorId: ctx.member._id, action: "tx.remove", summary: "removed" },
+    );
+  },
+});
+
+/** F-08 / architecture §10.3: admin brings a removed bill back into lists and totals. */
+export const restore = adminMutation({
+  args: { clientId: v.string() },
+  returns: v.id("transactions"),
+  handler: async (ctx, { clientId }) => {
+    const tx = await billByClientId(ctx, clientId);
+    if (tx.status === "active") return tx._id;
+    const { _id, _creationTime, needsAttention, updatedAt, deletedReason: _r, ...keep } = tx;
+    return apply(
+      ctx,
+      tx,
+      { ...keep, status: "active" },
+      { actorId: ctx.member._id, action: "tx.restore", summary: "restored" },
     );
   },
 });
