@@ -3,10 +3,10 @@
 import { toDevanagariDigits } from "@mero-pasal/shared/dates";
 import { AmountText } from "@mero-pasal/ui/components/amount-text";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
 import { useLocale } from "@/features/session/locale";
 import type { BillItem } from "./bill-item";
+import { blobUrlFor } from "./blob-urls";
 
 const nptTime = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Kathmandu",
@@ -14,16 +14,10 @@ const nptTime = new Intl.DateTimeFormat("en-GB", {
   minute: "2-digit",
 });
 
-function useThumbUrl(thumb: BillItem["thumb"]): string | null {
-  const [url, setUrl] = useState<string | null>(thumb && "url" in thumb ? thumb.url : null);
-  useEffect(() => {
-    if (!thumb) return setUrl(null);
-    if ("url" in thumb) return setUrl(thumb.url);
-    const objectUrl = URL.createObjectURL(thumb.blob);
-    setUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [thumb]);
-  return url;
+/** The server's thumbnail URL, or a steady object URL for one still on the phone. */
+function thumbUrlOf(bill: BillItem): string | null {
+  if (!bill.thumb) return null;
+  return "url" in bill.thumb ? bill.thumb.url : blobUrlFor(bill.key, bill.thumb.blob);
 }
 
 /**
@@ -33,7 +27,7 @@ function useThumbUrl(thumb: BillItem["thumb"]): string | null {
  */
 export function BillRow({ bill, highlight = false }: { bill: BillItem; highlight?: boolean }) {
   const { locale, t } = useLocale();
-  const thumbUrl = useThumbUrl(bill.thumb);
+  const thumbUrl = thumbUrlOf(bill);
   const name = bill.isWalkIn ? t("party.walkIn") : (bill.partyName ?? t("party.noName"));
   const time = nptTime.format(bill.capturedAt);
   return (
