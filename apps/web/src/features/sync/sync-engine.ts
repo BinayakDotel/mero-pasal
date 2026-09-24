@@ -1,5 +1,5 @@
 import type { MeroPasalDb, OutboxRow } from "./db";
-import { type OutboxDeps, processItem } from "./outbox";
+import { billOf, type OutboxDeps, processItem } from "./outbox";
 
 // F-09 sync engine (architecture §8.2–8.3). Sends the phone's outbox to the server, oldest first
 // (names before the bills that use them), exactly once per item (server de-duplicates by
@@ -14,7 +14,7 @@ const AUTH_RETRY_MS = 60_000;
 export const DONE_BLOB_TTL_MS = 7 * 86_400_000;
 export const DONE_ROW_TTL_MS = 30 * 86_400_000;
 
-export type ErrorClass = "network" | "auth" | "conflict" | "other";
+export type ErrorClass = "network" | "auth" | "conflict" | "notFound" | "other";
 
 /** Map a failure to what the engine should do (§8.3). */
 export function classify(error: unknown): ErrorClass {
@@ -22,6 +22,7 @@ export function classify(error: unknown): ErrorClass {
   const code = (error as { data?: { code?: string } } | null)?.data?.code;
   if (code === "UNAUTHENTICATED" || code === "FORBIDDEN") return "auth";
   if (code === "CONFLICT") return "conflict";
+  if (code === "NOT_FOUND") return "notFound";
   return "other";
 }
 
@@ -197,30 +198,18 @@ export class SyncEngine {
         await db.outbox.update(seq, { status: "pending", lastError: message });
         return;
       case "conflict": {
-        // A bill whose new name hasn't reached the server: wait for the name, don't count it.
-        const partyClientId =
-          row.type === "tx.create" && row.payload.partyRef && "clientId" in row.payload.partyRef
-            ? row.payload.partyRef.clientId
-            : undefined;
-        const party = partyClientId
-          ? await db.outbox.where("clientId").equals(partyClientId).first()
-          : undefined;
-        if (party && party.status !== "done" && party.status !== "failed") {
-          await db.outbox.update(seq, {
-            status: "pending",
-            nextAttemptAt: now() + CONFLICT_RETRY_MS,
-            lastError: message,
-          });
+        // A bill (or correction) whose new name hasn't reached the server: wait for the name.
+        const ref =
+          row.type === "tx.create" || row.type === "tx.correct" ? row.payload.partyRef : undefined;
+        if (ref && "clientId" in ref && (await this.waitFor(row, ref.clientId, "name", message)))
           return;
-        }
-        if (party?.status === "failed") {
-          await db.outbox.update(seq, {
-            status: "failed",
-            lastError: `BLOCKED: name ${partyClientId} failed`,
-          });
-          return;
-        }
         break; // a real conflict: count it like any other rejection
+      }
+      case "notFound": {
+        // M3: a correction or removal that got ahead of its bill: wait for the bill.
+        const bill = row.type === "tx.create" ? undefined : billOf(row);
+        if (bill && (await this.waitFor(row, bill, "bill", message))) return;
+        break;
       }
       case "other":
         break;
@@ -237,6 +226,38 @@ export class SyncEngine {
             lastError: message,
           },
     );
+  }
+
+  /**
+   * `row` depends on the item `dependsOn` (a new name, or the bill a correction is about). While
+   * that item is still on its way, wait without counting a failure; if it failed, this is BLOCKED.
+   * Returns false when there's nothing to wait for (a real rejection).
+   */
+  private async waitFor(
+    row: OutboxRow,
+    dependsOn: string,
+    what: "name" | "bill",
+    message: string,
+  ): Promise<boolean> {
+    const { db, now } = this.env;
+    const seq = row.seq as number;
+    const other = await db.outbox.where("clientId").equals(dependsOn).first();
+    if (other && other.status !== "done" && other.status !== "failed") {
+      await db.outbox.update(seq, {
+        status: "pending",
+        nextAttemptAt: now() + CONFLICT_RETRY_MS,
+        lastError: message,
+      });
+      return true;
+    }
+    if (other?.status === "failed") {
+      await db.outbox.update(seq, {
+        status: "failed",
+        lastError: `BLOCKED: ${what} ${dependsOn} failed`,
+      });
+      return true;
+    }
+    return false;
   }
 
   /** §8.1: drop photos of sent items after 7 days, the rows after 30. Never touches unsent items. */

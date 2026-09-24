@@ -40,6 +40,8 @@ function fakeDeps(overrides: Partial<OutboxDeps> = {}) {
       return `storage-${url}`;
     }),
     createTx: vi.fn(async (a) => calls.push(`tx:${a.clientId}`)),
+    correctTx: vi.fn(async (a) => calls.push(`correct:${a.clientId}`)),
+    removeTx: vi.fn(async (a) => calls.push(`remove:${a.clientId}`)),
     ...overrides,
   };
   return { deps, calls };
