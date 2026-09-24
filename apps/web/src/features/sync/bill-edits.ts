@@ -1,6 +1,6 @@
 import { UNDO_WINDOW_MS } from "@mero-pasal/shared/domain";
 import type { MeroPasalDb, OutboxRow } from "./db";
-import { type BillBefore, billOf, type TxCorrectItem } from "./outbox";
+import { type BillBefore, billOf, type PartyCreateItem, type TxCorrectItem } from "./outbox";
 import { OUTBOX_CHANGED } from "./outbox-store";
 
 // F-08 on the phone (ADR-011): corrections and removals are outbox items like bills. Unlike
@@ -18,6 +18,8 @@ function changed() {
 /**
  * Correct a bill to these values. A bill (or an earlier correction) still waiting on the phone is
  * changed in place, so nothing extra is sent; otherwise a tx.correct queues behind the bill.
+ * `newParty`: a name added while correcting; it's queued first, and a bill still on the phone is
+ * re-queued after it, so the server gets the name before anything that uses it.
  * Returns where the change went.
  */
 export async function enqueueCorrect(
@@ -27,12 +29,32 @@ export async function enqueueCorrect(
   before: BillBefore,
   owner: Owner,
   now: number,
+  newParty?: PartyCreateItem,
 ): Promise<"inPlace" | "queued"> {
+  const mine = { status: "pending" as const, nextAttemptAt: 0, failures: 0 };
+  const ownedBy = { ownerMemberId: owner.memberId, ownerClerkId: owner.clerkId };
   const where = await db.transaction("rw", db.outbox, async () => {
+    if (newParty && !(await db.outbox.where("clientId").equals(newParty.clientId).count())) {
+      const nameRow: OutboxRow = {
+        ...newParty,
+        createdAt: newParty.createdAt || now,
+        ...mine,
+        ...ownedBy,
+      };
+      await db.outbox.add(nameRow);
+    }
     const related = (await db.outbox.toArray()).filter((r) => billOf(r) === billClientId);
     const create = related.find((r) => r.type === "tx.create");
     // In place only if the server can't have it yet (a submitted create would ignore new values).
     if (create?.type === "tx.create" && notSentYet(create) && !create.submitted) {
+      if (newParty) {
+        // Re-queue the bill behind its new name (a fresh seq); it hasn't been sent, so it's safe.
+        const { seq, ...row } = create;
+        const { partyRef: _oldParty, amountPaisa: _oldAmount, ...kept } = create.payload;
+        await db.outbox.delete(seq as number);
+        await db.outbox.add({ ...row, payload: { ...kept, ...values }, ...mine });
+        return "inPlace" as const;
+      }
       await db.outbox
         .where("seq")
         .equals(create.seq as number)
@@ -47,7 +69,8 @@ export async function enqueueCorrect(
       return "inPlace" as const;
     }
     const waiting = related.find((r) => r.type === "tx.correct" && r.status === "pending");
-    if (waiting) {
+    // With a new name, a new correction goes after it instead of updating an earlier one.
+    if (waiting && !newParty) {
       await db.outbox
         .where("seq")
         .equals(waiting.seq as number)
