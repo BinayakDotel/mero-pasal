@@ -20,6 +20,12 @@ export type ErrorClass = "network" | "auth" | "conflict" | "notFound" | "other";
 /** Map a failure to what the engine should do (§8.3). */
 export function classify(error: unknown): ErrorClass {
   if (error instanceof TypeError) return "network"; // fetch() dropped (upload)
+  // No answer in time (withTimeout / an aborted upload): the network, not the item.
+  if (
+    error instanceof DOMException &&
+    (error.name === "TimeoutError" || error.name === "AbortError")
+  )
+    return "network";
   const data = (error as { data?: { code?: string; reason?: string } } | null)?.data;
   const code = data?.code;
   // A bill this member may never change is a rejection of that item, not a sign-in problem.
