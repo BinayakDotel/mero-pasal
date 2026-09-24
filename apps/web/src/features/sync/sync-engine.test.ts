@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MeroPasalDb } from "./db";
-import { type OutboxDeps, type OutboxItem, withCallTimeouts, withTimeout } from "./outbox";
+import { type NewOutboxItem, type OutboxDeps, withCallTimeouts, withTimeout } from "./outbox";
 import { enqueueDurable, StorageFullError } from "./outbox-store";
 import { classify, DONE_ROW_TTL_MS, type EngineEnv, MAX_FAILURES, SyncEngine } from "./sync-engine";
 
@@ -45,14 +45,14 @@ const page = () => ({
   height: 1,
   bytes: 4,
 });
-const party = (clientId = "p1"): OutboxItem => ({
+const party = (clientId = "p1"): NewOutboxItem => ({
   type: "party.create",
   clientId,
   createdAt: 1,
   attempts: 0,
   payload: { name: "Ram", kind: "customer" },
 });
-const bill = (clientId = "t1", partyClientId?: string, pages = [page()]): OutboxItem => ({
+const bill = (clientId = "t1", partyClientId?: string, pages = [page()]): NewOutboxItem => ({
   type: "tx.create",
   clientId,
   createdAt: 2,
@@ -400,7 +400,8 @@ describe("sync engine (F-09, architecture §8.3)", () => {
     clock += 8 * 86_400_000;
     await e.kick();
     const done = await db.outbox.where("clientId").equals("old-done").first();
-    expect(done?.type === "tx.create" && done.pages[0]?.full.size).toBe(0); // photo freed, row kept
+    expect(done?.type === "tx.create" && done.photosGone).toBe(true); // photos freed, row kept
+    expect(await db.photos.count()).toBe(2); // only the unsent bill's photos remain
 
     clock += DONE_ROW_TTL_MS;
     await e.kick();
@@ -425,7 +426,7 @@ describe("sync engine (F-09, architecture §8.3)", () => {
 
 describe("M3 corrections and removals (F-08)", () => {
   const before = { kind: "sale" as const, dateBs: "2083-06-07", amountPaisa: 100 };
-  const correct = (billClientId: string, amountPaisa: number, clientId = "op1"): OutboxItem => ({
+  const correct = (billClientId: string, amountPaisa: number, clientId = "op1"): NewOutboxItem => ({
     type: "tx.correct",
     clientId,
     createdAt: 3,
@@ -433,7 +434,7 @@ describe("M3 corrections and removals (F-08)", () => {
     payload: { billClientId, kind: "sale", dateBs: "2083-06-07", amountPaisa },
     before,
   });
-  const remove = (billClientId: string, clientId = "op2"): OutboxItem => ({
+  const remove = (billClientId: string, clientId = "op2"): NewOutboxItem => ({
     type: "tx.remove",
     clientId,
     createdAt: 4,

@@ -1,6 +1,7 @@
 import { UNDO_WINDOW_MS } from "@mero-pasal/shared/domain";
 import type { MeroPasalDb, OutboxRow } from "./db";
-import { billOf, type OutboxDeps, processItem } from "./outbox";
+import { billOf, isV1Page, type OutboxDeps, processItem, type StoredPage } from "./outbox";
+import { asBlob, PhotoUnreadableError } from "./photo-bytes";
 
 // F-09 sync engine (architecture §8.2–8.3). Sends the phone's outbox to the server, oldest first
 // (names before the bills that use them), exactly once per item (server de-duplicates by
@@ -209,14 +210,19 @@ export class SyncEngine {
     const epoch = this.authEpoch;
     try {
       const one = () => db.outbox.where("seq").equals(seq);
-      await processItem(row, deps, async (progress) => {
-        if (progress.type !== "tx.create") return;
-        await one().modify((stored) => {
-          if (stored.type !== "tx.create") return;
-          stored.pages = progress.pages;
-          if (progress.submitted) stored.submitted = true;
-        });
-      });
+      await processItem(
+        row,
+        deps,
+        async (progress) => {
+          if (progress.type !== "tx.create") return;
+          await one().modify((stored) => {
+            if (stored.type !== "tx.create") return;
+            stored.pages = progress.pages;
+            if (progress.submitted) stored.submitted = true;
+          });
+        },
+        (ref) => this.loadPhoto(ref),
+      );
       this.confirmed.add(row.clientId);
       await one().modify((stored) => {
         stored.status = "done";
@@ -290,6 +296,13 @@ export class SyncEngine {
     );
   }
 
+  /** A page photo from the `photos` table, as a Blob to send (architecture §9). */
+  private async loadPhoto(ref: string): Promise<Blob> {
+    const row = await this.env.db.photos.get(ref);
+    if (!row) throw new PhotoUnreadableError(new Error(`photo ${ref} is not on the phone`));
+    return asBlob(row.photo);
+  }
+
   /**
    * M3 / UC-07: a bill removed before it ever left the phone (its undo window over) never goes to
    * the server: the bill, its corrections and the removal are deleted here, photos never uploaded.
@@ -298,7 +311,7 @@ export class SyncEngine {
     const bill = billOf(row);
     if (!bill) return false;
     const { db } = this.env;
-    return db.transaction("rw", db.outbox, async () => {
+    return db.transaction("rw", db.outbox, db.photos, async () => {
       const related = (await db.outbox.toArray()).filter((r) => billOf(r) === bill);
       const create = related.find((r) => r.type === "tx.create");
       const due = related.some(
@@ -308,6 +321,7 @@ export class SyncEngine {
       if (create?.type !== "tx.create" || create.status === "done" || create.submitted || !due)
         return false;
       await db.outbox.bulkDelete(related.map((r) => r.seq as number));
+      await db.photos.bulkDelete(photoRefs(create.pages));
       return true;
     });
   }
@@ -344,27 +358,42 @@ export class SyncEngine {
     return false;
   }
 
-  /** §8.1: drop photos of sent items after 7 days, the rows after 30. Never touches unsent items. */
+  /**
+   * §8.1: photos of sent bills go after 7 days, the rows after 30; unsent items are never
+   * touched. Photos are cleared first, and together with any row that expires, so none are
+   * left behind (e.g. an app not opened for a month).
+   */
   private async purge(now: number): Promise<void> {
     const { db } = this.env;
-    await db.outbox
-      .where("status")
-      .equals("done")
-      .filter((r) => (r.doneAt ?? now) < now - DONE_ROW_TTL_MS)
-      .delete();
-    await db.outbox
-      .where("status")
-      .equals("done")
-      .filter(
-        (r) =>
-          r.type === "tx.create" &&
-          (r.doneAt ?? now) < now - DONE_BLOB_TTL_MS &&
-          r.pages.some((p) => p.full.size > 0),
-      )
-      .modify((r) => {
-        if (r.type !== "tx.create") return;
-        r.pages = r.pages.map((p) => ({ ...p, full: new Blob([]), thumb: new Blob([]) }));
-      });
+    const done = await db.outbox.where("status").equals("done").toArray();
+    const expired = done.filter((r) => (r.doneAt ?? now) < now - DONE_ROW_TTL_MS);
+    const stale = done.filter(
+      (r) =>
+        r.type === "tx.create" &&
+        !r.photosGone &&
+        (r.doneAt ?? now) < now - DONE_BLOB_TTL_MS &&
+        !expired.includes(r),
+    );
+    if (!expired.length && !stale.length) return;
+    await db.transaction("rw", db.outbox, db.photos, async () => {
+      for (const r of [...expired, ...stale]) {
+        if (r.type === "tx.create") await db.photos.bulkDelete(photoRefs(r.pages));
+      }
+      await db.outbox.bulkDelete(expired.map((r) => r.seq as number));
+      for (const r of stale) {
+        await db.outbox
+          .where("seq")
+          .equals(r.seq as number)
+          .modify((stored) => {
+            if (stored.type !== "tx.create") return;
+            stored.photosGone = true;
+            // v1 pages held the photos inline: drop them (the row stays for the Today merge).
+            stored.pages = stored.pages.map((p) =>
+              isV1Page(p) ? { ...p, full: new Blob([]), thumb: new Blob([]) } : p,
+            );
+          });
+      }
+    });
   }
 
   async report(): Promise<PassReport> {
@@ -387,4 +416,9 @@ export class SyncEngine {
       ...(later.length ? { nextDueAt: Math.min(...later) } : {}),
     };
   }
+}
+
+/** The `photos` rows a bill's pages point at (v1 pages keep theirs inline). */
+function photoRefs(pages: readonly StoredPage[]): string[] {
+  return pages.flatMap((p) => (isV1Page(p) ? [] : [p.fullRef, p.thumbRef]));
 }

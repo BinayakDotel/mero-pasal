@@ -5,6 +5,7 @@ import { AmountText } from "@mero-pasal/ui/components/amount-text";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { useLocale } from "@/features/session/locale";
+import { usePhotos } from "@/features/sync/use-photo";
 import type { BillItem } from "./bill-item";
 import { blobUrlFor } from "./blob-urls";
 
@@ -15,9 +16,13 @@ const nptTime = new Intl.DateTimeFormat("en-GB", {
 });
 
 /** The server's thumbnail URL, or a steady object URL for one still on the phone. */
-function thumbUrlOf(bill: BillItem): string | null {
+/** The server's thumbnail URL, or a steady object URL for one still on the phone. */
+function useThumbUrl(bill: BillItem): string | null {
+  const ref = bill.thumb && "photoRef" in bill.thumb ? bill.thumb.photoRef : null;
+  const [blob] = usePhotos(ref ? [ref] : []);
   if (!bill.thumb) return null;
-  return "url" in bill.thumb ? bill.thumb.url : blobUrlFor(bill.key, bill.thumb.blob);
+  if ("url" in bill.thumb) return bill.thumb.url;
+  return ref && blob ? blobUrlFor(ref, blob) : null;
 }
 
 /**
@@ -27,7 +32,7 @@ function thumbUrlOf(bill: BillItem): string | null {
  */
 export function BillRow({ bill, highlight = false }: { bill: BillItem; highlight?: boolean }) {
   const { locale, t } = useLocale();
-  const thumbUrl = thumbUrlOf(bill);
+  const thumbUrl = useThumbUrl(bill);
   const name = bill.isWalkIn ? t("party.walkIn") : (bill.partyName ?? t("party.noName"));
   const time = nptTime.format(bill.capturedAt);
   return (

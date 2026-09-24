@@ -3,9 +3,13 @@
 // `enqueueDurable` (outbox-store.ts) stores items on the phone; the sync engine sends them with
 // `processItem`.
 
+/**
+ * A bill page as the outbox keeps it. The photos themselves live in the `photos` table (bytes,
+ * architecture §9) and are loaded only to upload or show them, so reading the queue stays cheap.
+ */
 export type OutboxPage = {
-  full: Blob;
-  thumb: Blob;
+  fullRef: string;
+  thumbRef: string;
   width: number;
   height: number;
   bytes: number;
@@ -13,6 +17,14 @@ export type OutboxPage = {
   storageId?: string;
   thumbId?: string;
 };
+
+/** A page as schema v1 kept it: photos inline. Converted to references when the bill is sent. */
+export type V1Page = Omit<OutboxPage, "fullRef" | "thumbRef"> & { full: Blob; thumb: Blob };
+export type StoredPage = OutboxPage | V1Page;
+export const isV1Page = (page: StoredPage): page is V1Page => !("fullRef" in page);
+
+/** A page handed to the save (`enqueueDurable`): the processed photos themselves. */
+export type NewPage = { full: Blob; thumb: Blob; width: number; height: number; bytes: number };
 
 export type PartyCreateItem = {
   type: "party.create";
@@ -35,7 +47,9 @@ export type TxCreateItem = {
     /** M2: phone time the photo was taken (ordering only). */
     clientCapturedAt?: number;
   };
-  pages: OutboxPage[];
+  pages: StoredPage[];
+  /** §8.1: the photos were cleared from the phone 7 days after the bill was sent. */
+  photosGone?: boolean;
   /**
    * Set (and saved) just before the server call: the server may now have this bill even if the
    * phone never hears back, so it must not be dropped or edited in place (F-08). Cleared when the
@@ -83,6 +97,11 @@ export type TxRemoveItem = {
 };
 
 export type OutboxItem = PartyCreateItem | TxCreateItem | TxCorrectItem | TxRemoveItem;
+
+/** What a save hands in: a bill's pages still carry their photos (they're stored on the way). */
+export type NewOutboxItem =
+  | Exclude<OutboxItem, TxCreateItem>
+  | (Omit<TxCreateItem, "pages"> & { pages: NewPage[] });
 
 /** The bill an item is about (its own clientId for a create; none for a name). */
 export function billOf(item: OutboxItem): string | undefined {
@@ -158,7 +177,9 @@ export async function processItem(
   item: OutboxItem,
   deps: OutboxDeps,
   /** M2: persist upload progress after each upload, so a restart never uploads twice. */
-  onProgress?: (item: OutboxItem) => Promise<void>,
+  onProgress: ((item: OutboxItem) => Promise<void>) | undefined,
+  /** A page photo by reference (from the `photos` table), read only when it's uploaded. */
+  loadPhoto: (ref: string) => Promise<Blob>,
 ): Promise<void> {
   item.attempts += 1;
   if (item.type === "party.create") {
@@ -176,11 +197,17 @@ export async function processItem(
   }
   for (const page of item.pages) {
     if (page.storageId === undefined) {
-      page.storageId = await uploadOnce(deps, page.full);
+      page.storageId = await uploadOnce(
+        deps,
+        isV1Page(page) ? page.full : await loadPhoto(page.fullRef),
+      );
       await onProgress?.(item);
     }
     if (page.thumbId === undefined) {
-      page.thumbId = await uploadOnce(deps, page.thumb);
+      page.thumbId = await uploadOnce(
+        deps,
+        isV1Page(page) ? page.thumb : await loadPhoto(page.thumbRef),
+      );
       await onProgress?.(item);
     }
   }
