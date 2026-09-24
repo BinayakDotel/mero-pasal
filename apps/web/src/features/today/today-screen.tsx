@@ -5,6 +5,7 @@ import { AmountText } from "@mero-pasal/ui/components/amount-text";
 import { BigButton } from "@mero-pasal/ui/components/big-button";
 import { BsDateText } from "@mero-pasal/ui/components/bs-date-text";
 import { type LedgerRow, LedgerStrip } from "@mero-pasal/ui/components/ledger-strip";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
@@ -130,10 +131,15 @@ export function TodayScreen() {
         <p className="px-5 py-7 text-center text-ink-soft">{t("today.empty")}</p>
       ) : (
         <section className="mt-4.5">
-          <h2 className="mx-4 mb-1 text-base font-bold text-ink-soft">
-            {t("today.recent")}
-            {stale}
-          </h2>
+          <div className="mx-4 mb-1 flex items-baseline justify-between">
+            <h2 className="text-base font-bold text-ink-soft">
+              {t("today.recent")}
+              {stale}
+            </h2>
+            <Link href="/bills" className="min-h-12 content-center font-semibold underline">
+              {t("today.seeAll")}
+            </Link>
+          </div>
           <ul>
             {recent.map((bill) => (
               <BillRow key={bill.key} bill={bill} highlight={bill.clientId === glow} />
