@@ -13,6 +13,7 @@ const PORT = 3100;
 // the service worker and manifest behave as they will on the phone.
 export default defineConfig({
   testDir: "e2e",
+  globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
   reporter: "list",
   use: {

@@ -1,9 +1,8 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import { api } from "@mero-pasal/backend/convex/_generated/api";
 import type { Id } from "@mero-pasal/backend/convex/_generated/dataModel";
-import { useConvex } from "convex/react";
+import { useConvex, useConvexAuth } from "convex/react";
 import {
   createContext,
   type ReactNode,
@@ -13,7 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useMember } from "@/features/session/member-gate";
+import { useMemberIdentity } from "@/features/session/member-gate";
 import { getDb, requestPersistence } from "./db";
 import type { OutboxDeps } from "./outbox";
 import { OUTBOX_CHANGED } from "./outbox-store";
@@ -33,14 +32,26 @@ const SyncContext = createContext<SyncValue | null>(null);
 /** Runs the one sync engine for this device (F-09) while Buwa's app is open. */
 export function SyncProvider({ children }: { children: ReactNode }) {
   const convex = useConvex();
-  const { userId } = useAuth();
-  const { member } = useMember();
+  const identity = useMemberIdentity();
+  const { isAuthenticated } = useConvexAuth();
+  // Saving needs only who the member is (snapshot is fine offline); sending also needs the
+  // server to have confirmed that member for this session, so another account's session can
+  // never carry these items (architecture §8.4).
   const owner = useMemo(
-    () => (userId ? { memberId: member._id as string, clerkId: userId } : null),
-    [member._id, userId],
+    () => (identity ? { memberId: identity.memberId, clerkId: identity.clerkUserId } : null),
+    [identity],
   );
   const ownerRef = useRef(owner);
   ownerRef.current = owner;
+  const canSend = Boolean(identity?.confirmed && isAuthenticated);
+  const senderRef = useRef(canSend ? owner : null);
+  senderRef.current = canSend ? owner : null;
+  useEffect(() => {
+    senderRef.current = canSend ? owner : null; // again here: Strict Mode re-runs the cleanup
+    return () => {
+      senderRef.current = null; // leaving the app shell: an in-flight pass stops here
+    };
+  }, [canSend, owner]);
   const [report, setReport] = useState<PassReport | null>(null);
   const lastBeat = useRef<{ at: number; drained: boolean } | null>(null);
 
@@ -67,7 +78,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       deps,
       now: () => Date.now(),
       isConnected: () => navigator.onLine && convex.connectionState().isWebSocketConnected,
-      identity: () => ownerRef.current,
+      identity: () => senderRef.current,
+      owner: () => ownerRef.current,
       withLock: async (fn) => {
         if (!navigator.locks) return fn();
         await navigator.locks.request("mp-sync", { ifAvailable: true }, async (lock) => {
@@ -115,10 +127,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     };
   }, [engine, convex]);
 
-  // Signing in (or the Clerk token arriving) is a reason to try again.
+  // The server confirming the member for this session: end any auth pause and send now.
   useEffect(() => {
-    if (owner) void engine.kick();
-  }, [owner, engine]);
+    if (canSend) void engine.resumeAfterAuth();
+  }, [canSend, engine]);
 
   const value = useMemo(() => ({ report, engine, owner }), [report, engine, owner]);
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;

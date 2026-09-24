@@ -232,6 +232,55 @@ describe("sync engine (F-09, architecture §8.3)", () => {
     expect((await e.report()).pauseReason).toBe("auth");
   });
 
+  it("while sending isn't allowed yet, the member's saved bills still count as pending", async () => {
+    const server = fakeServer();
+    await enqueueDurable(db, [bill("t1")], ME, clock);
+    const e = engine(server.deps, { identity: () => null, owner: () => ME });
+    await e.kick();
+    expect(server.deps.createTx).not.toHaveBeenCalled();
+    expect(await e.report()).toMatchObject({ drained: false, pending: 1, foreignPending: 0 });
+  });
+
+  it("sign-in coming back ends an auth pause at once (not on the next minute tick)", async () => {
+    const server = fakeServer();
+    const createTx = server.deps.createTx;
+    server.deps.createTx = vi.fn(async () => {
+      throw convexError("UNAUTHENTICATED");
+    });
+    await enqueueDurable(db, [bill("t1")], ME, clock);
+    const e = engine(server.deps);
+    await e.kick();
+    server.deps.createTx = createTx; // Clerk's token has arrived
+    await e.kick();
+    expect((await rows())[0]?.status).toBe("pending"); // still paused
+    await e.resumeAfterAuth();
+    expect((await rows())[0]?.status).toBe("done");
+  });
+
+  it("a send already on its way when sign-in returns doesn't start a new pause", async () => {
+    const server = fakeServer();
+    const createTx = server.deps.createTx;
+    let rejectFirst: (error: unknown) => void = () => {};
+    let calls = 0;
+    server.deps.createTx = vi.fn(async (...args: Parameters<typeof createTx>) => {
+      calls += 1;
+      if (calls === 1)
+        return new Promise<never>((_, reject) => {
+          rejectFirst = reject;
+        });
+      return createTx(...args);
+    });
+    await enqueueDurable(db, [bill("t1")], ME, clock);
+    const e = engine(server.deps);
+    const pass = e.kick();
+    await vi.waitFor(() => expect(calls).toBe(1));
+    const resumed = e.resumeAfterAuth(); // sign-in back while the first send is in flight
+    rejectFirst(convexError("UNAUTHENTICATED"));
+    await Promise.all([pass, resumed]);
+    expect((await rows())[0]?.status).toBe("done");
+    expect((await e.report()).pauseReason).not.toBe("auth");
+  });
+
   it("a bill waiting for its new name is retried without counting; a failed name blocks it", async () => {
     const server = fakeServer();
     server.deps.createParty = vi.fn(async () => {

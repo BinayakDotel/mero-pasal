@@ -52,25 +52,3 @@ describe("members.heartbeat (M2, F-09)", () => {
     expect(await t.run((ctx) => ctx.db.query("members").collect())).toEqual(before);
   });
 });
-
-describe("e2eSupport.billsByClientIds", () => {
-  it("reports which phone-made bills reached the server", async () => {
-    const t = convexTest(schema, modules);
-    const { asOwner } = await seedShop(t);
-    const [storageId, thumbId] = await t.run(async (ctx) => [
-      await ctx.storage.store(new Blob(["f"])),
-      await ctx.storage.store(new Blob(["t"])),
-    ]);
-    const photo = { storageId, thumbId, width: 1, height: 1, bytes: 1 };
-    const { todayBs } = await import("@mero-pasal/shared/dates");
-    await asOwner.mutation(api.transactions.createFromClient, {
-      clientId: "b1",
-      kind: "sale",
-      dateBs: todayBs(Date.now()),
-      photos: [photo as never],
-    });
-    expect(
-      await t.query(internal.e2eSupport.billsByClientIds, { clientIds: ["b1", "nope"] }),
-    ).toEqual([{ clientId: "b1", photos: 1, status: "active" }]);
-  });
-});

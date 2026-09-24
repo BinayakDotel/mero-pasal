@@ -8,7 +8,7 @@
 | | |
 |---|---|
 | **Phase** | **M0 Foundations**: code merged (PRs #1–#8) and running locally against Convex dev; production deploy and Redmi test remain |
-| **Current focus** | M2 offline and sync: the offline e2e test (PR 9, needs the Clerk dev test user) and the Redmi airplane-mode test remain; M1 phone tests (voice, stopwatch) pending with Binayak |
+| **Current focus** | M2 offline and sync: only the Redmi airplane-mode test remains; M1 phone tests (voice, stopwatch) pending with Binayak |
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
 | **Risks** | NFR-03: Today ships 262 KB gzipped JS (budget 250); React/Next ≈ 140 KB, Clerk + Convex ≈ 65 KB are the bulk. Judged on the Redmi instead: Today interactive < 2 s warm (ADR-031); time it in the phone test. |
@@ -72,7 +72,7 @@
 - [x] Sync pill (ok / pending / offline / failed) + details sheet with "Try now" and a low-storage warning.
 - [x] Offline shell not gated on Clerk (architecture §8.4): public shells + member snapshot (ADR-032); `/` and `/capture` precached per build; updates wait for idle; Clerk network-only; no reload on reconnect.
 - [x] `members.heartbeat` → `memberSync` (own table; last seen, last full sync, pending/failed/other-account counts).
-- [ ] Playwright: offline capture ×5 → reconnect → exactly 5 on the server.
+- [x] Playwright: offline capture ×5 → app closed → reopened offline → reconnect → exactly 5 on the server with photos (`offline-sync.spec.ts`, Clerk dev test user in its own E2E shop). It caught three bugs, all fixed: Save failed offline once Clerk dropped its userId; the screen crashed on reconnect after an offline start (unauthenticated queries); an auth pause delayed sending up to 2 min.
 - [ ] Manual: airplane mode + app kill + cold start on the Redmi.
 
 ### M3 — Browse and fix (≈ 4–5 days) · F-06, F-07, F-08, F-15

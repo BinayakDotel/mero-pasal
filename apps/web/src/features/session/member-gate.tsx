@@ -5,15 +5,29 @@ import { api } from "@mero-pasal/backend/convex/_generated/api";
 import { t } from "@mero-pasal/shared/i18n";
 import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { getDb } from "@/features/sync/db";
-import { decideGate } from "./gate-decision";
+import { decideGate, gateClerkUserId } from "./gate-decision";
 import { LocaleProvider } from "./locale";
 import { type MeState, useMe } from "./use-me";
 
 type Me = Extract<MeState, { status: "member" }>["me"];
 type Snapshot = { me: Me; clerkUserId: string };
+/**
+ * Who is using the app, as the gate decided it. `confirmed`: the server confirmed this member for
+ * the current session (not just the phone's snapshot); only then may the outbox be sent.
+ */
+export type MemberIdentity = { memberId: string; clerkUserId: string; confirmed: boolean };
 const MeContext = createContext<Me | null>(null);
+const IdentityContext = createContext<MemberIdentity | null>(null);
 const SNAPSHOT_KEY = "member";
 
 /** The signed-in member and shop; only usable inside <MemberGate>. */
@@ -21,6 +35,14 @@ export function useMember(): Me {
   const me = useContext(MeContext);
   if (!me) throw new Error("useMember must be used inside <MemberGate>");
   return me;
+}
+
+/**
+ * The member's ids for the outbox owner guard (F-09). Not Clerk's live `userId`: offline, Clerk
+ * drops it as soon as its short session token can't refresh, which must never stop a Save.
+ */
+export function useMemberIdentity(): MemberIdentity | null {
+  return useContext(IdentityContext);
 }
 
 /**
@@ -96,12 +118,29 @@ export function MemberGate({ children }: { children: ReactNode }) {
       : decision === "snapshot"
         ? snapshot?.me
         : null;
+  const memberId = (me?.member._id as string | undefined) ?? null;
+  const clerkUserId = gateClerkUserId({
+    decision,
+    memberId,
+    clerkUserId: userId,
+    snapshot: snapshot
+      ? { memberId: snapshot.me.member._id as string, clerkUserId: snapshot.clerkUserId }
+      : null,
+  });
+  const confirmed = decision === "live";
+  const identity = useMemo(
+    () => (memberId && clerkUserId ? { memberId, clerkUserId, confirmed } : null),
+    [memberId, clerkUserId, confirmed],
+  );
+
   if (me) {
     return (
       <MeContext.Provider value={me}>
-        <LocaleProvider initial={me.member.locale} onChange={persistLocale}>
-          {children}
-        </LocaleProvider>
+        <IdentityContext.Provider value={identity}>
+          <LocaleProvider initial={me.member.locale} onChange={persistLocale}>
+            {children}
+          </LocaleProvider>
+        </IdentityContext.Provider>
       </MeContext.Provider>
     );
   }
