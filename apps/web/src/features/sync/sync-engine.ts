@@ -95,6 +95,19 @@ export class SyncEngine {
     return this.running;
   }
 
+  /**
+   * The connection is back (online event, Convex reconnected): end a network backoff now. Uploads
+   * that failed while the Wi-Fi was coming back shouldn't make Buwa wait 30 s or 2 min more.
+   */
+  resumeAfterReconnect(): Promise<void> {
+    if (this.pauseReason === "network") {
+      this.pausedUntil = 0;
+      this.pauseReason = "none";
+      this.networkStreak = 0;
+    }
+    return this.kick();
+  }
+
   /** Sign-in is back (Convex authenticated): end an auth pause now instead of waiting it out. */
   resumeAfterAuth(): Promise<void> {
     this.authEpoch += 1;
