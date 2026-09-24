@@ -287,3 +287,50 @@ describe("review fixes: a bill the server may already have (F-08)", () => {
     expect(await submitted()).toBe(false);
   });
 });
+
+describe("a new name while correcting (F-04 in F-08)", () => {
+  const sita = {
+    type: "party.create" as const,
+    clientId: "p-sita",
+    createdAt: 1,
+    attempts: 0,
+    payload: { name: "Sita", kind: "customer" as const },
+  };
+  const toSita = { ...values(250), partyRef: { clientId: "p-sita" } };
+  const serverWithNames = () => {
+    const server = fakeServer();
+    const order: string[] = [];
+    server.deps.createParty = vi.fn(async ({ clientId }) => {
+      order.push(`party:${clientId}`);
+    });
+    const createTx = server.deps.createTx;
+    server.deps.createTx = vi.fn(async (a) => {
+      order.push(`tx:${a.clientId}`);
+      return createTx(a);
+    });
+    const correctTx = server.deps.correctTx;
+    server.deps.correctTx = vi.fn(async (a) => {
+      order.push(`correct:${a.clientId}`);
+      return correctTx(a);
+    });
+    return { ...server, order };
+  };
+
+  it("a sent bill: the name goes first, then the correction", async () => {
+    const server = serverWithNames();
+    await enqueueDurable(db, [bill()], ME, clock);
+    await engine(server.deps).kick();
+    await enqueueCorrect(db, "t1", toSita, before, ME, clock, sita);
+    await engine(server.deps).kick();
+    expect(server.order).toEqual(["tx:t1", "party:p-sita", "correct:t1"]);
+  });
+
+  it("a bill still on the phone: re-queued after its new name, sent once", async () => {
+    const server = serverWithNames();
+    await enqueueDurable(db, [bill()], ME, clock);
+    expect(await enqueueCorrect(db, "t1", toSita, before, ME, clock, sita)).toBe("inPlace");
+    await engine(server.deps).kick();
+    expect(server.order).toEqual(["party:p-sita", "tx:t1"]);
+    expect(server.bills.get("t1")).toBe(250);
+  });
+});
