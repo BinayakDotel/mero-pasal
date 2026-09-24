@@ -38,7 +38,52 @@ export type TxCreateItem = {
   pages: OutboxPage[];
 };
 
-export type OutboxItem = PartyCreateItem | TxCreateItem;
+/** What the phone showed for a bill before a correction or removal (display and totals, M3). */
+export type BillBefore = {
+  kind: "sale" | "purchase";
+  dateBs: string;
+  partyId?: string;
+  partyName?: string;
+  amountPaisa?: number;
+};
+
+/**
+ * F-08 correct: the bill's full new values (not a diff), so the server can apply it any number of
+ * times with the same result. `clientId` is this operation's own id; the bill is `billClientId`.
+ */
+export type TxCorrectItem = {
+  type: "tx.correct";
+  clientId: string;
+  createdAt: number;
+  attempts: number;
+  payload: {
+    billClientId: string;
+    kind: "sale" | "purchase";
+    partyRef?: { id: string } | { clientId: string };
+    dateBs: string;
+    amountPaisa?: number;
+  };
+  before: BillBefore;
+};
+
+/** F-08 remove: sent only after the 6 s undo window (`nextAttemptAt`). */
+export type TxRemoveItem = {
+  type: "tx.remove";
+  clientId: string;
+  createdAt: number;
+  attempts: number;
+  payload: { billClientId: string };
+  before: BillBefore;
+};
+
+export type OutboxItem = PartyCreateItem | TxCreateItem | TxCorrectItem | TxRemoveItem;
+
+/** The bill an item is about (its own clientId for a create; none for a name). */
+export function billOf(item: OutboxItem): string | undefined {
+  if (item.type === "tx.create") return item.clientId;
+  if (item.type === "tx.correct" || item.type === "tx.remove") return item.payload.billClientId;
+  return undefined;
+}
 
 /** The network side of sending, injected so it can be faked in tests (and reused by M2). */
 export type OutboxDeps = {
@@ -56,6 +101,10 @@ export type OutboxDeps = {
         }[];
       },
   ) => Promise<unknown>;
+  correctTx: (
+    args: { clientId: string } & Omit<TxCorrectItem["payload"], "billClientId">,
+  ) => Promise<unknown>;
+  removeTx: (args: { clientId: string }) => Promise<unknown>;
 };
 
 async function uploadOnce(deps: OutboxDeps, blob: Blob): Promise<string> {
@@ -75,6 +124,15 @@ export async function processItem(
   item.attempts += 1;
   if (item.type === "party.create") {
     await deps.createParty({ clientId: item.clientId, ...item.payload });
+    return;
+  }
+  if (item.type === "tx.correct") {
+    const { billClientId, ...values } = item.payload;
+    await deps.correctTx({ clientId: billClientId, ...values });
+    return;
+  }
+  if (item.type === "tx.remove") {
+    await deps.removeTx({ clientId: item.payload.billClientId });
     return;
   }
   for (const page of item.pages) {

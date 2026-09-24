@@ -76,9 +76,14 @@ export function SyncPill() {
               const who =
                 r.type === "party.create"
                   ? t("sync.newName", { name: r.payload.name })
-                  : partyRef && "clientId" in partyRef
-                    ? (names.get(partyRef.clientId) ?? "—")
-                    : t(r.payload.kind === "sale" ? "kind.sale" : "kind.purchase");
+                  : r.type !== "tx.create"
+                    ? `${t(r.type === "tx.remove" ? "bill.removed" : "bill.corrected")}: ${
+                        r.before.partyName ??
+                        t(r.before.kind === "sale" ? "kind.sale" : "kind.purchase")
+                      }`
+                    : partyRef && "clientId" in partyRef
+                      ? (names.get(partyRef.clientId) ?? "—")
+                      : t(r.payload.kind === "sale" ? "kind.sale" : "kind.purchase");
               return (
                 <li
                   key={r.clientId}

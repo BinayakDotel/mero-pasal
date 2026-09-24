@@ -72,6 +72,14 @@ export function SyncProvider({ children }: { children: ReactNode }) {
             thumbId: p.thumbId as Id<"_storage">,
           })),
         }),
+      correctTx: ({ partyRef, ...rest }) =>
+        convex.mutation(api.transactions.correct, {
+          ...rest,
+          ...(partyRef === undefined
+            ? {}
+            : { partyRef: "id" in partyRef ? { id: partyRef.id as Id<"parties"> } : partyRef }),
+        }),
+      removeTx: (args) => convex.mutation(api.transactions.remove, args),
     };
     return new SyncEngine({
       db: getDb(),

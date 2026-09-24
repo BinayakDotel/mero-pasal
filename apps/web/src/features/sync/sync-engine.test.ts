@@ -12,6 +12,8 @@ const convexError = (code: string) => Object.assign(new Error(code), { data: { c
 function fakeServer() {
   const parties = new Set<string>();
   const bills = new Map<string, number>();
+  const corrections: { clientId: string; amountPaisa?: number }[] = [];
+  const removed = new Set<string>();
   let uploads = 0;
   const deps: OutboxDeps = {
     createParty: vi.fn(async ({ clientId }) => {
@@ -24,8 +26,16 @@ function fakeServer() {
         throw convexError("CONFLICT");
       bills.set(clientId, (bills.get(clientId) ?? 0) + 1);
     }),
+    correctTx: vi.fn(async ({ clientId, amountPaisa }) => {
+      if (!bills.has(clientId)) throw convexError("NOT_FOUND");
+      corrections.push({ clientId, ...(amountPaisa === undefined ? {} : { amountPaisa }) });
+    }),
+    removeTx: vi.fn(async ({ clientId }) => {
+      if (!bills.has(clientId)) throw convexError("NOT_FOUND");
+      removed.add(clientId);
+    }),
   };
-  return { deps, parties, bills, uploads: () => uploads };
+  return { deps, parties, bills, corrections, removed, uploads: () => uploads };
 }
 
 const page = () => ({
@@ -384,7 +394,66 @@ describe("sync engine (F-09, architecture §8.3)", () => {
     expect(classify(new TypeError("Failed to fetch"))).toBe("network");
     expect(classify(convexError("FORBIDDEN"))).toBe("auth");
     expect(classify(convexError("CONFLICT"))).toBe("conflict");
+    expect(classify(convexError("NOT_FOUND"))).toBe("notFound");
     expect(classify(convexError("VALIDATION"))).toBe("other");
     expect(classify(null)).toBe("other");
+  });
+});
+
+describe("M3 corrections and removals (F-08)", () => {
+  const before = { kind: "sale" as const, dateBs: "2083-06-07", amountPaisa: 100 };
+  const correct = (billClientId: string, amountPaisa: number, clientId = "op1"): OutboxItem => ({
+    type: "tx.correct",
+    clientId,
+    createdAt: 3,
+    attempts: 0,
+    payload: { billClientId, kind: "sale", dateBs: "2083-06-07", amountPaisa },
+    before,
+  });
+  const remove = (billClientId: string, clientId = "op2"): OutboxItem => ({
+    type: "tx.remove",
+    clientId,
+    createdAt: 4,
+    attempts: 0,
+    payload: { billClientId },
+    before,
+  });
+
+  it("a correction goes after its bill, with the full new values; a removal after that", async () => {
+    const server = fakeServer();
+    await enqueueDurable(db, [bill("t1")], ME, clock);
+    await enqueueDurable(db, [correct("t1", 250), remove("t1")], ME, clock);
+    await engine(server.deps).kick();
+    expect(server.bills.get("t1")).toBe(1);
+    expect(server.corrections).toEqual([{ clientId: "t1", amountPaisa: 250 }]);
+    expect(server.removed.has("t1")).toBe(true);
+    expect((await rows()).every((r) => r.status === "done")).toBe(true);
+  });
+
+  it("NOT_FOUND while its bill is still on the way: waits, not counted as a failure", async () => {
+    const server = fakeServer();
+    await enqueueDurable(db, [bill("t1")], ME, clock);
+    await db.outbox
+      .where("clientId")
+      .equals("t1")
+      .modify({ nextAttemptAt: clock + 60_000 });
+    await enqueueDurable(db, [correct("t1", 250)], ME, clock);
+    await engine(server.deps).kick();
+    const op = (await rows()).find((r) => r.clientId === "op1");
+    expect(op).toMatchObject({ status: "pending", failures: 0 });
+    expect(op?.nextAttemptAt).toBeGreaterThan(clock);
+  });
+
+  it("its bill failed → the correction is BLOCKED; an unknown bill is a real failure", async () => {
+    const server = fakeServer();
+    await enqueueDurable(db, [bill("t1")], ME, clock);
+    await db.outbox.where("clientId").equals("t1").modify({ status: "failed" });
+    await enqueueDurable(db, [correct("t1", 250), correct("elsewhere", 5, "op3")], ME, clock);
+    await engine(server.deps).kick();
+    const [op1, op3] = ["op1", "op3"].map((id) =>
+      rows().then((r) => r.find((x) => x.clientId === id)),
+    );
+    expect(await op1).toMatchObject({ status: "failed", lastError: "BLOCKED: bill t1 failed" });
+    expect(await op3).toMatchObject({ status: "pending", failures: 1 });
   });
 });
