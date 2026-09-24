@@ -118,3 +118,37 @@ describe("transactions.listByParty (F-07)", () => {
     expect(month.page.map((b) => b.amountPaisa)).toEqual([200]);
   });
 });
+
+describe("transactions.listForParties (F-06 search)", () => {
+  it("merges the matched accounts' bills, newest first, only this shop's", async () => {
+    const { t, asOwner, today, party, bill } = await setup();
+    const hari = await party("Hari");
+    const harka = await party("Harka");
+    const sita = await party("Sita");
+    await bill(hari, 100, earlierMonthOf(today));
+    await bill(harka, 200);
+    await bill(sita, 300);
+    const rows = await asOwner.query(api.transactions.listForParties, {
+      partyIds: [hari, harka],
+    });
+    expect(rows.map((r) => r.amountPaisa)).toEqual([200, 100]);
+
+    await t.mutation(internal.e2eSupport.ensureE2eShop, {
+      clerkUserId: "user_other",
+      email: "other+clerk_test@example.com",
+    });
+    expect(
+      await t
+        .withIdentity({ subject: "user_other" })
+        .query(api.transactions.listForParties, { partyIds: [hari] }),
+    ).toEqual([]);
+  });
+
+  it("refuses more than 5 accounts → VALIDATION", async () => {
+    const { asOwner, party } = await setup();
+    const ids = await Promise.all(["a", "b", "c", "d", "e", "f"].map((n) => party(n)));
+    await expect(asOwner.query(api.transactions.listForParties, { partyIds: ids })).rejects.toThrow(
+      /VALIDATION/,
+    );
+  });
+});
