@@ -57,27 +57,3 @@ export function mergeTotals(
   }
   return total;
 }
-
-export type RecentItem = {
-  key: string;
-  clientId: string;
-  kind: "sale" | "purchase";
-  partyName?: string;
-  isWalkIn: boolean;
-  amountPaisa?: number;
-  capturedAt: number;
-  thumb: { url: string } | { blob: Blob } | null;
-  pending: boolean;
-};
-
-/** The recent list: server rows win over phone rows with the same clientId; newest first. */
-export function mergeRecent(
-  server: readonly RecentItem[],
-  local: readonly RecentItem[],
-  limit: number,
-): RecentItem[] {
-  const onServer = new Set(server.map((s) => s.clientId));
-  return [...server, ...local.filter((l) => !onServer.has(l.clientId))]
-    .sort((a, b) => b.capturedAt - a.capturedAt)
-    .slice(0, limit);
-}

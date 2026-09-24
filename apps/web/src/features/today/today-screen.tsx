@@ -8,12 +8,12 @@ import { type LedgerRow, LedgerStrip } from "@mero-pasal/ui/components/ledger-st
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
+import { BillRow } from "@/features/bills/bill-row";
 import { useCapture } from "@/features/capture/capture-provider";
 import { useCamera } from "@/features/capture/use-camera";
 import { useLocale } from "@/features/session/locale";
 import { useMember } from "@/features/session/member-gate";
 import { SyncPill } from "@/features/sync/sync-pill";
-import { BillRow } from "./bill-row";
 import { DraftCard } from "./draft-card";
 import { useTodayBills } from "./use-today-bills";
 import { useTodayBs } from "./use-today-bs";
