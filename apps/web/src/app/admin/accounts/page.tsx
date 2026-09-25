@@ -81,6 +81,7 @@ export default function AdminAccountsPage() {
       <PageHead title="Accounts">
         <input
           aria-label="Search accounts"
+          data-admin-search
           placeholder="Name (any script), tag or phone"
           className={`${inputClass} w-72`}
           value={query}

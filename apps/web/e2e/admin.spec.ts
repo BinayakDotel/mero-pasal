@@ -119,7 +119,11 @@ test.describe("F-11 admin console", () => {
     const { partyName: name } = fixture();
     await signInE2e(page);
     await page.goto("/admin/accounts");
-    await page.getByRole("textbox", { name: "Search accounts" }).fill(name);
+    const search = page.getByRole("textbox", { name: "Search accounts" });
+    await expect(search).toBeVisible();
+    await page.keyboard.press("/"); // ui-ux §6: jumps to search
+    await expect(search).toBeFocused();
+    await search.fill(name);
     await page.getByRole("cell", { name, exact: true }).click({ timeout: 15_000 });
 
     const dialog = page.getByRole("dialog", { name: `Account ${name}` });

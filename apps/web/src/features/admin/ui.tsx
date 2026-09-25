@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 // Admin console building blocks (ui-ux §6): the phone app's tokens, denser. English only
 // (ADR-034).
@@ -135,4 +143,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 /** Show a failed admin action to Binayak (code + message). */
 export function useShowError(): (error: unknown) => void {
   return useContext(ToastContext);
+}
+
+/** j/k, Enter and / are for moving around, not while Binayak is typing in a field. */
+export function isTyping(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName);
+}
+
+/** ui-ux §6: `/` focuses the page's search or main filter (marked `data-admin-search`). */
+export function useSearchShortcut(): void {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
+      const target = document.querySelector<HTMLElement>("[data-admin-search]");
+      if (!target) return;
+      e.preventDefault();
+      target.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 }

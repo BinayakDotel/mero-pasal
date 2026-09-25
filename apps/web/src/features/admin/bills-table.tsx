@@ -13,6 +13,7 @@ import {
   cellClass,
   EmptyRow,
   inputClass,
+  isTyping,
   Panel,
   rowClass,
   SkeletonRows,
@@ -31,11 +32,6 @@ const FILTERS: [Filter, string][] = [
 ];
 const PAGE = 50;
 const COLUMNS = 8;
-
-/** j/k move, Enter opens, unless Binayak is typing in a field. */
-function isTyping(target: EventTarget | null) {
-  return target instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName);
-}
 
 /**
  * F-11 bills table: every bill (removed ones too), filtered by type or flag, a BS date range
@@ -143,6 +139,7 @@ export function BillsTable({
         />
         <select
           aria-label="Account"
+          data-admin-search
           className={`${inputClass} max-w-64`}
           value={partyId}
           onChange={(e) => setPartyId(e.target.value)}
