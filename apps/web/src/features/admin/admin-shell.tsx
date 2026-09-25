@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMember } from "@/features/session/member-gate";
 import { useConnection } from "@/features/sync/use-connection";
-import { ToastProvider } from "./ui";
+import { ToastProvider, useSearchShortcut } from "./ui";
 
 const NAV = [
   { href: "/admin", label: "Overview" },
@@ -23,6 +23,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const { member, shop } = useMember();
   const connected = useConnection();
   const path = usePathname();
+  useSearchShortcut();
   if (member.role !== "admin") {
     return (
       <main className="grid min-h-dvh place-content-center gap-3 p-6 text-center">
