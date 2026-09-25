@@ -91,7 +91,7 @@ describe("partyAdmin.update / setArchived (F-12)", () => {
     await expect(asOwner.query(api.partyAdmin.list, {})).rejects.toThrow(/FORBIDDEN/);
     await asOwner.mutation(api.partyAdmin.setArchived, { id: ram, archived: true });
     expect((await asAdmin.query(api.partyAdmin.list, {})).find((p) => p._id === ram)).toMatchObject(
-      { archived: true },
+      { archived: true, phoneticKey: expect.any(String), lastUsedAt: expect.any(Number) },
     );
   });
 });

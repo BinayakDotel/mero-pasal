@@ -26,6 +26,9 @@ export const list = adminQuery({
       displayName: v.string(),
       nameLatin: v.string(),
       nameDevanagari: v.optional(v.string()),
+      /** For the any-script search (shared searchParties). */
+      phoneticKey: v.string(),
+      lastUsedAt: v.number(),
       tag: v.optional(v.string()),
       phone: v.optional(v.string()),
       pan: v.optional(v.string()),
@@ -52,6 +55,8 @@ export const list = adminQuery({
       displayName: p.displayName,
       nameLatin: p.nameLatin,
       ...(p.nameDevanagari === undefined ? {} : { nameDevanagari: p.nameDevanagari }),
+      phoneticKey: p.phoneticKey,
+      lastUsedAt: p.lastUsedAt,
       ...(p.tag === undefined ? {} : { tag: p.tag }),
       ...(p.phone === undefined ? {} : { phone: p.phone }),
       ...(p.pan === undefined ? {} : { pan: p.pan }),
