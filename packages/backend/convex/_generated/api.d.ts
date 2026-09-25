@@ -25,6 +25,7 @@ import type * as memberAdmin from "../memberAdmin.js";
 import type * as members from "../members.js";
 import type * as parties from "../parties.js";
 import type * as partyAdmin from "../partyAdmin.js";
+import type * as rebuild from "../rebuild.js";
 import type * as seed from "../seed.js";
 import type * as summaries from "../summaries.js";
 import type * as transactions from "../transactions.js";
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   members: typeof members;
   parties: typeof parties;
   partyAdmin: typeof partyAdmin;
+  rebuild: typeof rebuild;
   seed: typeof seed;
   summaries: typeof summaries;
   transactions: typeof transactions;
