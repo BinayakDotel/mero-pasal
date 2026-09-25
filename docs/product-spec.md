@@ -24,13 +24,13 @@
 
 **Goal:** Binayak sets up Buwa's phone once. Buwa never sees a login screen again.
 
-- Sign-in is Clerk with Google. It is **invite-only**: the Clerk allowlist blocks strangers, and the Convex `members` table decides access.
+- Sign-in is Clerk with Google. It is **invite-only**: anyone can sign in with Google, but only the Convex `members` table gives access (an invite is a member row with the person's email; ADR-034).
 - Binayak creates the shop, the owner and admin members, and the built-in walk-in account using a seed command (see architecture §11).
 - On Buwa's phone: open the app URL in **Chrome** (not Mi Browser), sign in, then choose **Install app** or **Add to Home screen**. The icon is labelled "मेरो पसल".
 - The session persists. Re-authentication only happens if Clerk revokes the session.
 
 **Acceptance**
-- An email that isn't on the allowlist cannot sign in. A signed-in user without a member row sees a "Not invited" screen and no data.
+- A signed-in user who isn't an active member and has no invite for their verified email sees a "Not invited" screen and no data.
 - After installing, opening the icon lands on Today in under 2 seconds on a warm start, with no login prompt for at least 30 days.
 
 ### F-02 Today screen (home) **[v1.0]**
@@ -207,7 +207,7 @@ For Binayak, at `/admin`, desktop-first.
 ### F-13 Admin console: members **[v1.0]**
 
 - List members with role, last-seen time and last successful sync.
-- Invite (add an allowlist email plus a member row), change role, deactivate.
+- Invite (a member row with the person's email, linked the first time they sign in with it; ADR-034), change role, deactivate.
 
 ### F-14 Data export and backup **[v1.0]**
 

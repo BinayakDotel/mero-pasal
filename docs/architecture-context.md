@@ -357,6 +357,7 @@ All public functions are built with wrappers in `convex/lib/functions.ts` (using
 | Wrapper | Allows | Injects |
 |---|---|---|
 | `optionalMemberQuery` | Anyone (signed in or not) | `ctx.member` (active member or `null`); for `members.me` only |
+| `optionalMemberMutation` | Anyone signed in | `ctx.member` (active member or `null`); for `members.claimInvite` only (ADR-034) |
 | `memberQuery` / `memberMutation` | Any active member | `ctx.member`, `ctx.shopId` |
 | `ownerMutation` | `owner` or `admin` | same |
 | `adminQuery` / `adminMutation` | `admin` only | same |
@@ -617,7 +618,8 @@ stateDiagram-v2
 
 ## 10. Auth and authorization
 
-1. Clerk application with **Google** as the only sign-in method and an **allowlist** of family emails.
+1. Clerk application with **Google** as the only sign-in method. No allowlist (ADR-034): anyone can sign in, but only an active `members` row gives access. An invite is a member row with an email and no Clerk user yet; `members.claimInvite` links it on first sign-in, only for a **verified** email.
+   - The Convex token must carry `email` and `email_verified` for that. Clerk Dashboard → **Sessions → Customize session token**: `{"email": "{{user.primary_email_address}}", "email_verified": "{{user.email_verified}}"}`. Without them the claim returns `noVerifiedEmail` and the invitee sees "Not invited".
 2. Connect Clerk to Convex with Clerk's Convex integration (a JWT template named `convex`). `convex/auth.config.ts`:
    ```ts
    export default { providers: [{ domain: process.env.CLERK_JWT_ISSUER_DOMAIN!, applicationID: "convex" }] };
