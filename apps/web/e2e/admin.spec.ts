@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import { convexRunDev, E2E_USER, signInE2e } from "./support/e2e-user";
 
@@ -7,6 +8,8 @@ const hasClerkSecret = Boolean(process.env.CLERK_SECRET_KEY);
 test.use({ viewport: { width: 1280, height: 860 }, isMobile: false, hasTouch: false });
 
 test.describe("F-11 admin console", () => {
+  // These share the E2E shop's newest bill (edit, remove, restore): one worker, in order.
+  test.describe.configure({ mode: "default" });
   test.skip(!hasClerkSecret, "Set CLERK_SECRET_KEY in apps/web/.env.local to run these");
   test.beforeAll(() => {
     convexRunDev("e2eSupport:ensureE2eShop", E2E_USER);
@@ -111,5 +114,40 @@ test.describe("F-11 admin console", () => {
     await dialog.getByRole("button", { name: "Bring back" }).click();
     await page.getByRole("checkbox", { name: "Archived" }).uncheck();
     await expect(page.getByRole("cell", { name, exact: true })).toBeVisible();
+  });
+
+  test("UC-10: exports a month as CSV, removed bills included", async ({ page }) => {
+    await signInE2e(page);
+    // One removed bill in this month, so the export must list it as "removed".
+    await page.goto("/admin/bills");
+    await page.locator("tbody tr[aria-selected]").first().click({ timeout: 15_000 });
+    const drawer = page.getByRole("complementary", { name: "Bill" });
+    page.once("dialog", (dialog) => void dialog.accept());
+    await drawer.getByRole("button", { name: "Remove" }).click();
+    await expect(drawer.getByRole("heading", { name: /removed/ })).toBeVisible();
+
+    await page.goto("/admin/export");
+    const month = page.getByRole("combobox", { name: "Month" });
+    await month.selectOption({ index: 1 }); // this month
+    const from = await page.getByRole("textbox", { name: "From (BS)" }).inputValue();
+    const to = await page.getByRole("textbox", { name: "To (BS)" }).inputValue();
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: "Download CSV" }).click(),
+    ]);
+    expect(download.suggestedFilename()).toBe(`mero-pasal-bills-${from}_${to}.csv`);
+    const text = (await readFile((await download.path()) ?? "")).toString("utf-8");
+    expect(text.startsWith("\uFEFFdate_bs,date_ad,type,account,amount_rs,")).toBe(true);
+    const lines = text.trimEnd().split("\r\n");
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines.some((line) => line.endsWith(",removed"))).toBe(true);
+    await expect(page.getByRole("status")).toContainText(`Exported ${lines.length - 1} bills.`);
+
+    // Put the bill back for the other tests.
+    await page.goto("/admin/bills");
+    await page.getByRole("button", { name: "Removed", exact: true }).click();
+    await page.locator("tbody tr[aria-selected]").first().click();
+    await drawer.getByRole("button", { name: "Restore" }).click();
+    await expect(drawer.getByRole("button", { name: "Remove" })).toBeVisible();
   });
 });
