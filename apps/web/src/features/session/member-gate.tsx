@@ -15,7 +15,13 @@ import {
   useState,
 } from "react";
 import { getDb } from "@/features/sync/db";
-import { decideGate, gateClerkUserId } from "./gate-decision";
+import {
+  type ClaimState,
+  decideGate,
+  gateClerkUserId,
+  gateServer,
+  nextClaim,
+} from "./gate-decision";
 import { LocaleProvider } from "./locale";
 import { type MeState, useMe } from "./use-me";
 
@@ -57,6 +63,21 @@ export function MemberGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<Snapshot | null | undefined>(undefined);
   const setLocale = useMutation(api.members.setLocale);
+  // F-13 / ADR-034: someone invited by email is linked on first sign-in; try that once before
+  // showing "not invited" (a successful claim makes members.me return the member by itself).
+  const claimInvite = useMutation(api.members.claimInvite);
+  const [claim, setClaim] = useState<ClaimState>("idle");
+  useEffect(() => {
+    const next = nextClaim(state.status, claim);
+    if (next === claim) return;
+    setClaim(next);
+    if (next !== "trying") return;
+    claimInvite({})
+      .then((result) => {
+        if (result !== "claimed" && result !== "member") setClaim("none");
+      })
+      .catch(() => setClaim("none"));
+  }, [state.status, claim, claimInvite]);
   const persistLocale = useCallback(
     (locale: "ne" | "en") => void setLocale({ locale }).catch(() => undefined), // best effort
     [setLocale],
@@ -85,14 +106,7 @@ export function MemberGate({ children }: { children: ReactNode }) {
   }, [liveMe, userId]);
 
   const decision = decideGate({
-    server:
-      state.status === "member"
-        ? "member"
-        : state.status === "notInvited"
-          ? "notInvited"
-          : state.status === "signedOut"
-            ? "unauthenticated"
-            : "loading",
+    server: gateServer(state.status, claim),
     clerkLoaded: isLoaded,
     clerkSignedIn: isSignedIn,
     clerkUserId: userId,

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { decideGate, type GateInput, gateClerkUserId } from "./gate-decision";
+import {
+  decideGate,
+  type GateInput,
+  gateClerkUserId,
+  gateServer,
+  nextClaim,
+} from "./gate-decision";
 
 const base: GateInput = {
   server: "loading",
@@ -78,5 +84,33 @@ describe("gateClerkUserId (F-09 owner guard, offline Save)", () => {
     );
     expect(gateClerkUserId({ ...live, decision: "loading", clerkUserId: "user_buwa" })).toBeNull();
     expect(gateClerkUserId({ ...live, decision: "signedOut", clerkUserId: null })).toBeNull();
+  });
+});
+
+describe("gateServer (F-13 / ADR-034 invite claim)", () => {
+  it("a not-invited answer is checked for an invite before it counts", () => {
+    expect(gateServer("notInvited", "idle")).toBe("claiming");
+    expect(gateServer("notInvited", "trying")).toBe("claiming");
+    expect(gateServer("notInvited", "none")).toBe("notInvited");
+    expect(gateServer("member", "trying")).toBe("member");
+    expect(gateServer("signedOut", "idle")).toBe("unauthenticated");
+    expect(gateServer("loading", "none")).toBe("loading");
+  });
+
+  it("while claiming, a deactivated member's snapshot is never shown", () => {
+    // The server has already said this session is not an active member.
+    expect(decideGate({ ...base, server: "claiming" })).toBe("loading");
+  });
+
+  it("claims once, and checks again after a claimed member is later deactivated", () => {
+    let claim = nextClaim("notInvited", "idle");
+    expect(claim).toBe("trying");
+    expect(nextClaim("notInvited", claim)).toBe("trying"); // no second call while it runs
+    claim = nextClaim("member", claim); // claimed → members.me confirms the member
+    expect(claim).toBe("idle");
+    claim = nextClaim("notInvited", claim); // an admin deactivated them
+    expect(claim).toBe("trying");
+    expect(gateServer("notInvited", "none")).toBe("notInvited"); // the retry found no invite
+    expect(nextClaim("loading", "none")).toBe("none");
   });
 });

@@ -46,6 +46,15 @@ export const optionalMemberQuery = customQuery(
   customCtx(async (ctx) => ({ member: await getMemberOrNull(ctx) })),
 );
 
+/**
+ * A signed-in caller who may not be a member yet (`ctx.member` null); for `members.claimInvite`.
+ * Checks nothing else: the function decides what a non-member may do.
+ */
+export const optionalMemberMutation = customMutation(
+  mutation,
+  customCtx(async (ctx) => ({ member: await getMemberOrNull(ctx) })),
+);
+
 /** Any active member (owner, admin, staff). */
 export const memberQuery = customQuery(
   query,

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
+import { writeAudit } from "./lib/audit";
 import { appError } from "./lib/errors";
-import { memberMutation, optionalMemberQuery } from "./lib/functions";
+import { memberMutation, optionalMemberMutation, optionalMemberQuery } from "./lib/functions";
 import { locale, role } from "./schema";
 
 /**
@@ -95,5 +96,45 @@ export const setLocale = memberMutation({
   handler: async (ctx, { locale: next }) => {
     await ctx.db.patch(ctx.member._id, { locale: next });
     return null;
+  },
+});
+
+/**
+ * F-13 / ADR-034: link an invite on first sign-in. The signed-in user's **verified** email
+ * (trimmed, lowercased, like the invite) must match an active invite nobody has claimed. Needs
+ * `email` and `email_verified` in the Clerk session token. Safe to call again.
+ */
+export const claimInvite = optionalMemberMutation({
+  args: {},
+  returns: v.union(
+    v.literal("member"),
+    v.literal("claimed"),
+    v.literal("notInvited"),
+    v.literal("noVerifiedEmail"),
+  ),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw appError("UNAUTHENTICATED");
+    if (ctx.member) return "member";
+    const email = identity.email?.trim().toLowerCase();
+    if (!email || identity.emailVerified !== true) return "noVerifiedEmail";
+    const rows = await ctx.db
+      .query("members")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .take(10);
+    const open = rows.filter((row) => row.active && row.clerkUserId === undefined);
+    const invite = open[0];
+    if (!invite) return "notInvited";
+    if (open.length > 1) throw appError("CONFLICT", "Invited to more than one shop");
+    await ctx.db.patch(invite._id, { clerkUserId: identity.subject });
+    await writeAudit(ctx, {
+      shopId: invite.shopId,
+      actorId: invite._id,
+      action: "member.claim",
+      entity: "member",
+      entityId: invite._id,
+      summary: `${email} signed in for the first time`,
+    });
+    return "claimed";
   },
 });
