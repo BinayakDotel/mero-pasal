@@ -60,4 +60,29 @@ test.describe("F-11 admin console", () => {
     await page.keyboard.press("k");
     await expect(rows.first()).toHaveAttribute("aria-selected", "true");
   });
+
+  test("the bill drawer edits a note, removes and restores, with history", async ({ page }) => {
+    await signInE2e(page);
+    await page.goto("/admin/bills");
+    await page.locator("tbody tr[aria-selected]").first().click({ timeout: 15_000 });
+    const drawer = page.getByRole("complementary", { name: "Bill" });
+    await expect(drawer.getByText(/^Captured by/)).toBeVisible();
+
+    const note = `e2e note ${Date.now()}`;
+    await drawer.getByRole("textbox", { name: "Note" }).fill(note);
+    await drawer.getByRole("button", { name: "Save" }).click();
+    await expect(drawer.getByText("note changed").first()).toBeVisible();
+    await expect(drawer.getByRole("textbox", { name: "Note" })).toHaveValue(note); // own save kept
+    await expect(drawer.getByText("changed since you opened it")).toHaveCount(0);
+
+    page.once("dialog", (dialog) => void dialog.accept());
+    await drawer.getByRole("button", { name: "Remove" }).click();
+    await expect(drawer.getByRole("heading", { name: /removed/ })).toBeVisible();
+    await drawer.getByRole("button", { name: "Restore" }).click();
+    await expect(drawer.getByRole("button", { name: "Remove" })).toBeVisible();
+    await expect(drawer.getByText("restored").first()).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(drawer).toHaveCount(0);
+  });
 });

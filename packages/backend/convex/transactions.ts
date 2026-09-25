@@ -231,6 +231,9 @@ export const get = memberQuery({
       isWalkIn: v.boolean(),
       amountPaisa: v.optional(v.number()),
       billNumber: v.optional(v.string()),
+      note: v.optional(v.string()),
+      /** The version shown (billAdmin.update expectedUpdatedAt). */
+      updatedAt: v.number(),
       capturedAt: v.number(),
       capturedBy: v.id("members"),
       capturedByName: v.string(),
@@ -264,6 +267,8 @@ export const get = memberQuery({
       ...fields,
       status: row.status,
       ...(row.billNumber === undefined ? {} : { billNumber: row.billNumber }),
+      ...(row.note === undefined ? {} : { note: row.note }),
+      updatedAt: row.updatedAt,
       capturedBy: row.createdBy,
       capturedByName: author?.displayName ?? "",
       photos,

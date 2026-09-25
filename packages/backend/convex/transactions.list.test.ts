@@ -131,6 +131,9 @@ describe("transactions.get (F-08 bill detail)", () => {
       capturedByName: "Owner",
       isWalkIn: false,
     });
+    expect(got.note).toBeUndefined();
+    const stored = await t.run((ctx) => ctx.db.get(id));
+    expect(got.updatedAt).toBe(stored?.updatedAt); // the version an admin edit sends back
     expect(got.photos).toHaveLength(1);
     expect(got.photos[0]).toMatchObject({ width: 1, height: 1 });
     expect(typeof got.photos[0]?.url).toBe("string");
