@@ -27,7 +27,7 @@ describe("e2eSupport.ensureE2eShop (M2 e2e)", () => {
     }));
     expect(shops.map((s) => s.name)).toEqual(["Kavre Store", E2E_SHOP_NAME]);
     expect(members.filter((m) => m.shopId === first)).toEqual([
-      expect.objectContaining({ clerkUserId: "user_e2e", role: "owner", active: true }),
+      expect.objectContaining({ clerkUserId: "user_e2e", role: "admin", active: true }),
     ]);
     expect(walkIns).toEqual([expect.objectContaining({ isWalkIn: true })]);
   });
