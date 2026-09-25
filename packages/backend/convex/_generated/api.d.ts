@@ -18,6 +18,7 @@ import type * as lib_functions from "../lib/functions.js";
 import type * as lib_ledger from "../lib/ledger.js";
 import type * as lib_months from "../lib/months.js";
 import type * as lib_permissions from "../lib/permissions.js";
+import type * as memberAdmin from "../memberAdmin.js";
 import type * as members from "../members.js";
 import type * as parties from "../parties.js";
 import type * as seed from "../seed.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   "lib/ledger": typeof lib_ledger;
   "lib/months": typeof lib_months;
   "lib/permissions": typeof lib_permissions;
+  memberAdmin: typeof memberAdmin;
   members: typeof members;
   parties: typeof parties;
   seed: typeof seed;
