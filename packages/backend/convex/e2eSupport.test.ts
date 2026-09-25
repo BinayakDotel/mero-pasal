@@ -132,3 +132,63 @@ describe("e2eSupport.resetE2eInvite (M4 invite e2e)", () => {
     ).rejects.toThrow(/VALIDATION/);
   });
 });
+
+describe("e2eSupport.seedUc09 (M4 UC-09 e2e)", () => {
+  it("seeds a duplicate pair and two needs-attention bills through the ledger", async () => {
+    const t = convexTest(schema, modules);
+    await t.mutation(internal.e2eSupport.ensureE2eShop, tester);
+    const shopId = await t.run(async (ctx) => (await ctx.db.query("shops").first())?._id);
+    if (!shopId) throw new Error("E2E shop");
+    // An earlier bill of the shop whose photo files the seed reuses.
+    await t.run(async (ctx) => {
+      const photo = {
+        storageId: await ctx.storage.store(new Blob(["f"])),
+        thumbId: await ctx.storage.store(new Blob(["t"])),
+        width: 1,
+        height: 1,
+        bytes: 1,
+      };
+      const member = await ctx.db.query("members").first();
+      if (!member) throw new Error("member");
+      await ctx.db.insert("transactions", {
+        shopId,
+        clientId: "old",
+        kind: "sale",
+        dateBs: "2083-01-01",
+        dateAd: 0,
+        photos: [photo],
+        status: "active",
+        needsAttention: true,
+        capturedAt: 0,
+        createdBy: member._id,
+        updatedAt: 0,
+      });
+    });
+    const seeded = await t.mutation(internal.e2eSupport.seedUc09, {
+      token: "abc",
+      phone: "9800012345",
+      noNamePaisa: 712_300,
+    });
+    const state = await t.query(internal.e2eSupport.partyBills, {
+      ids: [seeded.keepId, seeded.mergeId],
+    });
+    expect(state).toEqual([
+      { id: seeded.keepId, bills: 21, billCount: 21, mergedIntoId: null },
+      { id: seeded.mergeId, bills: 17, billCount: 17, mergedIntoId: null },
+    ]);
+    const noName = await t.run(async (ctx) =>
+      (await ctx.db.query("transactions").collect()).filter(
+        (r) => r.amountPaisa === 712_300 && r.partyId === undefined,
+      ),
+    );
+    expect(noName).toHaveLength(1);
+    await expect(
+      t.mutation(internal.e2eSupport.seedUc09, { token: "a b", phone: "1", noNamePaisa: 1 }),
+    ).rejects.toThrow(/VALIDATION/);
+    const fixture = await t.mutation(internal.e2eSupport.seedAdminFixture, { token: "xyz" });
+    expect(fixture.partyName).toBe("Admin xyz");
+    expect(await t.query(internal.e2eSupport.partyBills, { ids: [fixture.partyId] })).toEqual([
+      { id: fixture.partyId, bills: 1, billCount: 1, mergedIntoId: null },
+    ]);
+  });
+});
