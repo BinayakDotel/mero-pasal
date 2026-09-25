@@ -73,6 +73,8 @@ export default defineSchema({
     isWalkIn: v.boolean(),
     archived: v.boolean(),
     mergedIntoId: v.optional(v.id("parties")),
+    // F-12: a merge into this account is moving its bills (set at start, cleared when done).
+    mergingInto: v.optional(v.id("parties")),
     lastUsedAt: v.number(),
     // F-04 picker line "हिजो · रु 2,340": the latest active bill (by date). Kept by ledger.apply;
     // undefined until the account has a bill. The amount is absent when that bill has none.
