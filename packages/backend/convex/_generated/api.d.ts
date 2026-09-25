@@ -10,6 +10,7 @@
 
 import type * as audit from "../audit.js";
 import type * as billAdmin from "../billAdmin.js";
+import type * as billQueries from "../billQueries.js";
 import type * as e2eSupport from "../e2eSupport.js";
 import type * as files from "../files.js";
 import type * as lib_audit from "../lib/audit.js";
@@ -36,6 +37,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   audit: typeof audit;
   billAdmin: typeof billAdmin;
+  billQueries: typeof billQueries;
   e2eSupport: typeof e2eSupport;
   files: typeof files;
   "lib/audit": typeof lib_audit;
