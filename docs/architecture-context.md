@@ -370,12 +370,12 @@ Importing raw `query` or `mutation` from `_generated/server` in feature modules 
 | `members` | `me` | query (`optionalMemberQuery`) | anyone | Returns `{member, shop}` or `null` for signed-out, not-invited or deactivated callers (drives the "Not invited" screen) |
 | | `setLocale` | mutation | member | Language preference |
 | | `heartbeat` | mutation | member | M2: writes the member's `memberSync` row (last seen; last full sync; pending/failed counts; items left by another account). A separate table, so heartbeats don't re-run member queries |
-| | `list`, `invite`, `setRole`, `deactivate` | q/m | admin | F-13 |
+| | `claimInvite` | mutation (`optionalMemberMutation`) | signed in | F-13 / ADR-034: links an open invite to the caller on a **verified** token email; `member` / `claimed` / `notInvited` / `noVerifiedEmail`. `MemberGate` calls it once when `me` is null |
+| `memberAdmin` | `list` | query | admin | F-13: members with `invited` and each phone's `memberSync` health |
+| | `invite(email, displayName, role)`, `setRole`, `setActive` | mutation | admin | Re-invite reactivates the row; nobody changes their own role or access; one active membership per Clerk user and per email; audit `member.*` |
 | `parties` | `listForPicker` | query | member | All non-archived, non-merged parties, trimmed fields (for client-side search and cache) |
 | | `create` | mutation | member | Idempotent by `clientId`; computes `nameLatin`, `nameDevanagari`, `phoneticKey` |
 | | `get(id, monthBs)`, `monthTotals(monthBs)` | query | member | Account page (all-time totals from the party row, the month from `partyMonthly`; a merged account reports `mergedIntoId`); accounts list |
-| | `update`, `archive` | mutation | owner/admin | F-12 |
-| | `merge(keepId, mergeId)` | mutation | admin | Moves transactions in batches (scheduled continuation if large) |
 | | `similar(name)` | query | member | Online double-check for the duplicate-name warning |
 | `transactions` | `createFromClient` | mutation | member | Idempotent create from the outbox (same `clientId` → same bill). Resolves the account by `{id}` or `{clientId}`, follows merges, and returns `CONFLICT` if a phone-made account hasn't synced yet (the outbox retries). Checks the BS date (≤ 1 day ahead), integer paisa ≥ 0 and 1–5 uploaded photos, then `ledger.apply` |
 | | `listRecentForDate(dateBs, limit ≤ 10)` | query | member | Today's recent bills: newest active first, with account name, walk-in flag and thumbnail URL |
@@ -384,13 +384,19 @@ Importing raw `query` or `mutation` from `_generated/server` in feature modules 
 | | `get(clientId)` | query | member | Bill detail by the phone's `clientId` (null while only on the phone); full photo URLs only here |
 | | `listByDate(filter)`, `listByParty(partyId, monthBs?)` | query (paginated) | member | F-06 / F-07 lists, thumbnails only; filter all / sale / purchase / noAmount |
 | | `listForParties(partyIds ≤ 5)` | query | member | F-06 search: bills of the accounts matched on the phone (≤ 50 each) |
-| | `listNeedsAttention`, `listForExport` | query (paginated) | admin | F-11, F-14 |
+| `billQueries` | `listForAdmin(filter, fromBs?, toBs?, partyId?)` | query (paginated) | admin | F-11 bills table, needs-attention queue and F-14 export: all / sale / purchase / attention / removed; rows carry `updatedAt` |
+| `billAdmin` | `update(clientId, kind, partyId?, dateBs, amountPaisa?, billNumber?, note?, expectedUpdatedAt)` | mutation | admin | F-11 drawer: full values, any past date (never future); bill number/note left out = unchanged, "" clears; `CONFLICT` if the bill changed since it was shown |
+| `partyAdmin` | `list` | query | admin | Every account incl. archived / merged / merging, with totals and `phoneticKey` for search |
+| | `update(id, name, kind, tag?, phone?, pan?)`, `setArchived` | mutation | owner/admin | F-12: names re-derived from `name`; walk-in and merged accounts refused |
+| | `merge(keepId, mergeId)` | mutation | admin | F-12 / UC-09: sets `mergingInto`, then internal `moveBatch` moves 100 bills per transaction through `ledger.apply`; the last batch sets `mergedIntoId` atomically |
+| | `resumeMerge(mergeId)`, `stopMerge(mergeId)` | mutation | admin | A failed batch isn't retried: resume (refused if the kept account was merged away) or stop (moved bills stay moved) |
+| | `duplicates` | query | admin | Pairs with the same phonetic key or the same phone (last 10 digits); keep = more bills |
 | `files` | `generateUploadUrl` | mutation | member | Signed upload URL |
 | | `photoUrls(txId)` | query | member | Resolves `storageId`s to URLs |
 | `summaries` | `forDate(dateBs)`, `forRange(from, to)` | query | member | Today strip, reports (≤ 400 rows read) |
-| | `rebuild(from, to)` | internal mutation | CLI | Repair tool: recompute derived data from transactions |
+| `rebuild` | `summaries(fromBs, toBs, shopId?)` | internal mutation | CLI | NFR-10 repair: rewrites daily rows of the range and the month rows of the months touched, then schedules `partyTotals` (accounts' all-time totals from their month rows, 50 accounts per transaction) |
 | `audit` | `listForEntity(entity, entityId)` | query | admin | A record's history, newest first, with actor names (the admin bill drawer, M4) |
-| `e2eSupport` | `ensureE2eShop`, `billsByClientIds` | internal | CLI (e2e) | The Clerk dev test user's own shop; which phone-made bills reached it. Playwright runs them via `convex run` on dev only |
+| `e2eSupport` | `ensureE2eShop`, `billsByClientIds`, `resetE2eInvite`, `seedUc09`, `seedAdminFixture`, `partyBills` | internal | CLI (e2e) | The Clerk dev test user's own shop (it is its admin); which phone-made bills reached it; a fresh invite per run; per-test accounts and bills (through `ledger.apply`) so admin tests never touch data other tests use. Playwright runs them via `convex run` on dev only |
 | `seed` | `bootstrap` | internal mutation | CLI | Shop, owner (locale `ne`) and admin (locale `en`) members, walk-in party; refuses if a shop exists (`CONFLICT`) |
 | `crons` | weekly | — | — | v1: nothing critical. Later: orphan-file report and backup reminder. |
 
@@ -482,7 +488,7 @@ The operations map to it like this:
 - a merged account (`CONFLICT`)
 - any write that would drive a derived total below zero, which could only happen if data had already drifted
 
-`summaries.rebuild` recomputes derived data from scratch for a date range. The invariant test runs random operations and compares incremental against rebuilt results.
+`rebuild.summaries` (then `rebuild.partyTotals`) recomputes derived data from scratch for a date range. Runbook: a ledger error names the drifted row (`partyMonthly[<account>/<month>]`, `dailySummaries[<date>]`); rebuild those months, then resume any stuck merge. The invariant test runs random operations and compares incremental against rebuilt results.
 
 **Balance sign convention (v1.1):** `+` means the party owes the shop; `−` means the shop owes the party.
 - Credit sale: `+creditPaisa`. Payment in: `−amount`. Opening balance: `±amount`.
