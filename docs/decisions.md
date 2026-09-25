@@ -17,7 +17,7 @@
 - **Revisit when:** storage costs grow, or offline needs outgrow the outbox approach.
 
 ### ADR-003 · Clerk with Google sign-in, invite-only; Convex `members` is the authority
-- **Why:** Binayak knows Clerk. Google sign-in is one tap on an Android phone, with no password for Buwa to remember. The allowlist blocks strangers, and roles live in our own table.
+- **Why:** Binayak knows Clerk. Google sign-in is one tap on an Android phone, with no password for Buwa to remember. The allowlist blocks strangers, and roles live in our own table. *(Allowlist superseded by ADR-034: membership in Convex alone blocks strangers; invites are member rows.)*
 - **Consequences:** Authorization is always checked in Convex. `proxy.ts` gates routes only (Next 16 naming).
 
 ### ADR-004 · Installable PWA, not a native or Play Store app

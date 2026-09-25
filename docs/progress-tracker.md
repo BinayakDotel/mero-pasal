@@ -8,11 +8,11 @@
 | | |
 |---|---|
 | **Phase** | **M0 Foundations**: code merged (PRs #1–#8) and running locally against Convex dev; production deploy and Redmi test remain |
-| **Current focus** | M4 admin console (F-11 to F-14): plan approved 2026-09-25 (ADR-034); M3 phone checks done on the iPhone 17 |
+| **Current focus** | M4 admin console (F-11 to F-14): built as a 21-branch Graphite stack, not yet submitted; UC-09 and UC-10 pass in Playwright (27/27). Next: Binayak's review, `submit`, then the Mac checks below |
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
 | **Risks** | NFR-03: Today ships 262 KB gzipped JS (budget 250); React/Next ≈ 140 KB, Clerk + Convex ≈ 65 KB are the bulk. Judged on the Redmi instead: Today interactive < 2 s warm (ADR-031); time it in the phone test. |
-| **Last updated** | 2083-06-07 BS (2026-09-23) |
+| **Last updated** | 2083-06-09 BS (2026-09-25) |
 
 **Capacity assumption:** ~4–5 h a day (~25–30 h a week). The estimates below are rough; re-plan after M1 with real velocity.
 
@@ -94,13 +94,15 @@
 
 **Exit:** UC-09 and UC-10 pass.
 
-- [ ] `/admin` layout, role gate, keyboard navigation.
-- [ ] Overview: month totals, **Needs attention** queue with inline fixes, member sync health.
-- [ ] Bills table with filters + drawer (photo, edit, bill number, note, restore, audit).
-- [ ] Accounts: edit, archive, **merge** (batched move) + phonetic-key merge suggestions.
-- [ ] Members: invite, role, deactivate.
-- [ ] CSV export by BS date range.
-- [ ] `summaries.rebuild` CLI repair tool.
+- [x] `/admin` layout, role gate, keyboard navigation (`j`/`k`, `Enter`, `Esc`, `/`).
+- [x] Overview: month totals, **Needs attention** queue with inline fixes, duplicates, member sync health.
+- [x] Bills table with filters + drawer (photo, edit, bill number, note, remove/restore, audit). Saves are refused if the bill changed since it was opened.
+- [x] Accounts: edit, archive, **merge** (batched move) + phonetic-key/phone merge suggestions; a stuck merge can be resumed or stopped.
+- [x] Members: invite by email (linked on first sign-in, ADR-034), role, deactivate/reactivate. Clerk session token carries `email` + `email_verified` (checked 2026-09-25).
+- [x] CSV export by BS date range (BOM, exact rupees, removed bills included).
+- [x] `rebuild.summaries` / `rebuild.partyTotals` CLI repair tool (runbook in `rebuild.ts` and architecture §7).
+- [ ] **Binayak on the Mac** (dev, ≥ 1024 px): invite a second Google account and sign in with it; fix a bill without an amount; merge two duplicates; remove then restore a bill; export last month and open it in Excel (Devanagari intact).
+- [ ] **Decision (schema, rule 8):** add a `parties.by_shop_mergingInto` index so the merge guard scales past 2,000 accounts? Deferred: far below that, and a miss can only leave a merge stuck (stop it), never corrupt totals.
 
 ### M5 — Field trial with Buwa (2 weeks)
 
@@ -154,3 +156,4 @@
 | 2083-06-07 | Claude (planning) | F-04, F-24 | Voice now finds *or creates* names (confirm sheet); typed search gets an "Add “X”" card; paper look made explicit (ADR-022/023); mockup updated | Run voice spike in M1 |
 | 2083-06-07 | Claude (M0) | F-01, F-02, F-03, F-05, F-10, F-13 | Steps 1–9: root tooling; shared money, domain, dates (UTC-only arithmetic, 33,238-day oracle test), i18n (copy-deck sync test); Convex schema, auth wrappers, `members.me`, seed; ui tokens + primitives; web shell (sign-in, Not invited, Today); Serwist PWA; Playwright smoke + vercel.json. Graphite + private GitHub repo (ADR-024…028). PRs #1–#8 merged | NFR-03 at 256 KB (budget 250): decide in M1 |
 | 2083-06-07 | Binayak + Claude | F-01 | Local setup: Convex dev `fine-marlin-976`, Clerk dev `direct-drum-2930` (issuer set on Convex), `CLERK_SECRET_KEY` in `apps/web/.env.local`, dev data seeded. On `main`: lint, typecheck, 82 unit tests, 5/5 e2e green | Prod deploy + Redmi test; review `i18n-review` strings and month names |
+| 2083-06-09 | Claude (M4) | F-11, F-12, F-13, F-14, F-15, UC-09, UC-10 | Admin console as a small-PR stack: ADR-034; invites (`claimInvite`, `memberAdmin`); `billAdmin.update`; `billQueries.listForAdmin`; `partyAdmin` edit/merge/resume/stop/duplicates; `rebuild`; `/admin` Overview, Bills + drawer, Accounts, Members, Export, `/`. Two second-pass reviews; all findings fixed test-first. 145 backend + 146 web + 163 shared unit tests; 27/27 e2e (admin tests use their own seeded data) | Review + submit the stack; Mac checks; index decision |

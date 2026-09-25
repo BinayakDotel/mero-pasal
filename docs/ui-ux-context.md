@@ -227,7 +227,9 @@ Empty state: "आज कुनै बिल छैन। माथिको ब�
   - 14–15 px Mukta body
   - 40 px table rows
   - tabular numbers
-- Bill drawer on the right (480 px): photo with zoom, editable fields, audit history.
+- Bill drawer on the right (560 px): photo with zoom, editable fields (type, account, amount, date, bill number, note), remove / restore, audit history. It edits the version it opened: if the bill changes meanwhile (Buwa's correction), it says so and the server refuses the save.
+- Accounts: a table with search in either script (and tag, phone); a row opens an edit dialog (name, kind, tag, phone, PAN, archive, merge into…). A merge in progress shows "Merging into X…" with Resume / Stop.
+- Admin changes are online-only (ADR-034): no outbox; buttons are disabled offline.
 - **Needs attention** is the Overview's main block. Each item can be fixed inline without leaving the page.
 - Keyboard: `j`/`k` move between rows, `Enter` opens the drawer, `Esc` closes it, `/` jumps to search.
 
@@ -237,7 +239,7 @@ Empty state: "आज कुनै बिल छैन। माथिको ब�
 |---|---|---|
 | Loading | Skeleton rows on ruled lines (no spinners over 300 ms) | Skeleton table |
 | Empty | One sentence of direction plus the relevant action | Same |
-| Offline | Sync pill in marigold; data from cache; "(पुरानो)" hint on stale lists | Banner "Offline — changes will sync" |
+| Offline | Sync pill in marigold; data from cache; "(पुरानो)" hint on stale lists | Banner "Offline — changes can't be saved now."; save buttons disabled |
 | Error | A plain sentence naming what happened and what to do, e.g. "फोटो पठाउन सकिएन। इन्टरनेट आएपछि आफैँ पठाइन्छ।" (The photo couldn't upload. It will send by itself when the internet returns.) | Code and message in a toast; details in the console |
 | Not invited | "तपाईंलाई यो पसलमा थपिएको छैन। बिनायकलाई सम्पर्क गर्नुहोस्।" (You haven't been added to this shop. Contact Binayak.) | Same |
 
