@@ -85,4 +85,31 @@ test.describe("F-11 admin console", () => {
     await page.keyboard.press("Escape");
     await expect(drawer).toHaveCount(0);
   });
+
+  test("accounts: search, edit a tag, archive and bring back", async ({ page }) => {
+    await signInE2e(page);
+    await page.goto("/admin/accounts");
+    await page.getByRole("textbox", { name: "Search accounts" }).fill("E2E Sita");
+    const row = page.locator("tbody tr[tabindex]").first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    const name = (await row.locator("td").first().textContent()) ?? "";
+    await row.click();
+
+    const dialog = page.getByRole("dialog", { name: `Account ${name}` });
+    const tag = `t${Date.now() % 100_000}`;
+    await dialog.getByRole("textbox", { name: "Tag" }).fill(tag);
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog).toHaveCount(0);
+    await page.getByRole("textbox", { name: "Search accounts" }).fill(tag); // finds by tag
+    await expect(page.getByRole("cell", { name, exact: true })).toBeVisible();
+
+    await page.getByRole("cell", { name, exact: true }).click();
+    await dialog.getByRole("button", { name: "Archive" }).click();
+    await expect(page.getByRole("cell", { name, exact: true })).toHaveCount(0); // hidden
+    await page.getByRole("checkbox", { name: "Archived" }).check();
+    await page.getByRole("cell", { name, exact: true }).click();
+    await dialog.getByRole("button", { name: "Bring back" }).click();
+    await page.getByRole("checkbox", { name: "Archived" }).uncheck();
+    await expect(page.getByRole("cell", { name, exact: true })).toBeVisible();
+  });
 });
