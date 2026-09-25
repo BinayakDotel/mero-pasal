@@ -41,8 +41,12 @@ export default defineSchema({
 
   members: defineTable({
     shopId: v.id("shops"),
-    clerkUserId: v.string(), // identity.subject
-    email: v.optional(v.string()), // F-13: lets an invite be claimed on first sign-in (M4)
+    // identity.subject. Absent on an invite nobody has claimed yet (F-13, ADR-034): such a row
+    // matches no signed-in user until `members.claimInvite` links it.
+    clerkUserId: v.optional(v.string()),
+    email: v.optional(v.string()), // trimmed + lowercased; how an invite is claimed
+    invitedAt: v.optional(v.number()),
+    invitedBy: v.optional(v.id("members")),
     displayName: v.string(),
     role,
     locale,
