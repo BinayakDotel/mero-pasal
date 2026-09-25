@@ -24,4 +24,15 @@ test.describe("F-11 admin console", () => {
       "page",
     );
   });
+
+  test("the overview loads this month, the queue, duplicates and sync health", async ({ page }) => {
+    await signInE2e(page);
+    await page.goto("/admin");
+    for (const title of [/^Needs attention/, /^Possible duplicates/, /^Members/]) {
+      await expect(page.getByRole("heading", { name: title, level: 2 })).toBeVisible();
+    }
+    await expect(page.getByRole("combobox", { name: "Month" })).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Sold", exact: true })).toBeVisible();
+    await expect(page.getByRole("cell", { name: "E2E", exact: true })).toBeVisible();
+  });
 });
