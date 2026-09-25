@@ -61,6 +61,38 @@ export const ensureE2eShop = internalMutation({
   },
 });
 
+/**
+ * M4 invite e2e: removes a Clerk test invitee's member row (and its sync row) from the E2E shop,
+ * so every run starts from a fresh invite. Test rows only: never another shop, never a real email.
+ */
+export const resetE2eInvite = internalMutation({
+  args: { email: v.string() },
+  returns: v.number(),
+  handler: async (ctx, { email }) => {
+    const address = email.trim().toLowerCase();
+    if (!address.includes("+clerk_test@")) {
+      throw appError("VALIDATION", "Only Clerk test users (…+clerk_test@…) can be reset");
+    }
+    const shop = (await ctx.db.query("shops").take(50)).find((s) => s.name === E2E_SHOP_NAME);
+    if (!shop) return 0;
+    const rows = (
+      await ctx.db
+        .query("members")
+        .withIndex("by_email", (q) => q.eq("email", address))
+        .take(10)
+    ).filter((m) => m.shopId === shop._id);
+    for (const row of rows) {
+      const sync = await ctx.db
+        .query("memberSync")
+        .withIndex("by_member", (q) => q.eq("memberId", row._id))
+        .unique();
+      if (sync) await ctx.db.delete(sync._id);
+      await ctx.db.delete(row._id);
+    }
+    return rows.length;
+  },
+});
+
 /** Which of these phone-made bills reached the E2E shop, with their photo counts. */
 export const billsByClientIds = internalQuery({
   args: { clientIds: v.array(v.string()) },

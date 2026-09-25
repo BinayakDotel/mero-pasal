@@ -89,3 +89,46 @@ describe("e2eSupport.billsByClientIds", () => {
     ).toEqual([{ clientId: "b1", photos: 1, status: "active" }]);
   });
 });
+
+describe("e2eSupport.resetE2eInvite (M4 invite e2e)", () => {
+  it("clears a test invitee from the E2E shop only, so each run invites afresh", async () => {
+    const t = convexTest(schema, modules);
+    const e2e = await t.mutation(internal.e2eSupport.ensureE2eShop, {
+      clerkUserId: "user_e2e",
+      email: "e2e+clerk_test@example.com",
+    });
+    const email = "invitee+clerk_test@example.com";
+    const other = await t.run((ctx) => ctx.db.insert("shops", { name: "Real", createdAt: 0 }));
+    await t.run(async (ctx) => {
+      for (const shopId of [e2e, other]) {
+        const id = await ctx.db.insert("members", {
+          shopId,
+          clerkUserId: `user_${shopId}`,
+          email,
+          displayName: "Invitee",
+          role: "staff",
+          locale: "ne",
+          active: shopId === e2e,
+        });
+        await ctx.db.insert("memberSync", {
+          shopId,
+          memberId: id,
+          lastSeenAt: 1,
+          pending: 0,
+          failed: 0,
+          foreignPending: 0,
+        });
+      }
+    });
+    expect(await t.mutation(internal.e2eSupport.resetE2eInvite, { email })).toBe(1);
+    const left = await t.run(async (ctx) => ({
+      members: (await ctx.db.query("members").collect()).filter((m) => m.email === email),
+      sync: await ctx.db.query("memberSync").collect(),
+    }));
+    expect(left.members.map((m) => m.shopId)).toEqual([other]);
+    expect(left.sync.map((s) => s.shopId)).toEqual([other]);
+    await expect(
+      t.mutation(internal.e2eSupport.resetE2eInvite, { email: "aama@example.com" }),
+    ).rejects.toThrow(/VALIDATION/);
+  });
+});
