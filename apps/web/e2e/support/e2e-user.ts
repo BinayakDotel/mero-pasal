@@ -36,7 +36,36 @@ export function convexRunDev<T>(fn: string, args: Record<string, unknown>): T {
 
 /** Sign in as the E2E test user and land on Today. */
 export async function signInE2e(page: Page): Promise<void> {
+  await signInAs(page, E2E_USER.email);
+}
+
+/** Sign in as any existing Clerk test user and open the app. */
+export async function signInAs(page: Page, emailAddress: string): Promise<void> {
   await page.goto("/sign-in");
-  await clerk.signIn({ page, emailAddress: E2E_USER.email });
+  await clerk.signIn({ page, emailAddress });
   await page.goto("/");
+}
+
+/**
+ * M4 invite e2e: make sure a second Clerk test user exists on the DEV instance (a `+clerk_test`
+ * address, created through the Clerk Backend API; its email counts as verified). Refuses any key
+ * but a dev (`sk_test_`) one.
+ */
+export async function ensureClerkTestUser(email: string): Promise<void> {
+  const key = process.env.CLERK_SECRET_KEY ?? "";
+  if (!key.startsWith("sk_test_")) throw new Error("e2e: needs the Clerk DEV secret key");
+  if (!email.includes("+clerk_test@")) throw new Error("e2e: only +clerk_test addresses");
+  const headers = { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
+  const found = await fetch(
+    `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(email)}`,
+    { headers },
+  );
+  if (!found.ok) throw new Error(`e2e: Clerk user lookup failed (${found.status})`);
+  if (((await found.json()) as unknown[]).length > 0) return;
+  const made = await fetch("https://api.clerk.com/v1/users", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ email_address: [email] }),
+  });
+  if (!made.ok) throw new Error(`e2e: Clerk user create failed (${made.status})`);
 }
