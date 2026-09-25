@@ -186,3 +186,21 @@ describe("members.me (F-01)", () => {
     expect(me?.member).toMatchObject({ role: "admin", locale: "en" });
   });
 });
+
+describe("invites not yet claimed (F-13, ADR-034)", () => {
+  it("an invite row grants nothing: its person is refused until they claim it", async () => {
+    const { t, shopId } = await setup();
+    await t.run((ctx) =>
+      ctx.db.insert("members", {
+        shopId,
+        email: "aama@example.com",
+        displayName: "Aama",
+        role: "staff",
+        locale: "ne",
+        active: true,
+        invitedAt: 1,
+      }),
+    );
+    await expect(as(t, "user_aama").query(p.member, {})).rejects.toThrow(/FORBIDDEN/);
+  });
+});
