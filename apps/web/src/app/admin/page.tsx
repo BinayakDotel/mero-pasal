@@ -1,13 +1,14 @@
 "use client";
 
 import { api } from "@mero-pasal/backend/convex/_generated/api";
-import { daysInMonthBs, monthOf } from "@mero-pasal/shared/dates";
-import { formatNpr } from "@mero-pasal/shared/money";
+import { monthOf } from "@mero-pasal/shared/dates";
 import { useQuery } from "convex/react";
 import { useState } from "react";
 import { monthLabel, recentMonths } from "@/features/accounts/months";
 import { PageHead } from "@/features/admin/admin-shell";
 import { Duplicates, NeedsAttention } from "@/features/admin/attention";
+import { rs, whenNpt as when } from "@/features/admin/format";
+import { monthRange } from "@/features/admin/range";
 import {
   cellClass,
   EmptyRow,
@@ -19,28 +20,12 @@ import {
 } from "@/features/admin/ui";
 import { useTodayBs } from "@/features/today/use-today-bs";
 
-const when = (ms: number | undefined) =>
-  ms === undefined
-    ? "—"
-    : new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Asia/Kathmandu",
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(ms);
-
 /** F-11 overview: this month's numbers, what needs fixing, and whether every phone is syncing. */
 export default function AdminOverviewPage() {
   const thisMonth = monthOf(useTodayBs());
   const [month, setMonth] = useState(thisMonth);
-  const [year, mm] = month.split("-").map(Number) as [number, number];
-  const totals = useQuery(api.summaries.forRange, {
-    fromBs: `${month}-01`,
-    toBs: `${month}-${String(daysInMonthBs(year, mm)).padStart(2, "0")}`,
-  });
+  const totals = useQuery(api.summaries.forRange, monthRange(month));
   const members = useQuery(api.memberAdmin.list, {});
-  const rs = (paisa: number) => formatNpr(paisa, { locale: "en" });
   return (
     <>
       <PageHead title="Overview">

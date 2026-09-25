@@ -2,11 +2,12 @@
 
 import { api } from "@mero-pasal/backend/convex/_generated/api";
 import type { Id } from "@mero-pasal/backend/convex/_generated/dataModel";
-import { formatNpr, rupeesToPaisa } from "@mero-pasal/shared/money";
+import { rupeesToPaisa } from "@mero-pasal/shared/money";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
 import { useConnection } from "@/features/sync/use-connection";
+import { rs } from "./format";
 import {
   Button,
   cellClass,
@@ -113,7 +114,7 @@ function AttentionRow({ bill, accounts }: { bill: Row; accounts: readonly Accoun
             onChange={(e) => setRupees(e.target.value.trim())}
           />
         ) : (
-          formatNpr(bill.amountPaisa ?? 0, { locale: "en" })
+          rs(bill.amountPaisa ?? 0)
         )}
       </td>
       <td className={`${cellClass} text-right`}>
