@@ -3,9 +3,8 @@ import { MAX_BACKDATE_DAYS, MAX_BILL_PAGES, MAX_FUTURE_DAYS } from "@mero-pasal/
 import { formatNpr } from "@mero-pasal/shared/money";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
-import type { Doc, Id } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
 import { billRow, isBill, toBillRow } from "./lib/billRow";
+import { billByClientId, resolveParty } from "./lib/bills";
 import { appError } from "./lib/errors";
 import { adminMutation, memberMutation, memberQuery } from "./lib/functions";
 import { apply } from "./lib/ledger";
@@ -16,7 +15,6 @@ const MAX_CLIENT_ID = 64;
 const DAY_MS = 86_400_000;
 /** Offline bills may sync days later; older phone times than this are treated as clock errors. */
 const CLIENT_TIME_WINDOW_MS = 120 * DAY_MS;
-const MAX_MERGE_HOPS = 10;
 
 const photo = v.object({
   storageId: v.id("_storage"),
@@ -25,35 +23,6 @@ const photo = v.object({
   height: v.number(),
   bytes: v.number(),
 });
-
-/** F-04 / architecture §5.3 invariant 7: an account reference from the phone, merges followed. */
-async function resolveParty(
-  ctx: QueryCtx & { shopId: Id<"shops"> },
-  ref: { id: Id<"parties"> } | { clientId: string },
-): Promise<Doc<"parties">> {
-  let party =
-    "id" in ref
-      ? await ctx.db.get(ref.id)
-      : await ctx.db
-          .query("parties")
-          .withIndex("by_shop_clientId", (q) =>
-            q.eq("shopId", ctx.shopId).eq("clientId", ref.clientId),
-          )
-          .unique();
-  if (!party || party.shopId !== ctx.shopId) {
-    // A name created on the phone syncs before its bill (architecture §8.2); if it hasn't yet,
-    // the outbox retries this bill later.
-    throw appError("CONFLICT", "Account not on the server yet");
-  }
-  for (let hop = 0; party.mergedIntoId !== undefined; hop++) {
-    if (hop >= MAX_MERGE_HOPS) throw new Error("Account merge chain too long");
-    const next: Doc<"parties"> | null = await ctx.db.get(party.mergedIntoId);
-    if (!next || next.shopId !== ctx.shopId)
-      throw appError("NOT_FOUND", "Merged account not found");
-    party = next;
-  }
-  return party;
-}
 
 /**
  * F-03 save from the phone's outbox. Idempotent on (shop, clientId): a retry returns the bill it
@@ -335,16 +304,6 @@ export const listForParties = memberQuery({
   },
 });
 
-/** A bill to correct or remove, by the clientId the phone knows (NOT_FOUND while unsent). */
-async function billByClientId(ctx: QueryCtx & { shopId: Id<"shops"> }, clientId: string) {
-  const row = await ctx.db
-    .query("transactions")
-    .withIndex("by_shop_clientId", (q) => q.eq("shopId", ctx.shopId).eq("clientId", clientId))
-    .unique();
-  if (!row || !isBill(row)) throw appError("NOT_FOUND", "Bill not on the server (yet)");
-  return row;
-}
-
 /**
  * F-08 correct (UC-08): set the bill's type, account, amount and date to these values through
  * ledger.apply; photos never change. The phone sends the full new values, so a retry is a no-op
@@ -448,7 +407,11 @@ export const remove = memberMutation({
   },
 });
 
-/** F-08 / architecture §10.3: admin brings a removed bill back into lists and totals. */
+/**
+ * F-08 / architecture §10.3: admin brings a removed bill back into lists and totals. If its
+ * account was merged meanwhile, it comes back on the account it was merged into (ledger.apply
+ * refuses bills on a merged account).
+ */
 export const restore = adminMutation({
   args: { clientId: v.string() },
   returns: v.id("transactions"),
@@ -456,11 +419,17 @@ export const restore = adminMutation({
     const tx = await billByClientId(ctx, clientId);
     if (tx.status === "active") return tx._id;
     const { _id, _creationTime, needsAttention, updatedAt, deletedReason: _r, ...keep } = tx;
+    const party = tx.partyId ? await resolveParty(ctx, { id: tx.partyId }) : null;
+    const moved = party && party._id !== tx.partyId;
     return apply(
       ctx,
       tx,
-      { ...keep, status: "active" },
-      { actorId: ctx.member._id, action: "tx.restore", summary: "restored" },
+      { ...keep, status: "active", ...(party ? { partyId: party._id } : {}) },
+      {
+        actorId: ctx.member._id,
+        action: "tx.restore",
+        summary: moved ? `restored onto ${party.displayName} (merged)` : "restored",
+      },
     );
   },
 });
