@@ -35,4 +35,29 @@ test.describe("F-11 admin console", () => {
     await expect(page.getByRole("cell", { name: "Sold", exact: true })).toBeVisible();
     await expect(page.getByRole("cell", { name: "E2E", exact: true })).toBeVisible();
   });
+
+  test("the bills table filters by type and date, and j selects a row", async ({ page }) => {
+    await signInE2e(page);
+    await page.goto("/admin/bills");
+    await expect(page.getByRole("heading", { name: "Bills", level: 1 })).toBeVisible();
+    const rows = page.locator("tbody tr[aria-selected]");
+    await expect(rows.first()).toBeVisible({ timeout: 15_000 }); // the E2E shop has bills
+    await page.getByRole("button", { name: "Sold", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Sold", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(rows.first().getByRole("cell", { name: "Sold", exact: true })).toBeVisible();
+
+    await page.getByRole("textbox", { name: "From (BS)" }).fill("2083-13"); // half typed
+    await expect(rows.first()).toBeVisible(); // the table keeps its last range
+    await page.getByRole("textbox", { name: "From (BS)" }).fill("");
+
+    await page.getByRole("textbox", { name: "From (BS)" }).blur(); // j/k only while not typing
+    await page.keyboard.press("j");
+    await expect(rows.first()).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("j");
+    await page.keyboard.press("k");
+    await expect(rows.first()).toHaveAttribute("aria-selected", "true");
+  });
 });
