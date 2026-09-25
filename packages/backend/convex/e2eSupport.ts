@@ -1,6 +1,10 @@
+import { bsToAdMs, todayBs } from "@mero-pasal/shared/dates";
+import { deriveNames } from "@mero-pasal/shared/names";
 import { v } from "convex/values";
-import { internalMutation, internalQuery } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { appError } from "./lib/errors";
+import { apply } from "./lib/ledger";
 import { insertWalkIn, WALK_IN_CLIENT_ID } from "./seed";
 
 // M2 e2e (plan PR 9): Playwright sets up its own shop and checks what reached the server through
@@ -109,5 +113,164 @@ export const billsByClientIds = internalQuery({
       if (row) found.push({ clientId, photos: row.photos.length, status: row.status });
     }
     return found;
+  },
+});
+
+const SEED_KEEP_BILLS = 20;
+const SEED_MERGE_BILLS = 17;
+
+/** The E2E shop and its admin (the Clerk test user), or VALIDATION. */
+async function e2eShop(ctx: MutationCtx) {
+  const shop = (await ctx.db.query("shops").take(50)).find((s) => s.name === E2E_SHOP_NAME);
+  if (!shop) throw appError("VALIDATION", "Run ensureE2eShop first");
+  const admin = (
+    await ctx.db
+      .query("members")
+      .withIndex("by_shop", (q) => q.eq("shopId", shop._id))
+      .take(100)
+  ).find((m) => m.active && m.role === "admin" && m.email?.includes("+clerk_test@"));
+  if (!admin) throw appError("VALIDATION", "The E2E shop has no test admin");
+  return { shopId: shop._id, admin };
+}
+
+const TOKEN = /^[a-z]{3,12}$/;
+
+/**
+ * Creates test accounts and bills in the E2E shop, through ledger.apply like any bill. Photos
+ * reuse an existing E2E bill's files (a mutation can't upload). `token` keeps names unique per
+ * run, so tests never touch data another test (or a phone-app test) is using.
+ */
+async function seeder(ctx: MutationCtx, token: string) {
+  if (!TOKEN.test(token)) throw appError("VALIDATION", "token: 3–12 letters a–z");
+  const { shopId, admin } = await e2eShop(ctx);
+  const sample = await ctx.db
+    .query("transactions")
+    .withIndex("by_shop_status_date", (q) => q.eq("shopId", shopId).eq("status", "active"))
+    .first();
+  if (!sample || sample.photos.length === 0) {
+    throw appError("VALIDATION", "The E2E shop needs one bill with a photo first");
+  }
+  const now = Date.now();
+  const dateBs = todayBs(now);
+  let n = 0;
+  return {
+    account: (name: string, phone?: string) => {
+      const names = deriveNames(name);
+      return ctx.db.insert("parties", {
+        shopId,
+        clientId: `seed-${token}-${name}`,
+        kind: "customer",
+        displayName: names.displayName,
+        nameLatin: names.nameLatin,
+        ...(names.nameDevanagari === undefined ? {} : { nameDevanagari: names.nameDevanagari }),
+        phoneticKey: names.phoneticKey,
+        ...(phone === undefined ? {} : { phone }),
+        isWalkIn: false,
+        archived: false,
+        lastUsedAt: now,
+        billCount: 0,
+        salePaisa: 0,
+        purchasePaisa: 0,
+        balancePaisa: 0,
+        createdBy: admin._id,
+        createdAt: now,
+      });
+    },
+    bill: async (partyId: Id<"parties"> | undefined, amountPaisa: number | undefined) => {
+      const clientId = `seed-${token}-${n++}`;
+      await apply(
+        { ...ctx, shopId },
+        null,
+        {
+          shopId,
+          clientId,
+          kind: "sale",
+          ...(partyId ? { partyId } : {}),
+          dateBs,
+          dateAd: bsToAdMs(dateBs),
+          ...(amountPaisa === undefined ? {} : { amountPaisa }),
+          photos: sample.photos,
+          status: "active",
+          capturedAt: now,
+          createdBy: admin._id,
+        } satisfies Omit<
+          Doc<"transactions">,
+          "_id" | "_creationTime" | "needsAttention" | "updatedAt"
+        >,
+        { actorId: admin._id, action: "tx.create", summary: "e2e seed" },
+      );
+      return clientId;
+    },
+  };
+}
+
+/**
+ * M4 UC-09 e2e: a duplicate pair (same phone; the kept account has more bills, so the console
+ * suggests keeping it) and two needs-attention bills.
+ */
+export const seedUc09 = internalMutation({
+  args: { token: v.string(), phone: v.string(), noNamePaisa: v.number() },
+  returns: v.object({
+    keepId: v.id("parties"),
+    mergeId: v.id("parties"),
+    keepName: v.string(),
+    mergeName: v.string(),
+  }),
+  handler: async (ctx, { token, phone, noNamePaisa }) => {
+    if (!/^\d{10}$/.test(phone)) throw appError("VALIDATION", "phone: 10 digits");
+    const seed = await seeder(ctx, token);
+    const keepName = `UC Keep ${token}`;
+    const mergeName = `UC Dup ${token}`;
+    const keepId = await seed.account(keepName, phone);
+    const mergeId = await seed.account(mergeName, phone);
+    for (let i = 0; i < SEED_KEEP_BILLS; i++) await seed.bill(keepId, 10_000);
+    for (let i = 0; i < SEED_MERGE_BILLS; i++) await seed.bill(mergeId, 5_000);
+    await seed.bill(keepId, undefined); // needs an amount
+    await seed.bill(undefined, noNamePaisa); // needs a name
+    return { keepId, mergeId, keepName, mergeName };
+  },
+});
+
+/** M4 admin e2e: one account with one bill of its own, for a test to edit, remove or archive. */
+export const seedAdminFixture = internalMutation({
+  args: { token: v.string() },
+  returns: v.object({ partyId: v.id("parties"), partyName: v.string(), clientId: v.string() }),
+  handler: async (ctx, { token }) => {
+    const seed = await seeder(ctx, token);
+    const partyName = `Admin ${token}`;
+    const partyId = await seed.account(partyName);
+    const clientId = await seed.bill(partyId, 12_300);
+    return { partyId, partyName, clientId };
+  },
+});
+
+/** For the UC-09 e2e: each account's stored bills (removed ones too), its count and merge. */
+export const partyBills = internalQuery({
+  args: { ids: v.array(v.id("parties")) },
+  returns: v.array(
+    v.object({
+      id: v.id("parties"),
+      bills: v.number(),
+      billCount: v.number(),
+      mergedIntoId: v.union(v.id("parties"), v.null()),
+    }),
+  ),
+  handler: async (ctx, { ids }) => {
+    const out = [];
+    for (const id of ids) {
+      const party = await ctx.db.get(id);
+      if (!party) throw appError("NOT_FOUND");
+      const bills = await ctx.db
+        .query("transactions")
+        .withIndex("by_shop_party_date", (q) => q.eq("shopId", party.shopId).eq("partyId", id))
+        .take(1000);
+      out.push({
+        id,
+        bills: bills.length,
+        billCount: party.billCount,
+        mergedIntoId: party.mergedIntoId ?? null,
+      });
+    }
+    return out;
   },
 });
