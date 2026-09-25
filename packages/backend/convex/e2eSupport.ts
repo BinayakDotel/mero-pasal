@@ -10,7 +10,8 @@ import { insertWalkIn, WALK_IN_CLIENT_ID } from "./seed";
 export const E2E_SHOP_NAME = "E2E test shop";
 
 /**
- * Idempotent: the E2E shop with its walk-in account and the Clerk dev test user as its owner.
+ * Idempotent: the E2E shop with its walk-in account and the Clerk dev test user as its admin
+ * (M4: admin can do everything an owner can in the phone app, plus /admin).
  * Refuses a user who already belongs to another shop (never moves a real member).
  */
 export const ensureE2eShop = internalMutation({
@@ -36,12 +37,14 @@ export const ensureE2eShop = internalMutation({
       (await ctx.db.insert("shops", { name: E2E_SHOP_NAME, createdAt: now }));
 
     let memberId = existing?._id;
-    if (existing && !existing.active) await ctx.db.patch(existing._id, { active: true });
+    if (existing && (!existing.active || existing.role !== "admin")) {
+      await ctx.db.patch(existing._id, { active: true, role: "admin" });
+    }
     memberId ??= await ctx.db.insert("members", {
       shopId,
       clerkUserId,
       displayName: "E2E",
-      role: "owner",
+      role: "admin",
       locale: "ne",
       active: true,
       email: email.trim().toLowerCase(),
