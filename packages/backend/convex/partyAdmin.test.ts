@@ -95,3 +95,62 @@ describe("partyAdmin.update / setArchived (F-12)", () => {
     );
   });
 });
+
+describe("partyAdmin.duplicates (UC-09)", () => {
+  it("pairs the same name across scripts or the same phone; keeps the busier account", async () => {
+    const { asOwner, asAdmin, ram } = await setup();
+    const deva = await asOwner.mutation(api.parties.create, {
+      clientId: "deva",
+      name: "राम बहादुर थापा",
+      kind: "customer",
+    });
+    await asOwner.mutation(api.parties.create, {
+      clientId: "hari",
+      name: "Hari",
+      kind: "customer",
+      phone: "+977-9841",
+    });
+    await asOwner.mutation(api.parties.create, {
+      clientId: "gita",
+      name: "Gita",
+      kind: "customer",
+    });
+    const pairs = await asAdmin.query(api.partyAdmin.duplicates, {});
+    const names = pairs.map((p) => [p.reason, [p.keepName, p.mergeName].sort().join(" + ")]);
+    expect(names).toContainEqual(["name", ["Ram Bdr Thapa", "राम बहादुर थापा"].sort().join(" + ")]);
+    expect(pairs.some((p) => [p.keepId, p.mergeId].includes(ram))).toBe(true);
+    expect(pairs.some((p) => [p.keepId, p.mergeId].includes(deva))).toBe(true);
+    expect(pairs.every((p) => p.keepName !== "Gita" && p.mergeName !== "Gita")).toBe(true);
+  });
+
+  it("matches phones by their digits; leaves out archived accounts", async () => {
+    const { t, asOwner, asAdmin } = await setup();
+    const hari = await asOwner.mutation(api.parties.create, {
+      clientId: "hari",
+      name: "Hari Prasad",
+      kind: "customer",
+      phone: "+977 984-1000000",
+    });
+    const hp = await asOwner.mutation(api.parties.create, {
+      clientId: "hp",
+      name: "HP",
+      kind: "customer",
+      phone: "9841000000",
+    });
+    const pairs = await asAdmin.query(api.partyAdmin.duplicates, {});
+    expect(pairs).toContainEqual(
+      expect.objectContaining({ reason: "phone", keepId: expect.anything() }),
+    );
+    expect(
+      pairs.some(
+        (p) => new Set([p.keepId, p.mergeId]).has(hari) && new Set([p.keepId, p.mergeId]).has(hp),
+      ),
+    ).toBe(true);
+    await t.run((ctx) => ctx.db.patch(hp, { archived: true }));
+    expect(
+      (await asAdmin.query(api.partyAdmin.duplicates, {})).some((p) =>
+        [p.keepId, p.mergeId].includes(hp),
+      ),
+    ).toBe(false);
+  });
+});

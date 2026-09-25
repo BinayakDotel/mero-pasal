@@ -320,3 +320,75 @@ export const moveBatch = internalMutation({
     return null;
   },
 });
+
+/** Phone numbers compare by their digits (last 10), so "+977-9841…" and "9841…" match. */
+function phoneKey(phone: string | undefined): string | undefined {
+  const digits = phone?.replace(/\D/g, "").slice(-10);
+  return digits && digits.length >= 7 ? digits : undefined;
+}
+
+/**
+ * F-11 / F-12 / UC-09: pairs of accounts that are probably the same person: the same phonetic
+ * key (e.g. "Ram Bdr Thapa" / "राम बहादुर थापा") or the same phone. Suggests keeping the one
+ * with more bills. The walk-in, archived, merged and merging accounts are left out.
+ */
+export const duplicates = adminQuery({
+  args: {},
+  returns: v.array(
+    v.object({
+      keepId: v.id("parties"),
+      keepName: v.string(),
+      keepBills: v.number(),
+      mergeId: v.id("parties"),
+      mergeName: v.string(),
+      mergeBills: v.number(),
+      reason: v.union(v.literal("name"), v.literal("phone")),
+    }),
+  ),
+  handler: async (ctx) => {
+    const usable = (
+      await ctx.db
+        .query("parties")
+        .withIndex("by_shop_lastUsed", (q) => q.eq("shopId", ctx.shopId))
+        .take(MAX_PARTIES)
+    ).filter((p) => !p.isWalkIn && !p.archived && !p.mergedIntoId && !p.mergingInto);
+    const pairs = new Map<
+      string,
+      { a: (typeof usable)[number]; b: (typeof usable)[number]; reason: "name" | "phone" }
+    >();
+    const group = (
+      key: (p: (typeof usable)[number]) => string | undefined,
+      reason: "name" | "phone",
+    ) => {
+      const byKey = new Map<string, (typeof usable)[number][]>();
+      for (const p of usable) {
+        const k = key(p);
+        if (k) byKey.set(k, [...(byKey.get(k) ?? []), p]);
+      }
+      for (const same of byKey.values()) {
+        for (let i = 0; i < same.length; i++) {
+          for (let j = i + 1; j < same.length; j++) {
+            const [a, b] = [same[i], same[j]];
+            if (!a || !b) continue;
+            const id = [a._id, b._id].sort().join("|");
+            if (!pairs.has(id)) pairs.set(id, { a, b, reason });
+          }
+        }
+      }
+    };
+    group((p) => p.phoneticKey, "name");
+    group((p) => phoneKey(p.phone), "phone");
+    return [...pairs.values()].map(({ a, b, reason }) => {
+      const [keep, gone] = a.billCount >= b.billCount ? [a, b] : [b, a];
+      return {
+        keepId: keep._id,
+        keepName: keep.displayName,
+        keepBills: keep.billCount,
+        mergeId: gone._id,
+        mergeName: gone.displayName,
+        mergeBills: gone.billCount,
+        reason,
+      };
+    });
+  },
+});
