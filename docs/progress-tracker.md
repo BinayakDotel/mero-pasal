@@ -8,7 +8,7 @@
 | | |
 |---|---|
 | **Phase** | **M0 Foundations**: code merged (PRs #1–#8) and running locally against Convex dev; production deploy and Redmi test remain |
-| **Current focus** | M3 browse and fix: code done (Part A merged; Part B stack ready for review); phone check on the iPhone 17 pending; M2 airplane-mode test on the iPhone pending |
+| **Current focus** | M4 admin console (F-11 to F-14): plan approved 2026-09-25 (ADR-034); M3 phone checks done on the iPhone 17 |
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
 | **Risks** | NFR-03: Today ships 262 KB gzipped JS (budget 250); React/Next ≈ 140 KB, Clerk + Convex ≈ 65 KB are the bulk. Judged on the Redmi instead: Today interactive < 2 s warm (ADR-031); time it in the phone test. |

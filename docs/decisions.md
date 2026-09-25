@@ -184,6 +184,18 @@
   - Audit history is shown in the admin drawer (M4), not on Buwa's account page (F-15 note).
   - Browsing screens are online-only in M3; a bill already open can still be changed offline.
 
+### ADR-034 · The admin console is English-only; invites are claimed by email; merges move bills
+- **Decision:**
+  - `/admin` is for Binayak and is English-only (ui-ux §6). Its text is plain English in the code: golden rule 6 ("no hard-coded UI strings", ne + en keys) covers Buwa's app, not `/admin`.
+  - An invite is a member row with the person's email and no Clerk user yet. The first time they sign in with that Google account, `members.claimInvite` links it, but only on a verified email from the sign-in token (trimmed, lowercased). There is no Clerk allowlist; anyone else sees "not invited".
+  - Merging accounts moves every bill through `ledger.apply` in batches (continuing in the background), then marks the merged account `mergedIntoId`. Nothing is deleted.
+  - Admin writes are online-only: there's no outbox for `/admin`.
+- **Why:** Binayak's choices at M4 planning (2026-09-25). i18n keys for a one-person English console are noise. Membership already blocks strangers in Convex (ADR-003), so an allowlist would only add a second list to keep in sync. Moving bills through `ledger.apply` keeps totals equal to a recount (ADR-013).
+- **Consequences:**
+  - A stranger can create a Clerk account but sees "not invited".
+  - The Clerk "convex" JWT template must include the email and whether it's verified.
+  - Admin screens show an offline banner and don't save offline.
+
 ---
 
 ## Open decisions
