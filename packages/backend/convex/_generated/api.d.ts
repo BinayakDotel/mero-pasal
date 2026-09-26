@@ -29,6 +29,7 @@ import type * as rebuild from "../rebuild.js";
 import type * as seed from "../seed.js";
 import type * as summaries from "../summaries.js";
 import type * as transactions from "../transactions.js";
+import type * as trial from "../trial.js";
 
 import type {
   ApiFromModules,
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   summaries: typeof summaries;
   transactions: typeof transactions;
+  trial: typeof trial;
 }>;
 
 /**
