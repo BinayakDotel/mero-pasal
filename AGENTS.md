@@ -57,6 +57,7 @@ The pnpm scripts underneath still work (`pnpm dev`, `pnpm lint`, `pnpm typecheck
 | Code conventions | `docs/code-standard.md` |
 | How to work: rituals, recipes, stop-and-ask, done | `docs/ai-workflow-rules.md` |
 | Why something is the way it is | `docs/decisions.md` |
+| Going live, the M5 trial routine, rollback | `docs/go-live.md` (Binayak runs it; agents never run production steps) |
 | Product context and glossary (udharo, BS, NPT, paisa…) | `docs/project-overview.md` |
 
 ## Definition of done (short)

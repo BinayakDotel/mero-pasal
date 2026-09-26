@@ -193,8 +193,21 @@
 - **Why:** Binayak's choices at M4 planning (2026-09-25). i18n keys for a one-person English console are noise. Membership already blocks strangers in Convex (ADR-003), so an allowlist would only add a second list to keep in sync. Moving bills through `ledger.apply` keeps totals equal to a recount (ADR-013).
 - **Consequences:**
   - A stranger can create a Clerk account but sees "not invited".
-  - The Clerk "convex" JWT template must include the email and whether it's verified.
+  - The Clerk session token must carry `email` and `email_verified` (Clerk Dashboard → Sessions → Customize session token).
   - Admin screens show an offline banner and don't save offline.
+
+### ADR-035 · The v1 trial runs on the Clerk development instance and the Convex production deployment
+- **Decision:**
+  - For the M5 trial the app is served at the Vercel production URL (`*.vercel.app`) and signs in through the **Clerk development instance** (`direct-drum-2930`), because a Clerk production instance needs a domain we own and the domain isn't chosen yet (OD-4).
+  - Buwa's real bills live in the **Convex production deployment**, never in the dev deployment (which holds test and e2e data). Production's `CLERK_JWT_ISSUER_DOMAIN` points at the Clerk dev instance.
+  - Vercel Production builds deploy Convex production (`CONVEX_DEPLOY_KEY`); Preview builds never do (no deploy key; they use Convex dev).
+  - Binayak runs every production step by hand from `docs/go-live.md` (golden rule 9).
+- **Why:** Binayak's choice at M5 planning (2026-09-26): start the trial now, buy a domain later. Keeping real data in its own deployment means test runs can never touch it, and the switch to a real domain later changes only sign-in.
+- **Consequences:**
+  - Clerk's sign-in page shows its development badge; dev instances are capped (100 users), which is fine for a family shop.
+  - The Clerk dev instance must keep the `email`/`email_verified` session claims (ADR-034) and a session lifetime ≥ 30 days (F-01).
+  - **Switching to Clerk production later** gives every person a new Clerk user id. Because invites are claimed by verified email (ADR-034), the switch is a one-off, planned migration that clears `members.clerkUserId`, so each member is linked again on their next sign-in; bills and history don't move.
+- **Revisit when:** the domain is chosen (OD-4), and before v1.0 is called done.
 
 ---
 
@@ -206,6 +219,6 @@ Resolve these during the M5 trial.
 |---|---|---|---|
 | OD-1 | Should an amount be required? | Keep optional / require after trial | End of M5 |
 | OD-2 | Day-close inputs | Total sales + QR / cash counted + QR | Start of v1.1 |
-| OD-3 | Aama's account | Staff account / Buwa enters her bills | During M5 |
-| OD-4 | Shop name, logo, domain | — | Before M5 |
+| OD-3 | Aama's account | Staff account / Buwa enters her bills | During M5 (not at go-live: Buwa alone first, 2026-09-26) |
+| OD-4 | Shop name, logo, domain | — | Before v1.0 (the trial runs on `*.vercel.app` with Clerk dev: ADR-035) |
 | OD-5 | Voice (F-24) in v1.0 or v1.1? | Pull into v1.0 if the M1 voice spike is ≥ 80% usable | During M1 |

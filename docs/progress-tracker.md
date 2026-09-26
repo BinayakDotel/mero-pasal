@@ -108,14 +108,15 @@
 
 **Exit:** v1.0 accepted and v1.1 scope confirmed.
 
-- [ ] Phone setup checklist:
+- [ ] **Go live** per `docs/go-live.md` (ADR-035: Clerk dev instance + Convex production), steps 0–6.
+- [ ] Phone setup checklist (go-live step 6):
   - [ ] Chrome is the default browser
   - [ ] Chrome battery set to "No restrictions"
   - [ ] App installed and signed in
   - [ ] Persistent storage granted
   - [ ] Mobile data on as a fallback
 - [ ] 15-minute training at the counter, plus a one-page Nepali instruction card (photo → name → amount → save).
-- [ ] Daily for 14 days: compare paper bills written with bills captured; stopwatch 3 captures; log feedback below.
+- [ ] Daily for 14 days (go-live step 8): `trial:day` numbers vs paper bills written; stopwatch 3 captures; log feedback below.
 - [ ] Resolve spec §8 open questions 1–3 → `decisions.md`.
 - [ ] Retrospective: what to cut, what to add, what's confusing.
 
