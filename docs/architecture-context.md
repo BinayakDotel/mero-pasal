@@ -646,7 +646,9 @@ stateDiagram-v2
 | Env | Web | Convex | Clerk |
 |---|---|---|---|
 | Local dev | `next dev` | personal dev deployment (`convex dev`) | Clerk development instance |
-| Production | Vercel (`apps/web` root) | prod deployment | Clerk production instance |
+| Production | Vercel (`apps/web` root) | prod deployment | Clerk production instance (M5 trial: the Clerk **development** instance on `*.vercel.app`, ADR-035) |
+
+The step-by-step go-live, trial routine and rollback are in `docs/go-live.md` (run by Binayak, never by an agent).
 
 **Environment variables** (documented in `.env.example`):
 - `NEXT_PUBLIC_CONVEX_URL`
