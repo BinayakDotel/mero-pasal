@@ -224,6 +224,68 @@ describe("ledger.apply scenarios (architecture §7.4)", () => {
     expect((await stored(t)).parties.find((x) => x._id === sita)?.lastUsedAt).toBeGreaterThan(2);
   });
 
+  it("ADR-037: a bill landing on a deleted account brings it back, with a history entry", async () => {
+    const { t, asOwner, ram, sita } = await setup();
+    const account = async (id: Id<"parties">) =>
+      (await stored(t)).parties.find((x) => x._id === id);
+    const reviveEntries = () =>
+      t.run(async (ctx) =>
+        (await ctx.db.query("auditLog").collect()).filter((a) => a.action === "party.revive"),
+      );
+    const member = await t.run(async (ctx) => (await ctx.db.query("members").first())?._id);
+    await t.run((ctx) => ctx.db.patch(ram, { deletedAt: 1, deletedBy: member }));
+
+    // A new bill (e.g. saved offline before the delete).
+    const id = await asOwner.mutation(p.create, {
+      kind: "sale",
+      dateBs: "2083-06-07",
+      partyId: ram,
+    });
+    expect(await account(ram)).toMatchObject({ billCount: 1 });
+    expect((await account(ram))?.deletedAt).toBeUndefined();
+    expect((await account(ram))?.deletedBy).toBeUndefined();
+    expect(await reviveEntries()).toMatchObject([
+      {
+        entity: "party",
+        entityId: ram,
+        summary: "Ram brought back: a bill landed on it (tx.create)",
+      },
+    ]);
+
+    // A bill moved onto an account being deleted stops that delete too.
+    await t.run((ctx) => ctx.db.patch(sita, { deletingAt: 5 }));
+    await asOwner.mutation(p.update, { id, partyId: sita });
+    expect((await account(sita))?.deletingAt).toBeUndefined();
+    expect(await reviveEntries()).toHaveLength(2);
+
+    // So does a removed bill restored onto a deleted account.
+    await asOwner.mutation(p.update, { id, status: "deleted" });
+    await t.run((ctx) => ctx.db.patch(sita, { deletedAt: 9 }));
+    await asOwner.mutation(p.update, { id, status: "active" });
+    expect((await account(sita))?.deletedAt).toBeUndefined();
+    expect(await reviveEntries()).toHaveLength(3);
+  });
+
+  it("ADR-037: removing or editing a bill already on an account being deleted doesn't stop it", async () => {
+    const { t, asOwner, ram } = await setup();
+    const a = await asOwner.mutation(p.create, {
+      kind: "sale",
+      dateBs: "2083-06-07",
+      partyId: ram,
+    });
+    const b = await asOwner.mutation(p.create, {
+      kind: "sale",
+      dateBs: "2083-06-07",
+      partyId: ram,
+    });
+    await t.run((ctx) => ctx.db.patch(ram, { deletingAt: 5 }));
+    await asOwner.mutation(p.update, { id: a, amountPaisa: 700 });
+    await asOwner.mutation(p.update, { id: b, status: "deleted" });
+    const s = await stored(t);
+    expect(s.parties.find((x) => x._id === ram)?.deletingAt).toBe(5);
+    expect(s.txs.find((x) => x._id === a)?.amountPaisa).toBe(700);
+  });
+
   it("F-11: a removed bill never needs attention", async () => {
     const { t, asOwner } = await setup();
     const id = await asOwner.mutation(p.create, { kind: "sale", dateBs: "2083-06-07" });
