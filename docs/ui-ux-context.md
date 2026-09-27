@@ -228,7 +228,8 @@ Empty state: "आज कुनै बिल छैन। माथिको ब�
   - 40 px table rows
   - tabular numbers
 - Bill drawer on the right (560 px): photo with zoom, editable fields (type, account, amount, date, bill number, note), remove / restore, audit history. It edits the version it opened: if the bill changes meanwhile (Buwa's correction), it says so and the server refuses the save.
-- Accounts: a table with search in either script (and tag, phone); a row opens an edit dialog (name, kind, tag, phone, PAN, archive, merge into…). A merge in progress shows "Merging into X…" with Resume / Stop.
+- Accounts: a table with search in either script (and tag, phone), with Archived / Merged / Deleted filters; a row opens the account's profile (details, totals, its bills, history). **Edit, archive or merge** opens a dialog (name, kind, tag, phone, PAN, archive, merge into…). A merge in progress shows "Merging into X…" with Resume / Stop.
+- **Delete account** (red, on the profile; ADR-037): the dialog says "Its N bills (Rs X sold, Rs Y bought) will be removed from every list and total, on the phone too", and from 10 bills on asks to type the name (or its Latin form). The button reads "Delete account and N bills". While it runs: "Deleting…" with Retry. Afterwards a notice "Deleted …" with **Bring back**, and the bills table opens on Removed. On Buwa's phone the account page shows `account.deleted` in a red strip.
 - Admin changes are online-only (ADR-034): no outbox; buttons are disabled offline.
 - **Needs attention** is the Overview's main block. Each item can be fixed inline without leaving the page.
 - Keyboard: `j`/`k` move between rows, `Enter` opens the drawer, `Esc` closes it, `/` jumps to search.

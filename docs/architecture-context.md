@@ -242,6 +242,10 @@ export default defineSchema({
     isWalkIn: v.boolean(),
     archived: v.boolean(),
     mergedIntoId: v.optional(v.id("parties")),
+    mergingInto: v.optional(v.id("parties")), // F-12: a merge is moving its bills
+    deletingAt: v.optional(v.number()),   // ADR-037: its bills are being removed (names the run)
+    deletedAt: v.optional(v.number()),    // ADR-037: deleted; it has no active bills
+    deletedBy: v.optional(v.id("members")),
     lastUsedAt: v.number(),
     lastBillDateBs: v.optional(v.string()), // F-04 "हिजो · रु 2,340"; kept by ledger.apply
     lastBillPaisa: v.optional(v.number()),  // absent when that bill has no amount
@@ -271,7 +275,7 @@ export default defineSchema({
     note: v.optional(v.string()),
     photos: v.array(photo),
     status: v.union(v.literal("active"), v.literal("deleted")),
-    deletedReason: v.optional(v.string()),
+    deletedReason: v.optional(v.string()), // "account": removed with its account (ADR-037)
     needsAttention: v.boolean(),           // no amount OR no party (sale/purchase)
     capturedAt: v.number(),                // server clock at create (the record)
     clientCapturedAt: v.optional(v.number()), // M2: phone clock when taken; ordering only, dropped if implausible
@@ -345,10 +349,11 @@ These are enforced in code and covered by tests.
 1. **Tenant isolation.** Every row has `shopId`, taken from the caller's member row and never from arguments.
 2. **Idempotency.** `(shopId, clientId)` is unique in `transactions` and `parties`. A repeated create returns the existing id.
 3. **Derived data stays consistent.** For every date and account, the derived data equals the value recomputed from active transactions. Covered: `dailySummaries`, `partyMonthly` and the party totals and balance. All writes go through `lib/ledger.ts` (§7.4).
-4. **No hard deletes** of transactions or parties from app functions. Bills are soft-deleted; parties are merged or archived.
+4. **No hard deletes** of transactions or parties from app functions. Bills are soft-deleted; parties are merged, archived or deleted (soft: `deletedAt`, ADR-037).
 5. **Money** is an integer number of paisa. `Number.isSafeInteger` is checked in validators.
 6. **`dateBs`** matches `^\d{4}-\d{2}-\d{2}$`, is a valid BS date, is not more than 1 day in the future, and `dateAd` is derived from it on the server.
 7. **Merges.** A merged party (`mergedIntoId` set) receives no new transactions; the server resolves it to the target.
+8. **Deleted accounts** (ADR-037). A party with `deletedAt` has no active transactions. An active bill landing on a deleted party, or one being deleted, brings it back (`ledger.apply`, audit `party.revive`), so a late bill from a phone is never lost.
 
 ## 6. Backend: Convex modules and functions
 
@@ -373,30 +378,32 @@ Importing raw `query` or `mutation` from `_generated/server` in feature modules 
 | | `claimInvite` | mutation (`optionalMemberMutation`) | signed in | F-13 / ADR-034: links an open invite to the caller on a **verified** token email; `member` / `claimed` / `notInvited` / `noVerifiedEmail`. `MemberGate` calls it once when `me` is null |
 | `memberAdmin` | `list` | query | admin | F-13: members with `invited` and each phone's `memberSync` health |
 | | `invite(email, displayName, role)`, `setRole`, `setActive` | mutation | admin | Re-invite reactivates the row; nobody changes their own role or access; one active membership per Clerk user and per email; audit `member.*` |
-| `parties` | `listForPicker` | query | member | All non-archived, non-merged parties, trimmed fields (for client-side search and cache) |
+| `parties` | `listForPicker` | query | member | All parties not archived, merged or deleted, trimmed fields (for client-side search and cache) |
 | | `create` | mutation | member | Idempotent by `clientId`; computes `nameLatin`, `nameDevanagari`, `phoneticKey` |
-| | `get(id, monthBs)`, `monthTotals(monthBs)` | query | member | Account page (all-time totals from the party row, the month from `partyMonthly`; a merged account reports `mergedIntoId`); accounts list |
+| | `get(id, monthBs)`, `monthTotals(monthBs)` | query | member | Account page (all-time totals from the party row, the month from `partyMonthly`; a merged account reports `mergedIntoId`, a deleted one `deleted`); accounts list |
 | | `similar(name)` | query | member | Online double-check for the duplicate-name warning |
 | `transactions` | `createFromClient` | mutation | member | Idempotent create from the outbox (same `clientId` → same bill). Resolves the account by `{id}` or `{clientId}`, follows merges, and returns `CONFLICT` if a phone-made account hasn't synced yet (the outbox retries). Checks the BS date (≤ 1 day ahead), integer paisa ≥ 0 and 1–5 uploaded photos, then `ledger.apply` |
 | | `listRecentForDate(dateBs, limit ≤ 10)` | query | member | Today's recent bills: newest active first, with account name, walk-in flag and thumbnail URL |
-| | `correct(clientId, kind, partyRef?, dateBs, amountPaisa?)` | mutation | member (F-08 matrix) | The bill's full new values from the outbox; a no-op when nothing changed (so retries are exactly-once); a new date ≤ 90 days back; photos never change; `ledger.apply` with an audit summary like "account: A → B" |
-| | `remove(clientId)` / `restore(clientId)` | mutation | member (F-08 matrix) / admin | Soft delete / bring back through `ledger.apply`; no-op when already so |
+| | `correct(clientId, kind, partyRef?, dateBs, amountPaisa?)` | mutation | member (F-08 matrix) | The bill's full new values from the outbox; a no-op when nothing changed (so retries are exactly-once); a new date ≤ 90 days back; photos never change; `ledger.apply` with an audit summary like "account: A → B". A bill removed with its account (ADR-037) still takes the correction: it stays removed, or comes back if moved to another account |
+| | `remove(clientId)` / `restore(clientId)` | mutation | member (F-08 matrix) / admin | Soft delete / bring back through `ledger.apply`; no-op when already so (removing a bill removed with its account clears that reason, so Bring back leaves it removed) |
 | | `get(clientId)` | query | member | Bill detail by the phone's `clientId` (null while only on the phone); full photo URLs only here |
 | | `listByDate(filter)`, `listByParty(partyId, monthBs?)` | query (paginated) | member | F-06 / F-07 lists, thumbnails only; filter all / sale / purchase / noAmount |
 | | `listForParties(partyIds ≤ 5)` | query | member | F-06 search: bills of the accounts matched on the phone (≤ 50 each) |
 | `billQueries` | `listForAdmin(filter, fromBs?, toBs?, partyId?)` | query (paginated) | admin | F-11 bills table, needs-attention queue and F-14 export: all / sale / purchase / attention / removed; rows carry `updatedAt` |
 | `billAdmin` | `update(clientId, kind, partyId?, dateBs, amountPaisa?, billNumber?, note?, expectedUpdatedAt)` | mutation | admin | F-11 drawer: full values, any past date (never future); bill number/note left out = unchanged, "" clears; `CONFLICT` if the bill changed since it was shown |
-| `partyAdmin` | `list` | query | admin | Every account incl. archived / merged / merging, with totals and `phoneticKey` for search |
-| | `update(id, name, kind, tag?, phone?, pan?)`, `setArchived` | mutation | owner/admin | F-12: names re-derived from `name`; walk-in and merged accounts refused |
+| `partyAdmin` | `list` | query | admin | Every account incl. archived / merged / merging / deleted, with totals and `phoneticKey` for search |
+| | `update(id, name, kind, tag?, phone?, pan?)`, `setArchived` | mutation | owner/admin | F-12: names re-derived from `name`; walk-in, merged and deleted accounts refused |
 | | `merge(keepId, mergeId)` | mutation | admin | F-12 / UC-09: sets `mergingInto`, then internal `moveBatch` moves 100 bills per transaction through `ledger.apply`; the last batch sets `mergedIntoId` atomically |
 | | `resumeMerge(mergeId)`, `stopMerge(mergeId)` | mutation | admin | A failed batch isn't retried: resume (refused if the kept account was merged away) or stop (moved bills stay moved) |
-| | `duplicates` | query | admin | Pairs with the same phonetic key or the same phone (last 10 digits); keep = more bills |
+| | `deleteAccount(id)` | mutation | admin | F-12 / ADR-037: sets `deletingAt` (the run), then internal `deleteBatch` removes 100 active bills per transaction through `ledger.apply` (`deletedReason: "account"`); the last batch sets `deletedAt` atomically. Again after a minute continues a stuck run. Refuses the walk-in, merged or merging accounts and a merge target |
+| | `restoreAccount(id)`, `removedWithAccountCount(id)` | mutation / query | admin | Bring back: clears the delete at once, then internal `restoreBatch` restores the bills with reason `"account"`, 100 per transaction; the count drives the admin's Bring back |
+| | `duplicates` | query | admin | Pairs with the same phonetic key or the same phone (last 10 digits); keep = more bills; deleted accounts left out |
 | `files` | `generateUploadUrl` | mutation | member | Signed upload URL |
 | | `photoUrls(txId)` | query | member | Resolves `storageId`s to URLs |
 | `summaries` | `forDate(dateBs)`, `forRange(from, to)` | query | member | Today strip, reports (≤ 400 rows read) |
 | `rebuild` | `summaries(fromBs, toBs, shopId?)` | internal mutation | CLI | NFR-10 repair: rewrites daily rows of the range and the month rows of the months touched, then schedules `partyTotals` (accounts' all-time totals from their month rows, 50 accounts per transaction) |
 | `audit` | `listForEntity(entity, entityId)` | query | admin | A record's history, newest first, with actor names (the admin bill drawer, M4) |
-| `e2eSupport` | `ensureE2eShop`, `billsByClientIds`, `resetE2eInvite`, `seedUc09`, `seedAdminFixture`, `partyBills` | internal | CLI (e2e) | The Clerk dev test user's own shop (it is its admin); which phone-made bills reached it; a fresh invite per run; per-test accounts and bills (through `ledger.apply`) so admin tests never touch data other tests use. Playwright runs them via `convex run` on dev only |
+| `e2eSupport` | `ensureE2eShop`, `billsByClientIds`, `resetE2eInvite`, `seedUc09`, `seedAdminFixture(token, bills?)`, `partyBills` | internal | CLI (e2e) | The Clerk dev test user's own shop (it is its admin); which phone-made bills reached it; a fresh invite per run; per-test accounts and bills (through `ledger.apply`) so admin tests never touch data other tests use. Playwright runs them via `convex run` on dev only |
 | `seed` | `bootstrap` | internal mutation | CLI | Shop, owner (locale `ne`) and admin (locale `en`) members, walk-in party; refuses if a shop exists (`CONFLICT`) |
 | `crons` | weekly | — | — | v1: nothing critical. Later: orphan-file report and backup reminder. |
 
@@ -639,7 +646,7 @@ stateDiagram-v2
 | Capture, view all bills and accounts | ✓ | ✓ | ✓ |
 | Correct or remove bills | any | own, within 24 h | any |
 | Edit or archive accounts | ✓ | — | ✓ |
-| Merge accounts, restore bills, members, export | — | — | ✓ |
+| Merge or delete accounts, restore bills, members, export | — | — | ✓ |
 
 ## 11. Environments, deployment and commands
 
