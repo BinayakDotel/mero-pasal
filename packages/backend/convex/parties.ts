@@ -159,12 +159,20 @@ export const get = memberQuery({
     _id: v.id("parties"),
     kind: partyKind,
     displayName: v.string(),
+    nameLatin: v.string(),
+    nameDevanagari: v.optional(v.string()),
     tag: v.optional(v.string()),
     phone: v.optional(v.string()),
     isWalkIn: v.boolean(),
+    archived: v.boolean(),
     mergedIntoId: v.optional(v.id("parties")),
     allTime: totals,
     month: totals,
+    firstBillDateBs: v.optional(v.string()),
+    lastBillDateBs: v.optional(v.string()),
+    createdAt: v.number(),
+    /** The owner or admin may edit it (ADR-036); never the walk-in or a merged account. */
+    canEdit: v.boolean(),
   }),
   handler: async (ctx, { id, monthBs }) => {
     assertMonthBs(monthBs);
@@ -174,13 +182,29 @@ export const get = memberQuery({
       .query("partyMonthly")
       .withIndex("by_party_month", (q) => q.eq("partyId", id).eq("monthBs", monthBs))
       .unique();
+    // The oldest active bill (removed ones don't count); lastBillDateBs is kept by ledger.apply.
+    const first = party.billCount
+      ? await ctx.db
+          .query("transactions")
+          .withIndex("by_shop_party_date", (q) => q.eq("shopId", ctx.shopId).eq("partyId", id))
+          .filter((q) => q.eq(q.field("status"), "active"))
+          .first()
+      : null;
+    const canEdit =
+      ctx.member.role !== "staff" &&
+      !party.isWalkIn &&
+      party.mergedIntoId === undefined &&
+      party.mergingInto === undefined;
     return {
       _id: party._id,
       kind: party.kind,
       displayName: party.displayName,
+      nameLatin: party.nameLatin,
+      ...(party.nameDevanagari === undefined ? {} : { nameDevanagari: party.nameDevanagari }),
       ...(party.tag === undefined ? {} : { tag: party.tag }),
       ...(party.phone === undefined ? {} : { phone: party.phone }),
       isWalkIn: party.isWalkIn,
+      archived: party.archived,
       ...(party.mergedIntoId === undefined ? {} : { mergedIntoId: party.mergedIntoId }),
       allTime: {
         billCount: party.billCount,
@@ -192,6 +216,10 @@ export const get = memberQuery({
         salePaisa: month?.salePaisa ?? 0,
         purchasePaisa: month?.purchasePaisa ?? 0,
       },
+      ...(first ? { firstBillDateBs: first.dateBs } : {}),
+      ...(party.lastBillDateBs === undefined ? {} : { lastBillDateBs: party.lastBillDateBs }),
+      createdAt: party.createdAt,
+      canEdit,
     };
   },
 });
