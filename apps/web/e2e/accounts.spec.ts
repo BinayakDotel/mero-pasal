@@ -26,6 +26,11 @@ test.describe("F-07 accounts", () => {
     await expect(page).toHaveURL(/\/accounts\/[\w]+$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("E2E Sita Accounts");
     await expect(page.getByText("यो महिना").first()).toBeVisible();
+    // F-07 profile: the details card with kind and the first and last bill.
+    const details = page.getByRole("region", { name: "विवरण" });
+    await expect(details.getByText("प्रकार")).toBeVisible();
+    await expect(details.getByText("ग्राहक", { exact: true })).toBeVisible();
+    await expect(details.getByText("पछिल्लो बिल")).toBeVisible();
     await expect(page.getByRole("listitem").first()).toContainText("E2E Sita Accounts");
     await page.getByRole("button", { name: "सबै महिना" }).click();
     await expect(page.getByRole("listitem").first()).toBeVisible();

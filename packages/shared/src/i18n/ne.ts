@@ -114,6 +114,20 @@ export const ne = {
   "account.allTime": "जम्मा",
   "account.call": "फोन गर्नुहोस्", // i18n-review
   "account.allMonths": "सबै महिना", // i18n-review
+  "account.details": "विवरण", // i18n-review
+  "account.otherScript": "अर्को लिपिमा", // i18n-review
+  "account.phone": "फोन", // i18n-review
+  "account.tag": "चिनाउने शब्द", // i18n-review
+  "account.kind": "प्रकार", // i18n-review
+  "account.kindCustomer": "ग्राहक", // i18n-review
+  "account.kindSupplier": "सप्लायर", // i18n-review
+  "account.kindBoth": "ग्राहक र सप्लायर दुवै", // i18n-review
+  "account.firstBill": "पहिलो बिल", // i18n-review
+  "account.lastBill": "पछिल्लो बिल", // i18n-review
+  "account.thisMonthSold": "यो महिना बेचेको", // i18n-review
+  "account.thisMonthBought": "यो महिना किनेको", // i18n-review
+  "account.allTimeSold": "जम्मा बेचेको", // i18n-review
+  "account.allTimeBought": "जम्मा किनेको", // i18n-review
   "field.type": "प्रकार",
   "field.name": "नाम",
   "field.amount": "रकम",
