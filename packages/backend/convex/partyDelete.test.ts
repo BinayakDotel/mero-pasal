@@ -130,7 +130,10 @@ describe("partyAdmin.deleteAccount / restoreAccount (F-12, ADR-037)", () => {
     expect(now.txs.find((x) => x.clientId === byHand)?.status).toBe("deleted"); // stays removed
     expect(now.txs.filter((x) => x.deletedReason === "account")).toHaveLength(0);
     expect(now.audit.filter((a) => a.action === "party.restore")).toMatchObject([
-      { summary: "Ram brought back, 2 bills restored" },
+      { summary: "2 bills restored with Ram" },
+    ]);
+    expect(now.audit.filter((a) => a.action === "party.undelete")).toMatchObject([
+      { summary: "Ram brought back" },
     ]);
     expect(now.audit.filter((a) => a.action === "party.revive")).toHaveLength(0);
     expectTotalsMatchBills(now);
@@ -177,9 +180,12 @@ describe("partyAdmin.deleteAccount / restoreAccount (F-12, ADR-037)", () => {
     const s = await setup();
     const ram = await s.party("Ram");
     await s.bill(ram, 100);
-    await s.deleteAccount(ram); // run 1 scheduled, not run yet
+    await s.deleteAccount(ram); // run 1 scheduled, not run yet (e.g. its batch failed)
     const first = (await s.account(ram)).deletingAt;
-    await s.deleteAccount(ram); // continued: a new run
+    await s.deleteAccount(ram); // a double click: that run is still going
+    expect((await s.account(ram)).deletingAt).toBe(first);
+    vi.setSystemTime(Date.now() + 61_000);
+    await s.deleteAccount(ram); // a minute on: continued, as a new run
     expect((await s.account(ram)).deletingAt).toBeGreaterThan(first ?? 0);
     await s.finish();
     const now = await s.state();
@@ -290,6 +296,105 @@ describe("partyAdmin.deleteAccount / restoreAccount (F-12, ADR-037)", () => {
     await expect(
       s.asAdmin.mutation(api.partyAdmin.merge, { keepId: sita, mergeId: hari }),
     ).rejects.toThrow(/CONFLICT/);
+  });
+
+  it("rule 1: a bill arriving midway keeps what's left; Bring back restores what went", async () => {
+    const s = await setup();
+    const ram = await s.party("Ram");
+    for (const amount of [1, 2, 3]) await s.bill(ram, amount);
+    await s.t.run((ctx) => ctx.db.patch(ram, { deletingAt: 42 }));
+    const actorId = (await s.state()).audit[0]?.actorId;
+    if (!actorId) throw new Error("no actor");
+    const args = { partyId: ram, actorId, run: 42, removed: 0, batch: 2 };
+    await s.t.mutation(internal.partyAdmin.deleteBatch, args); // 2 of 3 removed
+    await s.bill(ram, 40); // lands midway
+    await s.finish();
+    expect(await s.account(ram)).toMatchObject({ billCount: 2, salePaisa: 43 });
+    expect((await s.account(ram)).deletingAt).toBeUndefined();
+    expect(await s.asAdmin.query(api.partyAdmin.removedWithAccountCount, { id: ram })).toBe(2);
+    await s.restoreAccount(ram);
+    await s.finish();
+    expect(await s.account(ram)).toMatchObject({ billCount: 4, salePaisa: 46 });
+    const now = await s.state();
+    expect(now.audit.filter((a) => a.action === "party.undelete")).toHaveLength(0); // was live
+    expectTotalsMatchBills(now);
+  });
+
+  it("deleting again while Bring back runs: the delete wins; a double Bring back is harmless", async () => {
+    const s = await setup();
+    const ram = await s.party("Ram");
+    for (const amount of [1, 2, 3]) await s.bill(ram, amount);
+    await s.deleteAccount(ram);
+    await s.finish();
+    await s.restoreAccount(ram); // scheduled, not run yet
+    await s.deleteAccount(ram);
+    await s.finish();
+    expect(await s.account(ram)).toMatchObject({ billCount: 0 });
+    expect((await s.account(ram)).deletedAt).toBeDefined();
+    expectTotalsMatchBills(await s.state());
+
+    await s.restoreAccount(ram);
+    await s.restoreAccount(ram);
+    await s.finish();
+    expect(await s.account(ram)).toMatchObject({ billCount: 3, salePaisa: 6 });
+    expectTotalsMatchBills(await s.state());
+  });
+
+  it("a removal or correction made on the phone before the delete arrived still counts", async () => {
+    const s = await setup();
+    const ram = await s.party("Ram");
+    const hari = await s.party("Hari");
+    const removedOnPhone = await s.bill(ram, 100);
+    const corrected = await s.bill(ram, 200);
+    const movedOnPhone = await s.bill(ram, 300);
+    await s.deleteAccount(ram);
+    await s.finish();
+
+    // Sent late from the phone's outbox (none of these may fail, or Buwa sees "failed").
+    await s.asOwner.mutation(api.transactions.remove, { clientId: removedOnPhone });
+    const correct = (clientId: string, partyId: Id<"parties">, amountPaisa: number) =>
+      s.asOwner.mutation(api.transactions.correct, {
+        clientId,
+        kind: "sale",
+        partyRef: { id: partyId },
+        dateBs: s.today,
+        amountPaisa,
+      });
+    await correct(corrected, ram, 250); // same account: stays removed, with the new amount
+    await correct(movedOnPhone, hari, 300); // to another account: back, on that account
+    let now = await s.state();
+    const bill = (clientId: string) => now.txs.find((x) => x.clientId === clientId);
+    expect(bill(removedOnPhone)).toMatchObject({ status: "deleted" });
+    expect(bill(removedOnPhone)?.deletedReason).toBeUndefined();
+    expect(bill(corrected)).toMatchObject({
+      status: "deleted",
+      deletedReason: "account",
+      amountPaisa: 250,
+    });
+    expect(bill(movedOnPhone)).toMatchObject({ status: "active", partyId: hari });
+    expect(bill(movedOnPhone)?.deletedReason).toBeUndefined();
+    expect((await s.account(ram)).deletedAt).toBeDefined(); // Ram stays deleted
+    expect(await s.account(hari)).toMatchObject({ billCount: 1, salePaisa: 300 });
+    expectTotalsMatchBills(now);
+
+    await s.restoreAccount(ram); // only the corrected bill comes back
+    await s.finish();
+    now = await s.state();
+    expect(await s.account(ram)).toMatchObject({ billCount: 1, salePaisa: 250 });
+    expect(bill(removedOnPhone)?.status).toBe("deleted");
+    expectTotalsMatchBills(now);
+  });
+
+  it("M5 trial: bills removed with a deleted account don't count as Buwa's removals", async () => {
+    const s = await setup();
+    const ram = await s.party("Ram");
+    const mistake = await s.bill(ram, 1);
+    await s.asOwner.mutation(api.transactions.remove, { clientId: mistake });
+    await s.bill(ram, 2);
+    await s.deleteAccount(ram);
+    await s.finish();
+    const day = await s.t.query(internal.trial.day, { dateBs: s.today });
+    expect(day).toMatchObject({ bills: 0, removed: 1 });
   });
 
   it("a merge turns bills an earlier delete removed into ordinary removed bills", async () => {
