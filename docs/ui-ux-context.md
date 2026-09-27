@@ -353,6 +353,13 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `account.thisMonthBought` | यो महिना किनेको | Bought this month |
 | `account.allTimeSold` | जम्मा बेचेको | Sold in all |
 | `account.allTimeBought` | जम्मा किनेको | Bought in all |
+| `account.edit` | सच्याउनुहोस् | Edit |
+| `account.editTitle` | खाता सच्याउनुहोस् | Edit account |
+| `account.editSave` | राख्नुहोस् | Save |
+| `account.edited` | सच्याइयो | Saved |
+| `account.needsInternet` | सच्याउन इन्टरनेट चाहिन्छ। इन्टरनेट आएपछि फेरि खोल्नुहोस्। | Editing needs the internet. Open this again once you're online. |
+| `account.similarKeep` | होइन, यही नाम राख्ने | No, keep this name |
+| `account.similarHint` | एउटै मान्छे भए बिनायकलाई दुई खाता मिलाउन भन्नुहोस्। | If it's the same person, ask Binayak to merge the two accounts. |
 | `field.type` | प्रकार | Type |
 | `field.name` | नाम | Name |
 | `field.amount` | रकम | Amount |
