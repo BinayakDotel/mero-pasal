@@ -7,7 +7,7 @@ import { writeAudit } from "./lib/audit";
 import { appError } from "./lib/errors";
 import { adminMutation, adminQuery, ownerMutation } from "./lib/functions";
 import { apply } from "./lib/ledger";
-import { isDeleted } from "./lib/parties";
+import { DELETED_WITH_ACCOUNT, isDeleted } from "./lib/parties";
 import { partyKind } from "./schema";
 
 // F-12 accounts: edit, archive, merge and delete. Names are derived the same way as when Buwa
@@ -184,8 +184,8 @@ export const setArchived = ownerMutation({
 
 const MERGE_BATCH = 100;
 const DELETE_BATCH = 100;
-/** `transactions.deletedReason` of a bill removed with its account (restored with it). */
-export const DELETED_WITH_ACCOUNT = "account";
+/** A delete started this recently is still running: running it again would only restart it. */
+const DELETE_RUNNING_MS = 60_000;
 
 /**
  * F-12 / UC-09 merge: every bill of `mergeId` moves to `keepId` through ledger.apply (so every
@@ -355,8 +355,8 @@ const bills = (n: number) => `${n} bill${n === 1 ? "" : "s"}`;
  * F-12 delete (ADR-037): every active bill of the account is removed through ledger.apply (so
  * every total stays equal to a recount), in batches that continue in the background; then the
  * account is marked deleted and leaves every list. Nothing is hard-deleted, and bringing it back
- * restores exactly these bills. Running it again while a delete is stuck continues it (a new run;
- * the old one stops at its next batch). Admin only.
+ * restores exactly these bills. Running it again while a delete is stuck (a minute on) continues
+ * it (a new run; the old one stops at its next batch). Admin only.
  */
 export const deleteAccount = adminMutation({
   args: { id: v.id("parties") },
@@ -371,9 +371,12 @@ export const deleteAccount = adminMutation({
     if (await isMergeTarget(ctx, id)) {
       throw appError("CONFLICT", "A merge into this account is still running");
     }
+    const now = Date.now();
+    // A double click, or Retry right after Delete: that run is still going.
+    if (party.deletingAt !== undefined && now - party.deletingAt < DELETE_RUNNING_MS) return null;
     const retried = party.deletingAt !== undefined;
     // Each run has its own mark, so an older run still scheduled stops instead of finishing twice.
-    const run = Math.max(Date.now(), (party.deletingAt ?? 0) + 1);
+    const run = Math.max(now, (party.deletingAt ?? 0) + 1);
     await ctx.db.patch(id, { deletingAt: run });
     await ctx.scheduler.runAfter(0, internal.partyAdmin.deleteBatch, {
       partyId: id,
@@ -471,7 +474,17 @@ export const restoreAccount = adminMutation({
     if (!party || party.shopId !== ctx.shopId) throw appError("NOT_FOUND");
     if (party.mergedIntoId) throw appError("CONFLICT", "This account was merged");
     if (party.mergingInto) throw appError("CONFLICT", "This account is being merged");
-    await ctx.db.patch(id, { deletedAt: undefined, deletedBy: undefined, deletingAt: undefined });
+    if (isDeleted(party)) {
+      await ctx.db.patch(id, { deletedAt: undefined, deletedBy: undefined, deletingAt: undefined });
+      await writeAudit(ctx, {
+        shopId: ctx.shopId,
+        actorId: ctx.member._id,
+        action: "party.undelete",
+        entity: "party",
+        entityId: id,
+        summary: `${party.displayName} brought back`,
+      });
+    }
     await ctx.scheduler.runAfter(0, internal.partyAdmin.restoreBatch, {
       partyId: id,
       actorId: ctx.member._id,
@@ -527,7 +540,7 @@ export const restoreBatch = internalMutation({
       action: "party.restore",
       entity: "party",
       entityId: party._id,
-      summary: `${party.displayName} brought back, ${bills(restored)} restored`,
+      summary: `${bills(restored)} restored with ${party.displayName}`,
     });
     return null;
   },
