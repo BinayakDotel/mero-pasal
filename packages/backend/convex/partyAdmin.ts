@@ -7,6 +7,7 @@ import { writeAudit } from "./lib/audit";
 import { appError } from "./lib/errors";
 import { adminMutation, adminQuery, ownerMutation } from "./lib/functions";
 import { apply } from "./lib/ledger";
+import { isDeleted } from "./lib/parties";
 import { partyKind } from "./schema";
 
 // F-12 accounts: edit, archive, merge and delete. Names are derived the same way as when Buwa
@@ -16,7 +17,7 @@ const MAX_PARTIES = 2000;
 const MAX_NAME = 80;
 const MAX_FIELD = 40;
 
-/** Every account for the admin table, incl. archived and merged ones (flagged). */
+/** Every account for the admin table, incl. archived, merged and deleted ones (flagged). */
 export const list = adminQuery({
   args: {},
   returns: v.array(
@@ -37,6 +38,9 @@ export const list = adminQuery({
       mergedIntoId: v.optional(v.id("parties")),
       /** A merge is moving this account's bills (still running, or stuck: resume or stop it). */
       mergingInto: v.optional(v.id("parties")),
+      /** ADR-037: its delete is still removing bills (running, or stuck: run it again). */
+      deletingAt: v.optional(v.number()),
+      deletedAt: v.optional(v.number()),
       billCount: v.number(),
       salePaisa: v.number(),
       purchasePaisa: v.number(),
@@ -64,6 +68,8 @@ export const list = adminQuery({
       archived: p.archived,
       ...(p.mergedIntoId === undefined ? {} : { mergedIntoId: p.mergedIntoId }),
       ...(p.mergingInto === undefined ? {} : { mergingInto: p.mergingInto }),
+      ...(p.deletingAt === undefined ? {} : { deletingAt: p.deletingAt }),
+      ...(p.deletedAt === undefined ? {} : { deletedAt: p.deletedAt }),
       billCount: p.billCount,
       salePaisa: p.salePaisa,
       purchasePaisa: p.purchasePaisa,
@@ -549,7 +555,7 @@ function phoneKey(phone: string | undefined): string | undefined {
 /**
  * F-11 / F-12 / UC-09: pairs of accounts that are probably the same person: the same phonetic
  * key (e.g. "Ram Bdr Thapa" / "राम बहादुर थापा") or the same phone. Suggests keeping the one
- * with more bills. The walk-in, archived, merged and merging accounts are left out.
+ * with more bills. The walk-in, archived, merged, merging and deleted accounts are left out.
  */
 export const duplicates = adminQuery({
   args: {},
@@ -570,7 +576,9 @@ export const duplicates = adminQuery({
         .query("parties")
         .withIndex("by_shop_lastUsed", (q) => q.eq("shopId", ctx.shopId))
         .take(MAX_PARTIES)
-    ).filter((p) => !p.isWalkIn && !p.archived && !p.mergedIntoId && !p.mergingInto);
+    ).filter(
+      (p) => !p.isWalkIn && !p.archived && !p.mergedIntoId && !p.mergingInto && !isDeleted(p),
+    );
     const pairs = new Map<
       string,
       { a: (typeof usable)[number]; b: (typeof usable)[number]; reason: "name" | "phone" }

@@ -97,6 +97,17 @@ describe("parties.get (F-07 account page)", () => {
     expect(w.firstBillDateBs).toBeUndefined();
   });
 
+  it("ADR-037: a deleted account says so and can't be edited", async () => {
+    const { t, asOwner, today, party } = await setup();
+    const hari = await party("Hari");
+    const get = () => asOwner.query(api.parties.get, { id: hari, monthBs: monthOf(today) });
+    expect(await get()).toMatchObject({ deleted: false, canEdit: true });
+    await t.run((ctx) => ctx.db.patch(hari, { deletingAt: 1 }));
+    expect(await get()).toMatchObject({ deleted: true, canEdit: false });
+    await t.run((ctx) => ctx.db.patch(hari, { deletingAt: undefined, deletedAt: 2 }));
+    expect(await get()).toMatchObject({ deleted: true, canEdit: false });
+  });
+
   it("an account with no bills this month shows zeros; bad month → VALIDATION", async () => {
     const { asOwner, today, party } = await setup();
     const sita = await party("Sita");
