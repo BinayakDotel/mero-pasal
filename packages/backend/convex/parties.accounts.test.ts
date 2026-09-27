@@ -55,6 +55,48 @@ describe("parties.get (F-07 account page)", () => {
     });
   });
 
+  it("the profile: both scripts, kind, first and last bill, who may edit (F-07)", async () => {
+    const { t, shopId, asOwner, today, party, bill } = await setup();
+    const hari = await party("हरि प्रसाद", { phone: "9841000000" }); // typed in Devanagari
+    const first = earlierMonthOf(today);
+    await bill(hari, 400, first);
+    await bill(hari, 100);
+    const got = await asOwner.query(api.parties.get, { id: hari, monthBs: monthOf(today) });
+    expect(got).toMatchObject({
+      kind: "customer",
+      displayName: "हरि प्रसाद",
+      nameDevanagari: "हरि प्रसाद",
+      nameLatin: expect.stringMatching(/^har/i), // the other script, worked out
+      archived: false,
+      firstBillDateBs: first,
+      lastBillDateBs: today,
+      createdAt: expect.any(Number),
+      canEdit: true,
+    });
+    // Staff view the same page without the edit button; the walk-in is never editable.
+    await t.run((ctx) =>
+      ctx.db.insert("members", {
+        shopId,
+        clerkUserId: "user_staff",
+        displayName: "Aama",
+        role: "staff",
+        locale: "ne",
+        active: true,
+      }),
+    );
+    const asStaff = t.withIdentity({ subject: "user_staff" });
+    expect(
+      (await asStaff.query(api.parties.get, { id: hari, monthBs: monthOf(today) })).canEdit,
+    ).toBe(false);
+    const walkIn = await t.run(
+      async (ctx) => (await ctx.db.query("parties").collect()).find((p) => p.isWalkIn)?._id,
+    );
+    if (!walkIn) throw new Error("seed has a walk-in");
+    const w = await asOwner.query(api.parties.get, { id: walkIn, monthBs: monthOf(today) });
+    expect(w.canEdit).toBe(false);
+    expect(w.firstBillDateBs).toBeUndefined();
+  });
+
   it("an account with no bills this month shows zeros; bad month → VALIDATION", async () => {
     const { asOwner, today, party } = await setup();
     const sita = await party("Sita");
