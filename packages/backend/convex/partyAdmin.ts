@@ -91,8 +91,9 @@ function field(value: string | undefined, label: string): string | undefined {
 }
 
 /**
- * F-12 edit: the name (Latin, Devanagari and phonetic forms recomputed from it), tag, phone,
- * PAN and kind, as full values. Owner or admin (architecture §10).
+ * F-12 / F-07 edit: the name (Latin, Devanagari and phonetic forms recomputed from it) and kind;
+ * tag, phone and PAN when given ("" clears; left out = unchanged, so the phone's edit sheet, which
+ * has no PAN field, never erases one). Owner or admin (architecture §10, ADR-036).
  */
 export const update = ownerMutation({
   args: {
@@ -117,9 +118,9 @@ export const update = ownerMutation({
       nameDevanagari: names.nameDevanagari,
       phoneticKey: names.phoneticKey,
       kind: args.kind,
-      tag: field(args.tag, "Tag"),
-      phone: field(args.phone, "Phone"),
-      pan: field(args.pan, "PAN"),
+      tag: args.tag === undefined ? party.tag : field(args.tag, "Tag"),
+      phone: args.phone === undefined ? party.phone : field(args.phone, "Phone"),
+      pan: args.pan === undefined ? party.pan : field(args.pan, "PAN"),
     };
     const changed = (Object.keys(next) as (keyof typeof next)[]).filter(
       (k) => next[k] !== party[k],

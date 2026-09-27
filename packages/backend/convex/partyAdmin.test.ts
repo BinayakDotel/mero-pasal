@@ -45,6 +45,35 @@ describe("partyAdmin.update / setArchived (F-12)", () => {
     expect(audit[audit.length - 1]?.summary).toBe("renamed: Ram Bdr Thapa → राम बहादुर थापा");
   });
 
+  it("tag, phone, PAN: left out stays, '' clears (a phone rename never erases the PAN)", async () => {
+    const { asOwner, asAdmin, ram, get } = await setup();
+    await asAdmin.mutation(api.partyAdmin.update, {
+      id: ram,
+      name: "Ram",
+      kind: "customer",
+      tag: "chowk",
+      phone: "9841000000",
+      pan: "301234567",
+    });
+    await asOwner.mutation(api.partyAdmin.update, { id: ram, name: "Ram Thapa", kind: "both" });
+    expect(await get(ram)).toMatchObject({
+      displayName: "Ram Thapa",
+      kind: "both",
+      tag: "chowk",
+      phone: "9841000000",
+      pan: "301234567",
+    });
+    await asAdmin.mutation(api.partyAdmin.update, {
+      id: ram,
+      name: "Ram Thapa",
+      kind: "both",
+      tag: "",
+    });
+    const after = await get(ram);
+    expect(after?.tag).toBeUndefined();
+    expect(after?.pan).toBe("301234567");
+  });
+
   it("archive hides the account from the picker; unarchive brings it back", async () => {
     const { asOwner, ram } = await setup();
     await asOwner.mutation(api.partyAdmin.setArchived, { id: ram, archived: true });
