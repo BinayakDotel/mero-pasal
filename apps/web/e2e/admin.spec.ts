@@ -115,8 +115,11 @@ test.describe("F-11 admin console", () => {
     await expect(drawer).toHaveCount(0);
   });
 
-  test("accounts: search, edit a tag, archive and bring back", async ({ page }) => {
-    const { partyName: name } = fixture();
+  test("accounts: search, open the profile, edit a tag, archive and bring back", async ({
+    page,
+  }) => {
+    const own = fixture();
+    const { partyName: name } = own;
     await signInE2e(page);
     await page.goto("/admin/accounts");
     const search = page.getByRole("textbox", { name: "Search accounts" });
@@ -124,24 +127,41 @@ test.describe("F-11 admin console", () => {
     await page.keyboard.press("/"); // ui-ux §6: jumps to search
     await expect(search).toBeFocused();
     await search.fill(name);
-    await page.getByRole("cell", { name, exact: true }).click({ timeout: 15_000 });
+    await page.getByRole("link", { name, exact: true }).click({ timeout: 15_000 });
 
+    // The profile: details, totals, its own bill (Rs 123), its history.
+    await expect(page).toHaveURL(new RegExp(`/admin/accounts/${own.partyId}$`));
+    await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Details" })).toBeVisible();
+    await expect(page.locator("tbody tr[aria-selected]")).toHaveCount(1, { timeout: 15_000 });
+    await expect(page.getByRole("cell", { name: "Rs 123" }).first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Edit, archive or merge" }).click();
     const dialog = page.getByRole("dialog", { name: `Account ${name}` });
     const tag = `tag ${token()}`;
     await dialog.getByRole("textbox", { name: "Tag" }).fill(tag);
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toHaveCount(0);
-    await page.getByRole("textbox", { name: "Search accounts" }).fill(tag); // finds by tag
-    await expect(page.getByRole("cell", { name, exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: `${name} · ${tag}`, level: 1 })).toBeVisible();
+    await expect(page.getByText("party.update")).toBeVisible(); // history
 
-    await page.getByRole("cell", { name, exact: true }).click();
+    await page.getByRole("button", { name: "Edit, archive or merge" }).click();
     await dialog.getByRole("button", { name: "Archive" }).click();
-    await expect(page.getByRole("cell", { name, exact: true })).toHaveCount(0); // hidden
+    await expect(page.getByText("Archived (hidden from the name picker)")).toBeVisible();
+    await page.goto("/admin/accounts");
+    await page.getByRole("textbox", { name: "Search accounts" }).fill(tag); // finds by tag
+    await expect(page.getByRole("link", { name, exact: true })).toHaveCount(0); // archived: hidden
     await page.getByRole("checkbox", { name: "Archived" }).check();
-    await page.getByRole("cell", { name, exact: true }).click();
+    await page.getByRole("link", { name, exact: true }).click();
+    await page.getByRole("button", { name: "Edit, archive or merge" }).click();
     await dialog.getByRole("button", { name: "Bring back" }).click();
-    await page.getByRole("checkbox", { name: "Archived" }).uncheck();
-    await expect(page.getByRole("cell", { name, exact: true })).toBeVisible();
+    await expect(page.getByText("Active", { exact: true })).toBeVisible();
+  });
+
+  test("an unknown account id says not found", async ({ page }) => {
+    await signInE2e(page);
+    await page.goto("/admin/accounts/not-an-account");
+    await expect(page.getByRole("heading", { name: "Account not found" })).toBeVisible();
   });
 
   test("UC-10: exports a month as CSV, removed bills included", async ({ page }) => {
