@@ -339,6 +339,20 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `account.allTime` | जम्मा | All time |
 | `account.call` | फोन गर्नुहोस् | Call |
 | `account.allMonths` | सबै महिना | All months |
+| `account.details` | विवरण | Details |
+| `account.otherScript` | अर्को लिपिमा | Other script |
+| `account.phone` | फोन | Phone |
+| `account.tag` | चिनाउने शब्द | Tag |
+| `account.kind` | प्रकार | Kind |
+| `account.kindCustomer` | ग्राहक | Customer |
+| `account.kindSupplier` | सप्लायर | Supplier |
+| `account.kindBoth` | ग्राहक र सप्लायर दुवै | Customer and supplier |
+| `account.firstBill` | पहिलो बिल | First bill |
+| `account.lastBill` | पछिल्लो बिल | Last bill |
+| `account.thisMonthSold` | यो महिना बेचेको | Sold this month |
+| `account.thisMonthBought` | यो महिना किनेको | Bought this month |
+| `account.allTimeSold` | जम्मा बेचेको | Sold in all |
+| `account.allTimeBought` | जम्मा किनेको | Bought in all |
 | `field.type` | प्रकार | Type |
 | `field.name` | नाम | Name |
 | `field.amount` | रकम | Amount |

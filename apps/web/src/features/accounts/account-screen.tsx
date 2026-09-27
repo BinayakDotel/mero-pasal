@@ -11,7 +11,9 @@ import { Icon } from "@/components/icons";
 import { BillGroups } from "@/features/bills/bill-groups";
 import { useLocale } from "@/features/session/locale";
 import { useTodayBs } from "@/features/today/use-today-bs";
+import { AccountDetails } from "./account-details";
 import { monthLabel, recentMonths } from "./months";
+import { profileTotals } from "./profile";
 import { useAccount } from "./use-account";
 
 const MONTH_CHIPS = 6;
@@ -29,9 +31,12 @@ export function AccountScreen({ partyId }: { partyId: Id<"parties"> }) {
     if (account?.mergedIntoId) router.replace(`/accounts/${account.mergedIntoId}`);
   }, [account?.mergedIntoId, router]);
 
-  const isSupplier = account?.kind === "supplier";
-  const paisa = (totals: { salePaisa: number; purchasePaisa: number }) =>
-    isSupplier ? totals.purchasePaisa : totals.salePaisa;
+  const heading =
+    account?.kind === "supplier"
+      ? t("kind.purchase")
+      : account?.kind === "both"
+        ? `${t("kind.sale")} / ${t("kind.purchase")}`
+        : t("kind.sale");
   const name = account?.isWalkIn ? t("party.walkIn") : account?.displayName;
 
   return (
@@ -65,26 +70,19 @@ export function AccountScreen({ partyId }: { partyId: Id<"parties"> }) {
       {account ? (
         <div className="mx-4 mt-2">
           <LedgerStrip
-            heading={`${t(isSupplier ? "kind.purchase" : "kind.sale")}${live ? "" : ` ${t("sync.stale")}`}`}
-            rows={[
-              {
-                label: t("account.thisMonth"),
-                tone: isSupplier ? "purchase" : "sale",
-                value: <AmountText paisa={paisa(account.month)} locale={locale} />,
-                count: t("today.billCount", { n: account.month.billCount }),
-              },
-              {
-                label: t("account.allTime"),
-                tone: isSupplier ? "purchase" : "sale",
-                value: <AmountText paisa={paisa(account.allTime)} locale={locale} />,
-                count: t("today.billCount", { n: account.allTime.billCount }),
-              },
-            ]}
+            heading={`${heading}${live ? "" : ` ${t("sync.stale")}`}`}
+            rows={profileTotals(account.kind, account.month, account.allTime).map((row) => ({
+              label: t(row.label),
+              tone: row.tone,
+              value: <AmountText paisa={row.paisa} locale={locale} />,
+              ...(row.count === undefined ? {} : { count: t("today.billCount", { n: row.count }) }),
+            }))}
           />
         </div>
       ) : (
         <div aria-busy="true" className="mx-4 mt-2 h-[146px] animate-pulse bg-card" />
       )}
+      {account && !account.isWalkIn ? <AccountDetails account={account} /> : null}
 
       <div className="mt-3 flex gap-2 overflow-x-auto px-4 pb-3">
         <Chip selected={month === null} onClick={() => setMonth(null)}>
