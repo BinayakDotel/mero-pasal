@@ -135,6 +135,7 @@ export const ne = {
   "account.needsInternet": "सच्याउन इन्टरनेट चाहिन्छ। इन्टरनेट आएपछि फेरि खोल्नुहोस्।", // i18n-review
   "account.similarKeep": "होइन, यही नाम राख्ने", // i18n-review
   "account.similarHint": "एउटै मान्छे भए बिनायकलाई दुई खाता मिलाउन भन्नुहोस्।", // i18n-review
+  "account.deleted": "यो खाता बिलहरूसहित हटाइएको छ। फिर्ता चाहिए बिनायकलाई भन्नुहोस्।", // i18n-review
   "field.type": "प्रकार",
   "field.name": "नाम",
   "field.amount": "रकम",
