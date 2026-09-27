@@ -360,6 +360,7 @@ Keys map to `packages/shared/src/i18n/{ne,en}.ts`. Nepali is the default.
 | `account.needsInternet` | सच्याउन इन्टरनेट चाहिन्छ। इन्टरनेट आएपछि फेरि खोल्नुहोस्। | Editing needs the internet. Open this again once you're online. |
 | `account.similarKeep` | होइन, यही नाम राख्ने | No, keep this name |
 | `account.similarHint` | एउटै मान्छे भए बिनायकलाई दुई खाता मिलाउन भन्नुहोस्। | If it's the same person, ask Binayak to merge the two accounts. |
+| `account.deleted` | यो खाता बिलहरूसहित हटाइएको छ। फिर्ता चाहिए बिनायकलाई भन्नुहोस्। | This account was deleted, with its bills. Ask Binayak if it should come back. |
 | `field.type` | प्रकार | Type |
 | `field.name` | नाम | Name |
 | `field.amount` | रकम | Amount |

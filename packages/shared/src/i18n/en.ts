@@ -134,6 +134,8 @@ export const en: { readonly [K in keyof typeof ne]: string } = {
   "account.needsInternet": "Editing needs the internet. Open this again once you're online.",
   "account.similarKeep": "No, keep this name",
   "account.similarHint": "If it's the same person, ask Binayak to merge the two accounts.",
+  "account.deleted":
+    "This account was deleted, with its bills. Ask Binayak if it should come back.",
   "field.type": "Type",
   "field.name": "Name",
   "field.amount": "Amount",
