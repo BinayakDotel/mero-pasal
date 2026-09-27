@@ -151,6 +151,7 @@
   - this BS month's and all-time totals with bill counts; an account that is **both** shows sold and bought separately
   - first and last bill dates
   - the account's bills as a list with thumbnails, filterable by month
+- **Deleted account (ADR-037):** if Buwa opens an account the admin deleted (from a link or the phone's cache), the page says it was deleted with its bills, and offers no edit.
 - **Edit (added 2026-09-27):** the owner and admin can correct the name, phone, tag and kind from the account page. It needs the internet (ADR-036); offline the button says so. If the new name matches another account, the app warns before saving (a merge may be what's wanted). Staff can only view.
 - v1.1 adds the balance card and "पैसा आयो / Money received" (F-21, F-22).
 
@@ -203,7 +204,8 @@ For Binayak, at `/admin`, desktop-first.
 
 ### F-12 Admin console: accounts **[v1.0]**
 
-- **Account profile** (`/admin/accounts/[id]`, added 2026-09-27): the account's details and totals, its bills, its change history, and Edit / Archive / Merge.
+- **Account profile** (`/admin/accounts/[id]`, added 2026-09-27): the account's details and totals, its bills, its change history, and Edit / Archive / Merge / Delete.
+- **Delete (added 2026-09-27, ADR-037):** admin only. A confirm dialog says what goes (its bills, sold and bought); from 10 bills on, the account's name must be typed first. The account and its bills leave every list and total, on the phone too; nothing is erased. **Bring back** restores the account and exactly the bills its delete removed. A bill saved on the phone for a deleted account brings it back by itself. The walk-in and merged accounts can't be deleted.
 
 - Rename an account; edit its Latin and Devanagari forms, tag, phone, PAN and kind; archive it.
 - **Merge:** pick a *keep* account and a *merge* account. All bills move to the kept one, the merged account is marked `mergedIntoId`, and nothing is deleted. The console suggests pairs with matching phonetic keys.
@@ -220,7 +222,7 @@ For Binayak, at `/admin`, desktop-first.
 
 ### F-15 Audit trail **[v1.0]**
 
-- Every create, correct, remove, restore, merge and role change writes an entry: who, what, when, and a short before/after summary.
+- Every create, correct, remove, restore, merge, account delete or bring-back, and role change writes an entry: who, what, when, and a short before/after summary.
 - The audit trail is visible in the admin bill drawer (M4; `audit.listForEntity`). Showing it on Buwa's account page is deferred (ADR-033): he doesn't need it.
 
 ---

@@ -214,6 +214,18 @@
 - **Why:** Binayak's request during M5 setup (2026-09-27). Renaming is rare and never part of taking a bill, so golden rule 1 (capture never blocks) isn't touched. Queuing renames offline would add a new outbox item type and conflict rules (a rename racing a merge, or another rename) for little gain. The phone's name cache is a live query, so a rename reaches every screen as soon as it's saved.
 - **Consequences:** The same audited, permission-checked mutation serves `/admin` and the phone. Staff see the details but no edit button.
 
+### ADR-037 · Deleting an account removes its bills, and can be undone
+- **Decision:**
+  - The admin deletes an account from its profile in `/admin` (the owner can't, and the phone can't). Every active bill of the account is removed through `ledger.apply` as a soft delete with `deletedReason: "account"`, in batches; then the account gets `deletedAt` and leaves every list, picker and total. Nothing is hard-deleted (golden rule 5).
+  - **Bring back** restores the account and exactly the bills its delete removed. Bills removed one by one earlier stay removed.
+  - A bill landing on a deleted account, or one being deleted, brings the account back (`ledger.apply`, audit `party.revive`): e.g. a bill Buwa saved offline before the delete. A removal or correction sent late from the phone for a bill removed with its account is still applied; a correction that moves it to another account brings the bill back there.
+  - From 10 bills on, the confirm dialog asks for the account's name (or its Latin form) to be typed.
+- **Why:** Binayak's request during the M5 trial (2026-09-27), to clear test and mistaken accounts; his choices: delete with its bills, admin only, type the name from 10 bills. The phone's outbox counts `CONFLICT` as a failure (5 → failed), so refusing late phone writes would turn a cleanup into failed bills on Buwa's phone; bringing the account back keeps golden rule 1.
+- **Consequences:**
+  - An account can come back by itself when a late bill arrives. Its history says why, and its other bills stay removed until the admin brings them back ("Bring them back" on its profile).
+  - Deleted accounts can't be edited, archived or merged; the walk-in and merged or merging accounts can't be deleted. A merge turns bills an earlier delete removed into ordinary removed bills.
+  - `trial:day` doesn't count bills removed with an account as Buwa's removals.
+
 ---
 
 ## Open decisions
