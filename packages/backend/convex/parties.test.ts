@@ -106,10 +106,14 @@ describe("parties.listForPicker (F-04)", () => {
     const a = await asOwner.mutation(api.parties.create, newParty("a", "Old Customer"));
     const b = await asOwner.mutation(api.parties.create, newParty("b", "Archived"));
     const c = await asOwner.mutation(api.parties.create, newParty("c", "Merged Away"));
+    const d = await asOwner.mutation(api.parties.create, newParty("d", "Deleted"));
+    const e = await asOwner.mutation(api.parties.create, newParty("e", "Being Deleted"));
     await t.run(async (ctx) => {
       await ctx.db.patch(a, { lastUsedAt: 1 });
       await ctx.db.patch(b, { archived: true });
       await ctx.db.patch(c, { mergedIntoId: a });
+      await ctx.db.patch(d, { deletedAt: 1 }); // ADR-037
+      await ctx.db.patch(e, { deletingAt: 1 });
       const creator = await ctx.db.query("members").first();
       if (!creator) throw new Error("seed created no members");
       const other = await ctx.db.insert("shops", { name: "Other", createdAt: 0 });
@@ -181,6 +185,14 @@ describe("parties.similar (F-04 “उही हो?”)", () => {
     expect(await asOwner.query(api.parties.similar, { name: "Sita" })).toEqual([
       { _id: expect.any(String), displayName: "Sita Gurung" },
     ]);
+  });
+
+  it("ADR-037: never suggests a deleted account", async () => {
+    const t = convexTest(schema, modules);
+    const { asOwner } = await seedShop(t);
+    const gone = await asOwner.mutation(api.parties.create, newParty("g", "Gopal Shrestha"));
+    await t.run((ctx) => ctx.db.patch(gone, { deletedAt: 1 }));
+    expect(await asOwner.query(api.parties.similar, { name: "Gopal" })).toEqual([]);
   });
 });
 
