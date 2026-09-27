@@ -128,6 +128,13 @@ export const ne = {
   "account.thisMonthBought": "यो महिना किनेको", // i18n-review
   "account.allTimeSold": "जम्मा बेचेको", // i18n-review
   "account.allTimeBought": "जम्मा किनेको", // i18n-review
+  "account.edit": "सच्याउनुहोस्", // i18n-review
+  "account.editTitle": "खाता सच्याउनुहोस्", // i18n-review
+  "account.editSave": "राख्नुहोस्", // i18n-review
+  "account.edited": "सच्याइयो", // i18n-review
+  "account.needsInternet": "सच्याउन इन्टरनेट चाहिन्छ। इन्टरनेट आएपछि फेरि खोल्नुहोस्।", // i18n-review
+  "account.similarKeep": "होइन, यही नाम राख्ने", // i18n-review
+  "account.similarHint": "एउटै मान्छे भए बिनायकलाई दुई खाता मिलाउन भन्नुहोस्।", // i18n-review
   "field.type": "प्रकार",
   "field.name": "नाम",
   "field.amount": "रकम",

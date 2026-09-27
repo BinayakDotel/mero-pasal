@@ -12,6 +12,7 @@ import { BillGroups } from "@/features/bills/bill-groups";
 import { useLocale } from "@/features/session/locale";
 import { useTodayBs } from "@/features/today/use-today-bs";
 import { AccountDetails } from "./account-details";
+import { EditAccountSheet } from "./edit-account-sheet";
 import { monthLabel, recentMonths } from "./months";
 import { profileTotals } from "./profile";
 import { useAccount } from "./use-account";
@@ -24,6 +25,7 @@ export function AccountScreen({ partyId }: { partyId: Id<"parties"> }) {
   const router = useRouter();
   const thisMonth = monthOf(useTodayBs());
   const [month, setMonth] = useState<string | null>(null); // null = all months
+  const [editing, setEditing] = useState(false);
   const { account, live, bills, canLoadMore, loadMore } = useAccount(partyId, thisMonth, month);
 
   // A merged account lives on under the account it was merged into.
@@ -56,6 +58,16 @@ export function AccountScreen({ partyId }: { partyId: Id<"parties"> }) {
             <span className="font-medium text-ink-soft"> · {account.tag}</span>
           ) : null}
         </h1>
+        {account?.canEdit ? (
+          <button
+            type="button"
+            aria-label={t("account.edit")}
+            onClick={() => setEditing(true)}
+            className="grid size-12 flex-none place-items-center rounded-full border-2 border-rule bg-card"
+          >
+            <Icon name="edit" />
+          </button>
+        ) : null}
         {account?.phone ? (
           <a
             href={`tel:${account.phone}`}
@@ -94,6 +106,9 @@ export function AccountScreen({ partyId }: { partyId: Id<"parties"> }) {
           </Chip>
         ))}
       </div>
+      {account && editing ? (
+        <EditAccountSheet open account={account} onClose={() => setEditing(false)} />
+      ) : null}
       <BillGroups
         bills={bills}
         empty={t("bills.empty")}
