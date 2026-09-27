@@ -40,14 +40,18 @@ const COLUMNS = 8;
 export function BillsTable({
   thisMonth,
   onOpen,
+  fixedPartyId,
 }: {
   thisMonth: string;
   onOpen: (bill: AdminBill) => void;
+  /** One account's bills only (its profile page): the account filter is hidden. */
+  fixedPartyId?: string;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [partyId, setPartyId] = useState("");
+  const [chosenPartyId, setPartyId] = useState("");
+  const partyId = fixedPartyId ?? chosenPartyId;
   const [range, setRange] = useState<{ fromBs?: string; toBs?: string }>({});
   const typed = rangeArgs(from, to);
   // Keep the last usable range while a date is half typed, so the table doesn't flicker.
@@ -137,23 +141,25 @@ export function BillsTable({
           value={to}
           onChange={(e) => setTo(e.target.value)}
         />
-        <select
-          aria-label="Account"
-          data-admin-search
-          className={`${inputClass} max-w-64`}
-          value={partyId}
-          onChange={(e) => setPartyId(e.target.value)}
-        >
-          <option value="">All accounts</option>
-          {choosable.map((p) => (
-            <option key={p._id} value={p._id}>
-              {p.displayName}
-              {p.tag ? ` · ${p.tag}` : ""}
-              {p.archived ? " (archived)" : ""}
-            </option>
-          ))}
-        </select>
-        {from || to || partyId ? (
+        {fixedPartyId ? null : (
+          <select
+            aria-label="Account"
+            data-admin-search
+            className={`${inputClass} max-w-64`}
+            value={partyId}
+            onChange={(e) => setPartyId(e.target.value)}
+          >
+            <option value="">All accounts</option>
+            {choosable.map((p) => (
+              <option key={p._id} value={p._id}>
+                {p.displayName}
+                {p.tag ? ` · ${p.tag}` : ""}
+                {p.archived ? " (archived)" : ""}
+              </option>
+            ))}
+          </select>
+        )}
+        {from || to || chosenPartyId ? (
           <Button
             tone="ghost"
             onClick={() => {
