@@ -1,15 +1,15 @@
 import { deriveNames } from "@mero-pasal/shared/names";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
-import { internalMutation, type MutationCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { internalMutation, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { writeAudit } from "./lib/audit";
 import { appError } from "./lib/errors";
 import { adminMutation, adminQuery, ownerMutation } from "./lib/functions";
 import { apply } from "./lib/ledger";
 import { partyKind } from "./schema";
 
-// F-12 accounts: edit, archive, and (next) merge. Names are derived the same way as when Buwa
+// F-12 accounts: edit, archive, merge and delete. Names are derived the same way as when Buwa
 // adds them (parties.create), so search keeps working.
 
 const MAX_PARTIES = 2000;
@@ -72,14 +72,28 @@ export const list = adminQuery({
   },
 });
 
-/** An account of the caller's shop that can still be changed (not the walk-in, not merged). */
+/**
+ * An account of the caller's shop that can still be changed: not the walk-in, not merged or being
+ * merged, not deleted or being deleted.
+ */
 async function editable(ctx: MutationCtx & { shopId: Id<"shops"> }, id: Id<"parties">) {
   const party = await ctx.db.get(id);
   if (!party || party.shopId !== ctx.shopId) throw appError("NOT_FOUND");
   if (party.isWalkIn) throw appError("VALIDATION", "The walk-in account can't be changed");
   if (party.mergedIntoId) throw appError("CONFLICT", "This account was merged");
   if (party.mergingInto) throw appError("CONFLICT", "This account is being merged");
+  if (party.deletingAt !== undefined) throw appError("CONFLICT", "This account is being deleted");
+  if (party.deletedAt !== undefined) throw appError("CONFLICT", "This account was deleted");
   return party;
+}
+
+/** Another merge is still moving bills into this account. */
+async function isMergeTarget(ctx: MutationCtx & { shopId: Id<"shops"> }, id: Id<"parties">) {
+  const all = await ctx.db
+    .query("parties")
+    .withIndex("by_shop_lastUsed", (q) => q.eq("shopId", ctx.shopId))
+    .take(MAX_PARTIES);
+  return all.some((p) => p.mergingInto === id);
 }
 
 /** "" clears an optional field; too long → VALIDATION. */
@@ -163,6 +177,9 @@ export const setArchived = ownerMutation({
 });
 
 const MERGE_BATCH = 100;
+const DELETE_BATCH = 100;
+/** `transactions.deletedReason` of a bill removed with its account (restored with it). */
+export const DELETED_WITH_ACCOUNT = "account";
 
 /**
  * F-12 / UC-09 merge: every bill of `mergeId` moves to `keepId` through ledger.apply (so every
@@ -177,11 +194,7 @@ export const merge = adminMutation({
     const keep = await editable(ctx, keepId);
     const gone = await editable(ctx, mergeId);
     // An account other merges are moving bills into can't itself be merged away meanwhile.
-    const all = await ctx.db
-      .query("parties")
-      .withIndex("by_shop_lastUsed", (q) => q.eq("shopId", ctx.shopId))
-      .take(MAX_PARTIES);
-    if (all.some((p) => p.mergingInto === gone._id)) {
+    if (await isMergeTarget(ctx, gone._id)) {
       throw appError("CONFLICT", "Another merge into this account is still running");
     }
     await ctx.db.patch(gone._id, { mergingInto: keep._id });
@@ -289,11 +302,14 @@ export const moveBatch = internalMutation({
       .withIndex("by_shop_party_date", (q) => q.eq("shopId", gone.shopId).eq("partyId", gone._id))
       .take(args.batch);
     for (const tx of bills) {
-      const { _id, _creationTime, needsAttention, updatedAt, ...rest } = tx;
+      const { _id, _creationTime, needsAttention, updatedAt, deletedReason, ...rest } = tx;
+      // A bill an earlier delete removed stays removed, as an ordinary removed bill: bringing the
+      // kept account back must not restore it.
+      const reason = deletedReason === DELETED_WITH_ACCOUNT ? undefined : deletedReason;
       await apply(
         shop,
         tx,
-        { ...rest, partyId: keep._id },
+        { ...rest, ...(reason === undefined ? {} : { deletedReason: reason }), partyId: keep._id },
         {
           actorId: args.actorId,
           action: "tx.move",
@@ -324,6 +340,203 @@ export const moveBatch = internalMutation({
         : `${gone.displayName} → ${keep.displayName}, ${moved} bill${moved === 1 ? "" : "s"}`,
     });
     return null;
+  },
+});
+
+const bills = (n: number) => `${n} bill${n === 1 ? "" : "s"}`;
+
+/**
+ * F-12 delete (ADR-037): every active bill of the account is removed through ledger.apply (so
+ * every total stays equal to a recount), in batches that continue in the background; then the
+ * account is marked deleted and leaves every list. Nothing is hard-deleted, and bringing it back
+ * restores exactly these bills. Running it again while a delete is stuck continues it (a new run;
+ * the old one stops at its next batch). Admin only.
+ */
+export const deleteAccount = adminMutation({
+  args: { id: v.id("parties") },
+  returns: v.null(),
+  handler: async (ctx, { id }) => {
+    const party = await ctx.db.get(id);
+    if (!party || party.shopId !== ctx.shopId) throw appError("NOT_FOUND");
+    if (party.deletedAt !== undefined) return null; // already deleted: a retry
+    if (party.isWalkIn) throw appError("VALIDATION", "The walk-in account can't be deleted");
+    if (party.mergedIntoId) throw appError("CONFLICT", "This account was merged");
+    if (party.mergingInto) throw appError("CONFLICT", "This account is being merged");
+    if (await isMergeTarget(ctx, id)) {
+      throw appError("CONFLICT", "A merge into this account is still running");
+    }
+    const retried = party.deletingAt !== undefined;
+    // Each run has its own mark, so an older run still scheduled stops instead of finishing twice.
+    const run = Math.max(Date.now(), (party.deletingAt ?? 0) + 1);
+    await ctx.db.patch(id, { deletingAt: run });
+    await ctx.scheduler.runAfter(0, internal.partyAdmin.deleteBatch, {
+      partyId: id,
+      actorId: ctx.member._id,
+      run,
+      removed: 0,
+      batch: DELETE_BATCH,
+      ...(retried ? { retried } : {}),
+    });
+    if (retried) {
+      await writeAudit(ctx, {
+        shopId: ctx.shopId,
+        actorId: ctx.member._id,
+        action: "party.deleteRetry",
+        entity: "party",
+        entityId: id,
+        summary: `${party.displayName}: delete continued`,
+      });
+    }
+    return null;
+  },
+});
+
+/** One batch of a delete; the last one (fewer bills than a batch) marks the account deleted. */
+export const deleteBatch = internalMutation({
+  args: {
+    partyId: v.id("parties"),
+    actorId: v.id("members"),
+    run: v.number(),
+    removed: v.number(),
+    batch: v.number(),
+    /** A continued delete counts only the bills this run removes. */
+    retried: v.optional(v.boolean()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const party = await ctx.db.get(args.partyId);
+    // Brought back (a bill landed on it, or the admin), or a newer run took over.
+    if (!party || party.deletingAt !== args.run) return null;
+    const shop = { ...ctx, shopId: party.shopId };
+    const active = await ctx.db
+      .query("transactions")
+      .withIndex("by_shop_party_status_date", (q) =>
+        q.eq("shopId", party.shopId).eq("partyId", party._id).eq("status", "active"),
+      )
+      .take(args.batch);
+    for (const tx of active) {
+      const { _id, _creationTime, needsAttention, updatedAt, ...rest } = tx;
+      await apply(
+        shop,
+        tx,
+        { ...rest, status: "deleted", deletedReason: DELETED_WITH_ACCOUNT },
+        {
+          actorId: args.actorId,
+          action: "tx.remove",
+          summary: `removed with its account ${party.displayName}`,
+        },
+      );
+    }
+    const removed = args.removed + active.length;
+    if (active.length === args.batch) {
+      await ctx.scheduler.runAfter(0, internal.partyAdmin.deleteBatch, { ...args, removed });
+      return null;
+    }
+    // Done: no active bill left on the account, in this same transaction.
+    await ctx.db.patch(party._id, {
+      deletingAt: undefined,
+      deletedAt: Date.now(),
+      deletedBy: args.actorId,
+    });
+    await writeAudit(ctx, {
+      shopId: party.shopId,
+      actorId: args.actorId,
+      action: "party.delete",
+      entity: "party",
+      entityId: party._id,
+      summary: args.retried
+        ? `${party.displayName} deleted (continued), ${removed} more bill${removed === 1 ? "" : "s"} removed`
+        : `${party.displayName} deleted, ${bills(removed)} removed`,
+    });
+    return null;
+  },
+});
+
+/**
+ * F-12 bring back (ADR-037): the account returns at once (a delete still running stops), then the
+ * bills its delete removed come back in batches. Bills removed one by one stay removed. Also
+ * finishes the job after a bill brought the account back on its own. Admin only.
+ */
+export const restoreAccount = adminMutation({
+  args: { id: v.id("parties") },
+  returns: v.null(),
+  handler: async (ctx, { id }) => {
+    const party = await ctx.db.get(id);
+    if (!party || party.shopId !== ctx.shopId) throw appError("NOT_FOUND");
+    if (party.mergedIntoId) throw appError("CONFLICT", "This account was merged");
+    if (party.mergingInto) throw appError("CONFLICT", "This account is being merged");
+    await ctx.db.patch(id, { deletedAt: undefined, deletedBy: undefined, deletingAt: undefined });
+    await ctx.scheduler.runAfter(0, internal.partyAdmin.restoreBatch, {
+      partyId: id,
+      actorId: ctx.member._id,
+      restored: 0,
+      batch: DELETE_BATCH,
+    });
+    return null;
+  },
+});
+
+/** Bills of this account that its delete removed, oldest first. */
+function removedWithAccount(ctx: QueryCtx, party: Doc<"parties">) {
+  return ctx.db
+    .query("transactions")
+    .withIndex("by_shop_party_status_date", (q) =>
+      q.eq("shopId", party.shopId).eq("partyId", party._id).eq("status", "deleted"),
+    )
+    .filter((q) => q.eq(q.field("deletedReason"), DELETED_WITH_ACCOUNT));
+}
+
+/** One batch of bringing an account's bills back; the last one writes the history entry. */
+export const restoreBatch = internalMutation({
+  args: {
+    partyId: v.id("parties"),
+    actorId: v.id("members"),
+    restored: v.number(),
+    batch: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const party = await ctx.db.get(args.partyId);
+    // Deleted again meanwhile: that delete wins (its bills would only be removed again).
+    if (!party || party.deletingAt !== undefined || party.deletedAt !== undefined) return null;
+    const shop = { ...ctx, shopId: party.shopId };
+    const removed = await removedWithAccount(ctx, party).take(args.batch);
+    for (const tx of removed) {
+      const { _id, _creationTime, needsAttention, updatedAt, deletedReason: _r, ...rest } = tx;
+      await apply(
+        shop,
+        tx,
+        { ...rest, status: "active" },
+        { actorId: args.actorId, action: "tx.restore", summary: "restored with its account" },
+      );
+    }
+    const restored = args.restored + removed.length;
+    if (removed.length === args.batch) {
+      await ctx.scheduler.runAfter(0, internal.partyAdmin.restoreBatch, { ...args, restored });
+      return null;
+    }
+    await writeAudit(ctx, {
+      shopId: party.shopId,
+      actorId: args.actorId,
+      action: "party.restore",
+      entity: "party",
+      entityId: party._id,
+      summary: `${party.displayName} brought back, ${bills(restored)} restored`,
+    });
+    return null;
+  },
+});
+
+const MAX_REMOVED_COUNT = 5000;
+
+/** F-12: how many of this account's bills its delete removed (what "Bring back" restores). */
+export const removedWithAccountCount = adminQuery({
+  args: { id: v.id("parties") },
+  returns: v.number(),
+  handler: async (ctx, { id }) => {
+    const party = await ctx.db.get(id);
+    if (!party || party.shopId !== ctx.shopId) throw appError("NOT_FOUND");
+    return (await removedWithAccount(ctx, party).take(MAX_REMOVED_COUNT)).length;
   },
 });
 
