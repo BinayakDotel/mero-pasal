@@ -7,12 +7,12 @@
 
 | | |
 |---|---|
-| **Phase** | **M0 Foundations**: code merged (PRs #1–#8) and running locally against Convex dev; production deploy and Redmi test remain |
-| **Current focus** | M4 admin console (F-11 to F-14): built as a 21-branch Graphite stack, not yet submitted; UC-09 and UC-10 pass in Playwright (27/27). Next: Binayak's review, `submit`, then the Mac checks below |
+| **Phase** | **M5 field trial**: M0–M4 merged (to #85); trial prep merged (#86–#88). Production go-live (`docs/go-live.md`) is Binayak's next step |
+| **Current focus** | M5: M4 checks on the Mac, then go live and run the 14-day trial (ADR-035: Clerk dev instance + Convex production) |
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
-| **Risks** | NFR-03: Today ships 262 KB gzipped JS (budget 250); React/Next ≈ 140 KB, Clerk + Convex ≈ 65 KB are the bulk. Judged on the Redmi instead: Today interactive < 2 s warm (ADR-031); time it in the phone test. |
-| **Last updated** | 2083-06-09 BS (2026-09-25) |
+| **Risks** | NFR-03: Today loads 275 KB gzipped app JS before its buttons appear (budget 250), plus Clerk's own script (~367 KB from Clerk's servers, HTTP-cached). Re-measured 2026-09-27 on a production build: identical before and after M4, and no admin code reaches Buwa's routes. Judged on the phone instead (ADR-031): time Today's warm start during the trial. |
+| **Last updated** | 2083-06-11 BS (2026-09-27) |
 
 **Capacity assumption:** ~4–5 h a day (~25–30 h a week). The estimates below are rough; re-plan after M1 with real velocity.
 
