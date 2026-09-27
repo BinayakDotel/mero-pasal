@@ -209,6 +209,11 @@
   - **Switching to Clerk production later** gives every person a new Clerk user id. Because invites are claimed by verified email (ADR-034), the switch is a one-off, planned migration that clears `members.clerkUserId`, so each member is linked again on their next sign-in; bills and history don't move.
 - **Revisit when:** the domain is chosen (OD-4), and before v1.0 is called done.
 
+### ADR-036 · Editing an account on the phone is online-only
+- **Decision:** The owner (and admin) edit an account's name, phone, tag and kind from its page on the phone by calling `partyAdmin.update` directly, not through the outbox. Offline, the edit button explains that the internet is needed.
+- **Why:** Binayak's request during M5 setup (2026-09-27). Renaming is rare and never part of taking a bill, so golden rule 1 (capture never blocks) isn't touched. Queuing renames offline would add a new outbox item type and conflict rules (a rename racing a merge, or another rename) for little gain. The phone's name cache is a live query, so a rename reaches every screen as soon as it's saved.
+- **Consequences:** The same audited, permission-checked mutation serves `/admin` and the phone. Staff see the details but no edit button.
+
 ---
 
 ## Open decisions
