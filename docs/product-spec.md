@@ -145,14 +145,16 @@
 ### F-07 Account page (खाता) **[v1.0]**
 
 - **Accounts list:** tabs **ग्राहक / Customers** and **सप्लायर / Suppliers**, with search. Each row shows the name, tag, and this month's total.
-- **Account page:**
+- **Account page (profile):**
   - header with name, tag, and a call button if a phone number exists
-  - this BS month's total and bill count
-  - all-time total
+  - details: the name in both scripts, phone, tag, kind (customer / supplier / both)
+  - this BS month's and all-time totals with bill counts; an account that is **both** shows sold and bought separately
+  - first and last bill dates
   - the account's bills as a list with thumbnails, filterable by month
+- **Edit (added 2026-09-27):** the owner and admin can correct the name, phone, tag and kind from the account page. It needs the internet (ADR-036); offline the button says so. If the new name matches another account, the app warns before saving (a merge may be what's wanted). Staff can only view.
 - v1.1 adds the balance card and "पैसा आयो / Money received" (F-21, F-22).
 
-**Acceptance:** From Today, Buwa reaches any customer's bills in ≤ 3 taps plus typing.
+**Acceptance:** From Today, Buwa reaches any customer's bills in ≤ 3 taps plus typing. Buwa can fix a misspelled name from its account page in ≤ 3 taps plus typing, and every screen shows the new name.
 
 ### F-08 Bill detail, correct and remove **[v1.0]**
 
@@ -200,6 +202,8 @@ For Binayak, at `/admin`, desktop-first.
 - **Bills table** with filters for date range, type, account and flags. A row opens a drawer with the photo, editable fields (including bill number and note), and the audit history. Removed bills can be restored here.
 
 ### F-12 Admin console: accounts **[v1.0]**
+
+- **Account profile** (`/admin/accounts/[id]`, added 2026-09-27): the account's details and totals, its bills, its change history, and Edit / Archive / Merge.
 
 - Rename an account; edit its Latin and Devanagari forms, tag, phone, PAN and kind; archive it.
 - **Merge:** pick a *keep* account and a *merge* account. All bills move to the kept one, the merged account is marked `mergedIntoId`, and nothing is deleted. The console suggests pairs with matching phonetic keys.
