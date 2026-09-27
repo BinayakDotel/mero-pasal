@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { filterAccounts } from "@/features/admin/account-filter";
 import { PageHead } from "@/features/admin/admin-shell";
 import { Duplicates } from "@/features/admin/attention";
+import { DeletingCell } from "@/features/admin/delete-account";
 import { rs } from "@/features/admin/format";
 import { MergingCell } from "@/features/admin/merge-status";
 import {
@@ -23,16 +24,20 @@ import {
 const KIND = { customer: "Customer", supplier: "Supplier", both: "Both" } as const;
 const COLUMNS = 9;
 
-/** F-12 accounts: search in either script; a row opens the account's profile; duplicates on top (UC-09). */
+/**
+ * F-12 accounts: search in either script; a row opens the account's profile; duplicates on top
+ * (UC-09). Archived, merged and deleted accounts show on request.
+ */
 export default function AdminAccountsPage() {
   const accounts = useQuery(api.partyAdmin.list, {});
   const [query, setQuery] = useState("");
   const [archived, setArchived] = useState(false);
   const [merged, setMerged] = useState(false);
+  const [deleted, setDeleted] = useState(false);
   const router = useRouter();
   const rows = useMemo(
-    () => filterAccounts(accounts ?? [], { query, archived, merged }),
-    [accounts, query, archived, merged],
+    () => filterAccounts(accounts ?? [], { query, archived, merged, deleted }),
+    [accounts, query, archived, merged, deleted],
   );
   const nameOf = (id: string | undefined) =>
     accounts?.find((p) => p._id === id)?.displayName ?? "another account";
@@ -59,6 +64,10 @@ export default function AdminAccountsPage() {
         <label className="flex items-center gap-1.5 font-semibold">
           <input type="checkbox" checked={merged} onChange={(e) => setMerged(e.target.checked)} />
           Merged
+        </label>
+        <label className="flex items-center gap-1.5 font-semibold">
+          <input type="checkbox" checked={deleted} onChange={(e) => setDeleted(e.target.checked)} />
+          Deleted
         </label>
       </PageHead>
       <div className="grid gap-5.5">
@@ -88,7 +97,7 @@ export default function AdminAccountsPage() {
                   <tr
                     key={p._id}
                     onClick={() => router.push(`/admin/accounts/${p._id}`)}
-                    className={`${rowClass} cursor-pointer hover:bg-paper ${p.mergedIntoId || p.archived ? "text-ink-soft" : ""}`}
+                    className={`${rowClass} cursor-pointer hover:bg-paper ${p.mergedIntoId || p.archived || p.deletedAt ? "text-ink-soft" : ""}`}
                   >
                     <td className={`${cellClass} font-semibold`}>
                       <Link href={`/admin/accounts/${p._id}`} onClick={(e) => e.stopPropagation()}>
@@ -107,6 +116,10 @@ export default function AdminAccountsPage() {
                         <MergingCell mergeId={p._id} into={nameOf(p.mergingInto)} />
                       ) : p.mergedIntoId ? (
                         `merged into ${nameOf(p.mergedIntoId)}`
+                      ) : p.deletingAt !== undefined ? (
+                        <DeletingCell id={p._id} />
+                      ) : p.deletedAt !== undefined ? (
+                        "deleted"
                       ) : p.isWalkIn ? (
                         "walk-in"
                       ) : p.archived ? (

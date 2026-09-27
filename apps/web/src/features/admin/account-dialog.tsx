@@ -67,7 +67,15 @@ export function AccountDialog({
     form.phone.trim() !== (account.phone ?? "") ||
     form.pan.trim() !== (account.pan ?? "");
   const targets = accounts
-    .filter((p) => p._id !== account._id && !p.isWalkIn && !p.mergedIntoId && !p.mergingInto)
+    .filter(
+      (p) =>
+        p._id !== account._id &&
+        !p.isWalkIn &&
+        !p.mergedIntoId &&
+        !p.mergingInto &&
+        p.deletedAt === undefined &&
+        p.deletingAt === undefined,
+    )
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
   const target = targets.find((p) => p._id === into);
 

@@ -21,7 +21,7 @@ import {
 } from "./ui";
 
 export type AdminBill = FunctionReturnType<typeof api.billQueries.listForAdmin>["page"][number];
-type Filter = "all" | "sale" | "purchase" | "attention" | "removed";
+export type Filter = "all" | "sale" | "purchase" | "attention" | "removed";
 
 const FILTERS: [Filter, string][] = [
   ["all", "All"],
@@ -41,13 +41,16 @@ export function BillsTable({
   thisMonth,
   onOpen,
   fixedPartyId,
+  initialFilter = "all",
 }: {
   thisMonth: string;
   onOpen: (bill: AdminBill) => void;
   /** One account's bills only (its profile page): the account filter is hidden. */
   fixedPartyId?: string;
+  /** e.g. "removed" for a deleted account, whose bills were all removed with it. */
+  initialFilter?: Filter;
 }) {
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>(initialFilter);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [chosenPartyId, setPartyId] = useState("");
@@ -155,6 +158,7 @@ export function BillsTable({
                 {p.displayName}
                 {p.tag ? ` · ${p.tag}` : ""}
                 {p.archived ? " (archived)" : ""}
+                {p.deletedAt === undefined ? "" : " (deleted)"}
               </option>
             ))}
           </select>
