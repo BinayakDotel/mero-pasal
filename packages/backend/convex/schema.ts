@@ -75,6 +75,12 @@ export default defineSchema({
     mergedIntoId: v.optional(v.id("parties")),
     // F-12: a merge into this account is moving its bills (set at start, cleared when done).
     mergingInto: v.optional(v.id("parties")),
+    // F-12 delete (ADR-037). `deletingAt` is set while its bills are being removed (its value
+    // names that run), then `deletedAt`/`deletedBy` once they all are. A deleted account has no
+    // active bills: one arriving brings the account back (ledger.apply).
+    deletingAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
+    deletedBy: v.optional(v.id("members")),
     lastUsedAt: v.number(),
     // F-04 picker line "हिजो · रु 2,340": the latest active bill (by date). Kept by ledger.apply;
     // undefined until the account has a bill. The amount is absent when that bill has none.
@@ -106,6 +112,7 @@ export default defineSchema({
     note: v.optional(v.string()),
     photos: v.array(photo),
     status: v.union(v.literal("active"), v.literal("deleted")),
+    // "account": removed with its account (F-12 delete), so bringing the account back restores it.
     deletedReason: v.optional(v.string()),
     needsAttention: v.boolean(), // no amount OR no party (sale/purchase)
     capturedAt: v.number(), // server clock at create (the record)
