@@ -351,6 +351,10 @@ document.addEventListener('keydown',e=>{
   else if(S.view==='bills' && e.key==='Enter' && S.sel>=0) openBill(S.rows[S.sel].id);
 });
 render();
+(function shotMode(){
+  const v = new URLSearchParams(location.search).get("shot");
+  if (v && typeof show === "function") show(v);
+})();
 </script>
 </body>
 </html>

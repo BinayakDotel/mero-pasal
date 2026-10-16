@@ -12,7 +12,7 @@
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
 | **Risks** | NFR-03: Today loads 275 KB gzipped app JS before its buttons appear (budget 250), plus Clerk's own script (~367 KB from Clerk's servers, HTTP-cached). Re-measured 2026-09-27 on a production build: identical before and after M4, and no admin code reaches Buwa's routes. Judged on the phone instead (ADR-031): time Today's warm start during the trial. |
-| **Last updated** | 2083-06-11 BS (2026-09-27) |
+| **Last updated** | 2083-06-30 BS (2026-10-16) |
 
 **Capacity assumption:** ~4–5 h a day (~25–30 h a week). The estimates below are rough; re-plan after M1 with real velocity.
 
@@ -158,3 +158,4 @@
 | 2083-06-07 | Claude (M0) | F-01, F-02, F-03, F-05, F-10, F-13 | Steps 1–9: root tooling; shared money, domain, dates (UTC-only arithmetic, 33,238-day oracle test), i18n (copy-deck sync test); Convex schema, auth wrappers, `members.me`, seed; ui tokens + primitives; web shell (sign-in, Not invited, Today); Serwist PWA; Playwright smoke + vercel.json. Graphite + private GitHub repo (ADR-024…028). PRs #1–#8 merged | NFR-03 at 256 KB (budget 250): decide in M1 |
 | 2083-06-07 | Binayak + Claude | F-01 | Local setup: Convex dev `fine-marlin-976`, Clerk dev `direct-drum-2930` (issuer set on Convex), `CLERK_SECRET_KEY` in `apps/web/.env.local`, dev data seeded. On `main`: lint, typecheck, 82 unit tests, 5/5 e2e green | Prod deploy + Redmi test; review `i18n-review` strings and month names |
 | 2083-06-09 | Claude (M4) | F-11, F-12, F-13, F-14, F-15, UC-09, UC-10 | Admin console as a small-PR stack: ADR-034; invites (`claimInvite`, `memberAdmin`); `billAdmin.update`; `billQueries.listForAdmin`; `partyAdmin` edit/merge/resume/stop/duplicates; `rebuild`; `/admin` Overview, Bills + drawer, Accounts, Members, Export, `/`. Two second-pass reviews; all findings fixed test-first. 145 backend + 146 web + 163 shared unit tests; 27/27 e2e (admin tests use their own seeded data) | Review + submit the stack; Mac checks; index decision |
+| 2083-06-30 | Cursor agent | docs | Public `README.md` + MIT `LICENSE`; mockup screenshots in `docs/readme/` for recruiters/viewers | Consider making the GitHub repo public |

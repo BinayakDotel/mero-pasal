@@ -99,6 +99,7 @@ This is background only, not legal advice; confirm with the shop's accountant.
 
 | Need | File |
 |---|---|
+| Public overview (screenshots, stack, license) | `/README.md` |
 | Rules for AI agents and the repo map | `/AGENTS.md` (Claude Code reads it through `/CLAUDE.md`) |
 | Features and acceptance criteria | `docs/product-spec.md` |
 | End-to-end scenarios | `docs/use-cases.md` |
