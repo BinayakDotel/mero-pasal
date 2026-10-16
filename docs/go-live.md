@@ -103,6 +103,19 @@ In the Convex dashboard, switch to the project's **Production** deployment.
 - [ ] **After day 1:** in the Convex production dashboard, go to Settings → **Snapshot export**, download the snapshot, and keep it off the platform.
 - [ ] **Monthly (the tracker's recurring task):** export last month's CSV at `/admin/export`, take a snapshot export, and store both off the platform.
 
+## 10. Cleaning up test data
+
+Test bills and accounts made on production during setup can go without touching real ones. All of it is in `/admin` on the Mac, online, and nothing is erased (it can all be brought back).
+
+1. On Buwa's phone, check the pill says "सबै सुरक्षित" (nothing waiting to upload).
+2. Back up first: `/admin/export` for the month, and a Convex snapshot (step 9).
+3. **A test account:** open it in `/admin/accounts` → **Delete account**. Its bills go with it (ADR-037). From 10 bills on, type its name to confirm.
+4. **A test bill on a real account:** open it in `/admin/bills` → **Remove**.
+5. **Two accounts for one person:** merge them (Accounts → Edit, archive or merge), don't delete.
+6. Check the Overview's month totals and a couple of accounts against the paper book.
+
+If a delete was a mistake: Accounts → tick **Deleted** → open it → **Bring back**. If a bill Buwa saved offline arrives for a deleted account, the account comes back by itself with that bill (its history says so).
+
 ## If something goes wrong
 
 - **Web:** Vercel → Deployments → a previous production deployment → **Promote to Production**. This brings the old front end back instantly.

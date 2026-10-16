@@ -19,7 +19,10 @@ import { useAccount } from "./use-account";
 
 const MONTH_CHIPS = 6;
 
-/** F-07 / ui-ux §5.6 account page: header with call, यो महिना / जम्मा, then its bills. */
+/**
+ * F-07 / ui-ux §5.6 account page: header with call, यो महिना / जम्मा, then its bills. A deleted
+ * account (ADR-037) says so; its bills were removed with it.
+ */
 export function AccountScreen({ partyId }: { partyId: Id<"parties"> }) {
   const { locale, t } = useLocale();
   const router = useRouter();
@@ -78,6 +81,11 @@ export function AccountScreen({ partyId }: { partyId: Id<"parties"> }) {
           </a>
         ) : null}
       </header>
+      {account?.deleted ? (
+        <p role="status" className="bg-bahi px-4 py-2 font-bold text-white">
+          {t("account.deleted")}
+        </p>
+      ) : null}
 
       {account ? (
         <div className="mx-4 mt-2">

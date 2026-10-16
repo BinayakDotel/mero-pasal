@@ -190,5 +190,12 @@ describe("e2eSupport.seedUc09 (M4 UC-09 e2e)", () => {
     expect(await t.query(internal.e2eSupport.partyBills, { ids: [fixture.partyId] })).toEqual([
       { id: fixture.partyId, bills: 1, billCount: 1, mergedIntoId: null },
     ]);
+    const big = await t.mutation(internal.e2eSupport.seedAdminFixture, { token: "big", bills: 12 });
+    expect(await t.query(internal.e2eSupport.partyBills, { ids: [big.partyId] })).toEqual([
+      { id: big.partyId, bills: 12, billCount: 12, mergedIntoId: null },
+    ]);
+    await expect(
+      t.mutation(internal.e2eSupport.seedAdminFixture, { token: "bad", bills: 21 }),
+    ).rejects.toThrow(/VALIDATION/);
   });
 });

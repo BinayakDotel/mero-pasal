@@ -23,12 +23,17 @@ import {
 type Row = FunctionReturnType<typeof api.billQueries.listForAdmin>["page"][number];
 type Account = FunctionReturnType<typeof api.partyAdmin.list>[number];
 
-/** Accounts a bill of this type can go to (F-04: customers for sales, suppliers for purchases). */
+/**
+ * Accounts a bill of this type can go to (F-04: customers for sales, suppliers for purchases);
+ * never a deleted one (a bill landing there would bring it back, ADR-037).
+ */
 export function accountsFor(kind: "sale" | "purchase", all: readonly Account[] | undefined) {
   return (all ?? []).filter(
     (p) =>
       !p.archived &&
       !p.mergedIntoId &&
+      p.deletedAt === undefined &&
+      p.deletingAt === undefined &&
       (p.kind === "both" || p.kind === (kind === "sale" ? "customer" : "supplier")),
   );
 }

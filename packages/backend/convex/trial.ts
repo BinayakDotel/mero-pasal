@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { internalQuery } from "./_generated/server";
 import { isBill } from "./lib/billRow";
 import { appError } from "./lib/errors";
+import { DELETED_WITH_ACCOUNT } from "./lib/parties";
 
 // M5 field trial (progress tracker → Trial metrics): one day's numbers to compare with the paper
 // bill book. Read-only. Binayak runs it himself, e.g. on production (docs/go-live.md):
@@ -39,7 +40,10 @@ export const day = internalQuery({
         )
         .take(MAX_DAY_BILLS);
     const active = (await of("active")).filter(isBill);
-    const removed = (await of("deleted")).filter(isBill);
+    // Bills Buwa (or the admin) removed; not those that went with a deleted account (ADR-037).
+    const removed = (await of("deleted")).filter(
+      (b) => isBill(b) && b.deletedReason !== DELETED_WITH_ACCOUNT,
+    );
     const sales = active.filter((b) => b.kind === "sale");
     const purchases = active.filter((b) => b.kind === "purchase");
     const sum = (rows: typeof active) => rows.reduce((t, b) => t + (b.amountPaisa ?? 0), 0);

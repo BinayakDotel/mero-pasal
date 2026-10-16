@@ -9,6 +9,7 @@ import { appError } from "./lib/errors";
 import { adminMutation, memberMutation, memberQuery } from "./lib/functions";
 import { apply } from "./lib/ledger";
 import { assertMonthBs } from "./lib/months";
+import { DELETED_WITH_ACCOUNT } from "./lib/parties";
 import { assertCanEdit } from "./lib/permissions";
 
 const MAX_CLIENT_ID = 64;
@@ -313,6 +314,9 @@ export const listForParties = memberQuery({
  * F-08 correct (UC-08): set the bill's type, account, amount and date to these values through
  * ledger.apply; photos never change. The phone sends the full new values, so a retry is a no-op
  * ("nothing changed") and applying twice can't double-count. Last write wins between devices.
+ * ADR-037: a bill removed with its deleted account still takes a correction made on the phone
+ * before the delete reached it. It stays removed, unless the correction moves it to another
+ * account: then it's back, on that account.
  */
 export const correct = memberMutation({
   args: {
@@ -328,7 +332,10 @@ export const correct = memberMutation({
   handler: async (ctx, args) => {
     const tx = await billByClientId(ctx, args.clientId);
     const now = Date.now();
-    if (tx.status === "deleted") throw appError("CONFLICT", "A removed bill can't be corrected");
+    const withAccount = tx.status === "deleted" && tx.deletedReason === DELETED_WITH_ACCOUNT;
+    if (tx.status === "deleted" && !withAccount) {
+      throw appError("CONFLICT", "A removed bill can't be corrected");
+    }
 
     const amount = args.amountPaisa;
     if (amount !== undefined && (!Number.isSafeInteger(amount) || amount < 0)) {
@@ -362,8 +369,12 @@ export const correct = memberMutation({
       updatedAt,
       partyId: _p,
       amountPaisa: _a,
+      status,
+      deletedReason,
       ...keep
     } = tx;
+    // Moved off the deleted account it was removed with: Buwa wants it on the other one.
+    const revived = withAccount && partyId !== tx.partyId;
     const oldParty = tx.partyId ? await ctx.db.get(tx.partyId) : null;
     const money = (paisa: number | undefined) =>
       paisa === undefined ? "—" : formatNpr(paisa, { locale: "en" });
@@ -373,12 +384,16 @@ export const correct = memberMutation({
         `account: ${oldParty?.displayName ?? "—"} → ${party?.displayName ?? "—"}`,
       amount !== tx.amountPaisa && `amount: ${money(tx.amountPaisa)} → ${money(amount)}`,
       args.dateBs !== tx.dateBs && `date: ${tx.dateBs} → ${args.dateBs}`,
+      revived ? "back from its deleted account" : withAccount && "(stays removed with its account)",
     ].filter(Boolean);
     return apply(
       ctx,
       tx,
       {
         ...keep,
+        ...(revived
+          ? { status: "active" as const }
+          : { status, ...(deletedReason === undefined ? {} : { deletedReason }) }),
         kind: args.kind,
         ...(partyId === undefined ? {} : { partyId }),
         ...(amount === undefined ? {} : { amountPaisa: amount }),
@@ -400,14 +415,21 @@ export const remove = memberMutation({
   returns: v.id("transactions"),
   handler: async (ctx, { clientId }) => {
     const tx = await billByClientId(ctx, clientId);
-    if (tx.status === "deleted") return tx._id; // a retry: nothing to do
+    const withAccount = tx.status === "deleted" && tx.deletedReason === DELETED_WITH_ACCOUNT;
+    if (tx.status === "deleted" && !withAccount) return tx._id; // a retry: nothing to do
     assertCanEdit(ctx.member, tx, Date.now());
-    const { _id, _creationTime, needsAttention, updatedAt, ...keep } = tx;
+    const { _id, _creationTime, needsAttention, updatedAt, deletedReason: _r, ...keep } = tx;
+    // ADR-037: removed on the phone before its account's delete arrived. It stays removed when
+    // the account is brought back (the ledger has nothing to change: it was removed already).
     return apply(
       ctx,
       tx,
       { ...keep, status: "deleted" },
-      { actorId: ctx.member._id, action: "tx.remove", summary: "removed" },
+      {
+        actorId: ctx.member._id,
+        action: "tx.remove",
+        summary: withAccount ? "removed (its account was deleted meanwhile)" : "removed",
+      },
     );
   },
 });

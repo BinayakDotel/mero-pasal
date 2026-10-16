@@ -14,13 +14,16 @@ const ram = account("Ram Bahadur Thapa", { phone: "+977 984-1234567", tag: "Chow
 const sita = account("सीता श्रेष्ठ");
 const old = account("Hari", { archived: true });
 const gone = account("Ram B.", { mergedIntoId: "p1" });
-const all = [sita, ram, old, gone];
-const base = { query: "", archived: false, merged: false };
+const deleted = account("Test Account", { deletedAt: 1 });
+const all = [sita, ram, old, gone, deleted];
+const base = { query: "", archived: false, merged: false, deleted: false };
 
 describe("accounts filter (F-12)", () => {
-  it("hides archived and merged unless asked; sorts by name", () => {
+  it("hides archived, merged and deleted unless asked; sorts by name", () => {
     expect(filterAccounts(all, base)).toEqual([ram, sita]);
     expect(filterAccounts(all, { ...base, archived: true, merged: true })).toHaveLength(4);
+    expect(filterAccounts(all, { ...base, deleted: true })).toEqual([ram, deleted, sita]);
+    expect(filterAccounts(all, { ...base, query: "test" })).toEqual([]);
   });
 
   it("finds names in either script, tags, and phones by digits", () => {

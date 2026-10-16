@@ -4,6 +4,7 @@ import { writeAudit } from "./lib/audit";
 import { appError } from "./lib/errors";
 import { memberMutation, memberQuery } from "./lib/functions";
 import { assertMonthBs } from "./lib/months";
+import { isDeleted } from "./lib/parties";
 import { partyKind } from "./schema";
 
 // F-04 name picker backend. Search itself runs on the phone over `listForPicker` (ADR-012);
@@ -26,7 +27,7 @@ const pickerParty = v.object({
   lastBillPaisa: v.optional(v.number()),
 });
 
-/** F-04: every usable account for the picker, most recently used first (trimmed fields). */
+/** F-04: every account the picker offers (not archived, merged or deleted), latest used first. */
 export const listForPicker = memberQuery({
   args: {},
   returns: v.array(pickerParty),
@@ -37,7 +38,7 @@ export const listForPicker = memberQuery({
       .order("desc")
       .take(MAX_PARTIES);
     return rows
-      .filter((p) => !p.archived && p.mergedIntoId === undefined)
+      .filter((p) => !p.archived && p.mergedIntoId === undefined && !isDeleted(p))
       .map((p) => ({
         _id: p._id,
         clientId: p.clientId,
@@ -134,7 +135,9 @@ export const similar = memberQuery({
       .withIndex("by_shop_lastUsed", (q) => q.eq("shopId", ctx.shopId))
       .order("desc")
       .take(MAX_PARTIES);
-    const usable = rows.filter((p) => !p.archived && p.mergedIntoId === undefined && !p.isWalkIn);
+    const usable = rows.filter(
+      (p) => !p.archived && p.mergedIntoId === undefined && !p.isWalkIn && !isDeleted(p),
+    );
     return findSimilar(name, usable).map((p) => ({
       _id: p._id,
       displayName: p.displayName,
@@ -166,12 +169,14 @@ export const get = memberQuery({
     isWalkIn: v.boolean(),
     archived: v.boolean(),
     mergedIntoId: v.optional(v.id("parties")),
+    /** ADR-037: deleted by the admin (or being deleted): its bills were removed with it. */
+    deleted: v.boolean(),
     allTime: totals,
     month: totals,
     firstBillDateBs: v.optional(v.string()),
     lastBillDateBs: v.optional(v.string()),
     createdAt: v.number(),
-    /** The owner or admin may edit it (ADR-036); never the walk-in or a merged account. */
+    /** The owner or admin may edit it (ADR-036); never the walk-in, a merged or deleted account. */
     canEdit: v.boolean(),
   }),
   handler: async (ctx, { id, monthBs }) => {
@@ -194,7 +199,8 @@ export const get = memberQuery({
       ctx.member.role !== "staff" &&
       !party.isWalkIn &&
       party.mergedIntoId === undefined &&
-      party.mergingInto === undefined;
+      party.mergingInto === undefined &&
+      !isDeleted(party);
     return {
       _id: party._id,
       kind: party.kind,
@@ -206,6 +212,7 @@ export const get = memberQuery({
       isWalkIn: party.isWalkIn,
       archived: party.archived,
       ...(party.mergedIntoId === undefined ? {} : { mergedIntoId: party.mergedIntoId }),
+      deleted: isDeleted(party),
       allTime: {
         billCount: party.billCount,
         salePaisa: party.salePaisa,

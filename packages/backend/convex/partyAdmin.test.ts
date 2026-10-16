@@ -122,6 +122,15 @@ describe("partyAdmin.update / setArchived (F-12)", () => {
     expect((await asAdmin.query(api.partyAdmin.list, {})).find((p) => p._id === ram)).toMatchObject(
       { archived: true, phoneticKey: expect.any(String), lastUsedAt: expect.any(Number) },
     );
+    // ADR-037: deleted accounts stay in the admin list, flagged.
+    await t.run((ctx) => ctx.db.patch(ram, { deletingAt: 5 }));
+    expect((await asAdmin.query(api.partyAdmin.list, {})).find((p) => p._id === ram)).toMatchObject(
+      { deletingAt: 5 },
+    );
+    await t.run((ctx) => ctx.db.patch(ram, { deletingAt: undefined, deletedAt: 6 }));
+    const row = (await asAdmin.query(api.partyAdmin.list, {})).find((p) => p._id === ram);
+    expect(row).toMatchObject({ deletedAt: 6 });
+    expect(row).not.toHaveProperty("deletingAt");
   });
 });
 
@@ -152,7 +161,7 @@ describe("partyAdmin.duplicates (UC-09)", () => {
     expect(pairs.every((p) => p.keepName !== "Gita" && p.mergeName !== "Gita")).toBe(true);
   });
 
-  it("matches phones by their digits; leaves out archived accounts", async () => {
+  it("matches phones by their digits; leaves out archived and deleted accounts", async () => {
     const { t, asOwner, asAdmin } = await setup();
     const hari = await asOwner.mutation(api.parties.create, {
       clientId: "hari",
@@ -175,11 +184,13 @@ describe("partyAdmin.duplicates (UC-09)", () => {
         (p) => new Set([p.keepId, p.mergeId]).has(hari) && new Set([p.keepId, p.mergeId]).has(hp),
       ),
     ).toBe(true);
-    await t.run((ctx) => ctx.db.patch(hp, { archived: true }));
-    expect(
+    const listed = async () =>
       (await asAdmin.query(api.partyAdmin.duplicates, {})).some((p) =>
         [p.keepId, p.mergeId].includes(hp),
-      ),
-    ).toBe(false);
+      );
+    await t.run((ctx) => ctx.db.patch(hp, { deletedAt: 1 })); // ADR-037
+    expect(await listed()).toBe(false);
+    await t.run((ctx) => ctx.db.patch(hp, { deletedAt: undefined, archived: true }));
+    expect(await listed()).toBe(false);
   });
 });

@@ -12,12 +12,28 @@ import { AccountDialog } from "@/features/admin/account-dialog";
 import { PageHead } from "@/features/admin/admin-shell";
 import { BillDrawer } from "@/features/admin/bill-drawer";
 import { type AdminBill, BillsTable } from "@/features/admin/bills-table";
+import {
+  BringBackButton,
+  DeleteAccountDialog,
+  DeletingCell,
+} from "@/features/admin/delete-account";
 import { rs, whenNpt } from "@/features/admin/format";
 import { MergingCell } from "@/features/admin/merge-status";
 import { Button, cellClass, Panel, rowClass, Table } from "@/features/admin/ui";
 import { useTodayBs } from "@/features/today/use-today-bs";
 
 const KIND = { customer: "Customer", supplier: "Supplier", both: "Customer and supplier" } as const;
+
+function Notice({ children }: { children: ReactNode }) {
+  return (
+    <div
+      role="status"
+      className="mb-4 flex items-center gap-3 rounded-xl border-2 border-bahi bg-card px-4 py-3"
+    >
+      {children}
+    </div>
+  );
+}
 
 function Detail({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -30,7 +46,8 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
 
 /**
  * F-12 account profile (added 2026-09-27): details, totals, the account's bills (a row opens the
- * bill drawer), its change history, and Edit / Archive / Merge.
+ * bill drawer), its change history, and Edit / Archive / Merge / Delete (ADR-037: a deleted
+ * account says so here, with Bring back).
  */
 export default function AdminAccountPage() {
   const { id } = useParams<{ id: string }>();
@@ -44,7 +61,12 @@ export default function AdminAccountPage() {
     api.audit.listForEntity,
     partyId ? { entity: "party", entityId: partyId } : "skip",
   );
+  const removedWithIt = useQuery(
+    api.partyAdmin.removedWithAccountCount,
+    partyId ? { id: partyId } : "skip",
+  );
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [openBill, setOpenBill] = useState<string | null>(null);
   const onOpen = useCallback((bill: AdminBill) => setOpenBill(bill.clientId), []);
   const onClose = useCallback(() => setOpenBill(null), []);
@@ -68,7 +90,10 @@ export default function AdminAccountPage() {
     return <div aria-busy="true" className="h-60 animate-pulse rounded-xl bg-rule/40" />;
   }
 
-  const editable = !row.isWalkIn && !row.mergedIntoId && !row.mergingInto;
+  const isDeleting = row.deletingAt !== undefined;
+  const isDeleted = row.deletedAt !== undefined;
+  const editable =
+    !row.isWalkIn && !row.mergedIntoId && !row.mergingInto && !isDeleting && !isDeleted;
   const other = otherScript(row);
   return (
     <>
@@ -79,14 +104,56 @@ export default function AdminAccountPage() {
       </p>
       <PageHead title={row.tag ? `${row.displayName} · ${row.tag}` : row.displayName}>
         {editable ? (
-          <Button tone="primary" onClick={() => setEditing(true)}>
-            Edit, archive or merge
-          </Button>
+          <>
+            <Button tone="primary" onClick={() => setEditing(true)}>
+              Edit, archive or merge
+            </Button>
+            <Button tone="danger" onClick={() => setDeleting(true)}>
+              Delete account
+            </Button>
+          </>
         ) : null}
       </PageHead>
+      {isDeleted ? (
+        <Notice>
+          <span className="flex-1">
+            <b>Deleted</b> {whenNpt(row.deletedAt)}. It's gone from every list and total, on the
+            phone too
+            {removedWithIt
+              ? `; ${removedWithIt} bill${removedWithIt === 1 ? " was" : "s were"} removed with it`
+              : ""}
+            .
+          </span>
+          <BringBackButton id={row._id} name={row.displayName} count={removedWithIt ?? 0} />
+        </Notice>
+      ) : isDeleting ? (
+        <Notice>
+          <span className="flex-1">Its bills are being removed.</span>
+          <DeletingCell id={row._id} />
+        </Notice>
+      ) : removedWithIt ? (
+        <Notice>
+          <span className="flex-1">
+            {removedWithIt} bill{removedWithIt === 1 ? " was" : "s were"} removed when this account
+            was deleted (a new bill brought it back).
+          </span>
+          <BringBackButton
+            id={row._id}
+            name={row.displayName}
+            count={removedWithIt}
+            label="Bring them back"
+          />
+        </Notice>
+      ) : null}
       <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start gap-5.5">
         <div className="min-w-0">
-          <BillsTable thisMonth={thisMonth} onOpen={onOpen} fixedPartyId={row._id} />
+          <BillsTable
+            key={isDeleted ? "deleted" : "live"}
+            thisMonth={thisMonth}
+            onOpen={onOpen}
+            fixedPartyId={row._id}
+            initialFilter={isDeleted ? "removed" : "all"}
+          />
         </div>
         <div className="grid gap-5.5">
           <Panel title="Details">
@@ -102,7 +169,11 @@ export default function AdminAccountPage() {
               <Detail label="First bill">{profile.firstBillDateBs ?? "—"}</Detail>
               <Detail label="Last bill">{profile.lastBillDateBs ?? "—"}</Detail>
               <Detail label="Status">
-                {row.mergingInto ? (
+                {isDeleted ? (
+                  "Deleted"
+                ) : isDeleting ? (
+                  "Deleting…"
+                ) : row.mergingInto ? (
                   <MergingCell mergeId={row._id} into={nameOf(row.mergingInto)} />
                 ) : row.mergedIntoId ? (
                   <>
@@ -158,6 +229,7 @@ export default function AdminAccountPage() {
       {editing && accounts ? (
         <AccountDialog account={row} accounts={accounts} onClose={() => setEditing(false)} />
       ) : null}
+      {deleting ? <DeleteAccountDialog account={row} onClose={() => setDeleting(false)} /> : null}
       {openBill ? <BillDrawer key={openBill} clientId={openBill} onClose={onClose} /> : null}
     </>
   );

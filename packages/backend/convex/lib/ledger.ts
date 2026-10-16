@@ -42,6 +42,34 @@ async function requireUsableParty(ctx: MutationCtx, tx: TxDraft): Promise<void> 
   }
 }
 
+/**
+ * ADR-037: a deleted account, or one being deleted, never swallows a bill. An active bill landing
+ * on it (a new bill, e.g. saved offline before the delete; a restored one; one moved onto it)
+ * brings the account back; a delete still running stops at its next batch. The bills the delete
+ * removed stay removed until the admin brings them back too.
+ */
+async function reviveIfDeleted(
+  ctx: MutationCtx,
+  partyId: Id<"parties">,
+  audit: { actorId: Id<"members">; action: string },
+): Promise<void> {
+  const party = await ctx.db.get(partyId);
+  if (!party || (party.deletedAt === undefined && party.deletingAt === undefined)) return;
+  await ctx.db.patch(partyId, {
+    deletedAt: undefined,
+    deletedBy: undefined,
+    deletingAt: undefined,
+  });
+  await writeAudit(ctx, {
+    shopId: party.shopId,
+    actorId: audit.actorId,
+    action: "party.revive",
+    entity: "party",
+    entityId: partyId,
+    summary: `${party.displayName} brought back: a bill landed on it (${audit.action})`,
+  });
+}
+
 /** ADR-030: the latest active bill of an account (by date, then capture order). */
 async function refreshLastBill(ctx: MutationCtx, shopId: Id<"shops">, partyId: Id<"parties">) {
   const latest = await ctx.db
@@ -79,6 +107,12 @@ export async function apply(
   // Archived accounts may still receive bills (e.g. an offline save made before archiving);
   // merged ones may not (architecture §5.3 invariant 7).
   await requireUsableParty(ctx, after);
+  // An active bill "lands" on an account when it's new there, or was removed before.
+  const gained =
+    after.status === "active" &&
+    after.partyId !== undefined &&
+    (before?.status !== "active" || before.partyId !== after.partyId);
+  if (gained && after.partyId) await reviveIfDeleted(ctx, after.partyId, audit);
 
   const now = Date.now();
   const row = {
@@ -144,10 +178,6 @@ export async function apply(
 
   // Recency (F-04 "recent" list) only moves forward: a party is "used" when an active bill
   // lands on it. It is never rewound, so it's excluded from the invariant comparison.
-  const gained =
-    after.status === "active" &&
-    after.partyId !== undefined &&
-    (before?.status !== "active" || before.partyId !== after.partyId);
   if (gained && after.partyId) {
     const party = await ctx.db.get(after.partyId);
     if (party && party.lastUsedAt < now) await ctx.db.patch(after.partyId, { lastUsedAt: now });

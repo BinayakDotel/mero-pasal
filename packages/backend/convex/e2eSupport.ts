@@ -231,15 +231,24 @@ export const seedUc09 = internalMutation({
   },
 });
 
-/** M4 admin e2e: one account with one bill of its own, for a test to edit, remove or archive. */
+const MAX_FIXTURE_BILLS = 20;
+
+/**
+ * M4 admin e2e: one account with bills of its own (one by default, Rs 123 each), for a test to
+ * edit, remove, archive or delete. `clientId` is its first bill.
+ */
 export const seedAdminFixture = internalMutation({
-  args: { token: v.string() },
+  args: { token: v.string(), bills: v.optional(v.number()) },
   returns: v.object({ partyId: v.id("parties"), partyName: v.string(), clientId: v.string() }),
-  handler: async (ctx, { token }) => {
+  handler: async (ctx, { token, bills = 1 }) => {
+    if (!Number.isInteger(bills) || bills < 1 || bills > MAX_FIXTURE_BILLS) {
+      throw appError("VALIDATION", `bills: 1–${MAX_FIXTURE_BILLS}`);
+    }
     const seed = await seeder(ctx, token);
     const partyName = `Admin ${token}`;
     const partyId = await seed.account(partyName);
     const clientId = await seed.bill(partyId, 12_300);
+    for (let i = 1; i < bills; i++) await seed.bill(partyId, 12_300);
     return { partyId, partyName, clientId };
   },
 });
