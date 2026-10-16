@@ -12,7 +12,7 @@
 | **Release target** | v1.0 Bill Book |
 | **Blockers** | None |
 | **Risks** | NFR-03: Today loads 275 KB gzipped app JS before its buttons appear (budget 250), plus Clerk's own script (~367 KB from Clerk's servers, HTTP-cached). Re-measured 2026-09-27 on a production build: identical before and after M4, and no admin code reaches Buwa's routes. Judged on the phone instead (ADR-031): time Today's warm start during the trial. |
-| **Last updated** | 2083-06-11 BS (2026-09-27) |
+| **Last updated** | 2083-06-30 BS (2026-10-16) |
 
 **Capacity assumption:** ~4–5 h a day (~25–30 h a week). The estimates below are rough; re-plan after M1 with real velocity.
 
@@ -160,3 +160,4 @@
 | 2083-06-07 | Binayak + Claude | F-01 | Local setup: Convex dev `fine-marlin-976`, Clerk dev `direct-drum-2930` (issuer set on Convex), `CLERK_SECRET_KEY` in `apps/web/.env.local`, dev data seeded. On `main`: lint, typecheck, 82 unit tests, 5/5 e2e green | Prod deploy + Redmi test; review `i18n-review` strings and month names |
 | 2083-06-09 | Claude (M4) | F-11, F-12, F-13, F-14, F-15, UC-09, UC-10 | Admin console as a small-PR stack: ADR-034; invites (`claimInvite`, `memberAdmin`); `billAdmin.update`; `billQueries.listForAdmin`; `partyAdmin` edit/merge/resume/stop/duplicates; `rebuild`; `/admin` Overview, Bills + drawer, Accounts, Members, Export, `/`. Two second-pass reviews; all findings fixed test-first. 145 backend + 146 web + 163 shared unit tests; 27/27 e2e (admin tests use their own seeded data) | Review + submit the stack; Mac checks; index decision |
 | 2083-06-11 | Claude (M5 requests) | F-07, F-12, F-15 | Account profile (phone + `/admin/accounts/[id]`) and phone edit (ADR-036), PRs #89–#95. Then delete an account (ADR-037) as a stack: schema; `ledger.apply` brings a deleted account back when a bill lands on it; `partyAdmin.deleteAccount` / `restoreAccount` in batches; deleted accounts leave picker, suggestions and duplicates; late phone removals and corrections still count; admin profile Delete (type the name from 10 bills), Deleting…/Retry, Deleted/Bring back, Deleted filter; phone notice. Second-pass review: no ledger defect; its edge cases fixed test-first. 164 backend unit tests; `account-delete.spec.ts` 2/2 | Delete test accounts on production (go-live §10); try Bring back once |
+| 2083-06-30 | Cursor agent | docs | Public `README.md` + MIT `LICENSE`; mockup screenshots in `docs/readme/` for recruiters/viewers | Consider making the GitHub repo public |

@@ -290,6 +290,11 @@ body.offline .mic{opacity:.4}
   .app{border-radius:0}
   .notes{border-radius:0;width:100%}
 }
+html.shot .ctl,html.shot .notes,html.shot .jump{display:none!important}
+html.shot body{background:#d8dfd4}
+html.shot .stage{padding:0;gap:0}
+html.shot .device{width:100vw;height:100dvh;border-radius:0;padding:0;box-shadow:none}
+html.shot .app{border-radius:0}
 </style>
 </head>
 <body>
@@ -936,6 +941,19 @@ function jump(k){
   go(k,{root:true});
 }
 render();
+(function shotMode(){
+  const s = new URLSearchParams(location.search).get("shot");
+  if (!s) return;
+  document.documentElement.classList.add("shot");
+  if (s === "today") go("today", {root:true});
+  else if (s === "preview") { startCapture("sale"); shutter(); }
+  else if (s === "party") { startCapture("sale"); shutter(); go("party"); }
+  else if (s === "amount") { startCapture("sale"); shutter(); pickParty("p1"); S.cap.digits = "2450"; render(); }
+  else if (s === "bills") go("bills", {root:true});
+  else if (s === "accounts") go("accounts", {root:true});
+  else if (s === "account") { S.acctId = "p1"; go("account"); }
+  else if (s === "bill") { S.billId = "b1"; go("bill"); }
+})();
 </script>
 </body>
 </html>
